@@ -5,7 +5,7 @@
 Elaborado por Gabriela Vidales, Luis Gonzalez, Filiberto Ortiz, and Gabriel Merino.
 
 Funcionalidades principales
-- Conversión SMILES a 3D (RDKit, OpenBabel, NetworkX, Auto3D)
+- Conversión SMILES a 3D (RDKit, OpenBabel, NetworkX)
 - Visualización 3D (py3Dmol)
 - Carga individual o por archivo.
 - Exportación de estructuras en formato .xyz.
@@ -22,7 +22,7 @@ import networkx as nx
 # RDKit and cheminformatics
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdmolops, Draw
-from rdkit.Chem.Draw import IPythonConsole
+from rdkit.Chem.Draw import IPythonConsole,  rdMolDraw2D
 from rdkit.Chem import MolToMolBlock
 from rdkit.Geometry import Point3D
 
@@ -492,28 +492,43 @@ class MolecularTools:
 
     # Batch Processing Methods
     def process_all_smiles(self, method='rdkit', force_field='uff'):
-        """Process all loaded SMILES with specified method"""
+        """Process all loaded SMILES with 3D, 2D, and export"""
         results = {}
-        for smi, ident in zip(self.smiles_list, self.identifiers):
+        for smiles, identifier in zip(self.smiles_list, self.identifiers):
             try:
+                # Conversión 3D
                 if method == 'rdkit':
-                    result = tool.rdkit_conversion(smiles, identifier, force_field)
+                    result = self.rdkit_conversion(smiles, identifier, force_field)
                 elif method == 'openbabel':
-                    result = tool.openbabel_conversion(smiles, identifier)
+                    result = self.openbabel_conversion(smiles, identifier)
                 elif method == 'networkx':
-                    result = {"xyz": tool.networkx_conversion(smiles, identifier), "mol": None}
+                    result = {"xyz": self.networkx_conversion(smiles, identifier), "mol": None}
                 else:
-                    return jsonify({"error": "Método no soportado"}), 400
+                    raise ValueError("Método no soportado")
 
-                results[ident] = {
-                    'xyz': xyz,
-                    'visualization': self.visualize_3d(xyz)
+                # Imagen 2D
+                img_paths = self.generate_2d_image(smiles, identifier)
+
+                # Exportación de formatos estándar
+                format_paths = self.export_formats(smiles, identifier)
+
+                # Visualización
+                vis = self.visualize_3d(result["xyz"])
+
+                results[identifier] = {
+                    'xyz': result["xyz"],
+                    'mol': result["mol"],
+                    'formats': format_paths,
+                    '2d_image': img_paths["png"],
+                    '2d_vector': img_paths["svg"],
                 }
+
             except Exception as e:
-                print(f"Error procesando {ident}: {str(e)}")
+                print(f"Error procesando {identifier}: {str(e)}")
                 continue
-                
+
         return results
+
 
     def compare_all_methods(self, identifier):
         """Compare results from all conversion methods for one molecule"""
@@ -537,6 +552,68 @@ class MolecularTools:
         except Exception as e:
             print(f"Error comparando métodos: {str(e)}")
             raise
+        
+    def export_formats(self, smiles, identifier):
+    #Exporta la molécula a formatos comunes y añade metadatos
+        try:
+            mol = pybel.readstring("smi", smiles)
+            mol.make3D()
+
+            # Agregar metadatos personalizados
+            mol.data["ID"] = identifier
+            mol.data["SMILES"] = smiles
+            mol.data["Source"] = "ELAYA"
+
+            safe_name = smiles.translate(str.maketrans('\\/:*?"<>|', '_________'))
+            base_path = os.path.join(self.dirs['xyz_openbabel'], safe_name)
+
+            formats = ['mol', 'sdf', 'mol2', 'pdb', 'cml', 'xyz']
+            paths = {}
+            for fmt in formats:
+                file_path = f"{base_path}.{fmt}"
+                mol.write(fmt, filename=file_path, overwrite=True)
+                paths[fmt] = file_path
+                print(f"Archivo exportado: {file_path}")
+
+            return paths
+
+        except Exception as e:
+            print(f"Error exportando formatos para {identifier}: {str(e)}")
+            return {}
+        
+    def generate_2d_image(self, smiles, identifier):
+        """Genera imagen 2D como PNG y SVG usando RDKit"""
+        try:
+            mol = Chem.MolFromSmiles(smiles)
+            if mol is None:
+                raise ValueError(f"No se pudo generar imagen 2D para: {smiles}")
+
+            mol = Chem.AddHs(mol)
+            AllChem.Compute2DCoords(mol)
+
+            # PNG
+            img = Draw.MolToImage(mol, size=(400, 400), kekulize=True)
+            png_path = os.path.join(self.dirs['xyz_rdkit'], f"{identifier}_2d.png")
+            img.save(png_path)
+
+            # SVG
+            drawer = rdMolDraw2D.MolDraw2DSVG(400, 400)
+            drawer.DrawMolecule(mol)
+            drawer.FinishDrawing()
+            svg_content = drawer.GetDrawingText()
+            svg_path = os.path.join(self.dirs['xyz_rdkit'], f"{identifier}_2d.svg")
+            with open(svg_path, 'w') as f:
+                f.write(svg_content)
+
+            return {
+                "png": png_path,
+                "svg": svg_path
+            }
+
+        except Exception as e:
+            print(f"Error generando imagen 2D: {str(e)}")
+            return None
+
 
 if __name__ == "__main__":
     tool = MolecularTools()
