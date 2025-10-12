@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, jsonify, send_from_directory
+from flask import Flask, Response, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from rdkit import Chem
 from rdkit.Chem.Draw import rdMolDraw2D
@@ -80,22 +80,69 @@ def compare():
 @app.route('/api/draw2d', methods=['POST'])
 def draw_2d():
     try:
-        data = request.json
-        smiles = data['smiles']
+        # Asegura parseo de JSON aunque falte el header en algunos clientes
+        data = request.get_json(force=True) or {}
+        smiles = (data.get('smiles') or '').strip()
+
+        if not smiles:
+            return jsonify({"error": "Missing 'smiles'"}), 400
+
+        # Construye molécula y valida
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             return jsonify({"error": "Invalid SMILES"}), 400
 
-        drawer = rdMolDraw2D.MolDraw2DSVG(300, 300)
-        drawer.drawOptions().useSvgStyles = False
-        rdMolDraw2D.PrepareAndDrawMolecule(drawer, mol)
+        # --- Preparación robusta para dibujo 2D ---
+        from rdkit.Chem import rdDepictor
+        from rdkit.Chem.Draw import rdMolDraw2D
+
+        # En algunos SMILES complejos, kekulize puede fallar; probamos y si falla, sin kekulize
+        try:
+            # (opcional) sanitiza si vienes de fuentes dudosas
+            Chem.SanitizeMol(mol)
+            # Calcula coords 2D de forma explícita (evita rarezas de PrepareAndDraw en ciertos RDKit)
+            rdDepictor.Compute2DCoords(mol)
+            # Algunas versiones requieren preparar la mol para dibujo
+            rdMolDraw2D.PrepareMolForDrawing(mol, kekulize=True)
+        except Exception:
+            # Fallback sin kekulize
+            try:
+                rdDepictor.Compute2DCoords(mol)
+                rdMolDraw2D.PrepareMolForDrawing(mol, kekulize=False)
+            except Exception as e2:
+                print("[/api/draw2d] PrepareMolForDrawing fallback error:", repr(e2))
+                return jsonify({"error": "Failed to prepare molecule for drawing", "detail": str(e2)}), 500
+
+        # Dibujo SVG
+        width, height = 320, 320
+        drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
+        # Opciones de dibujo: evita estilos CSS si algún visor los bloquea
+        try:
+            drawer.drawOptions().useSvgStyles = False
+        except Exception:
+            pass
+
+        # Dibujo (usando la mol ya preparada)
+        try:
+            # Si tu RDKit no admite PrepareAndDrawMolecule con mol ya preparado, usa DrawMolecule
+            rdMolDraw2D.PrepareAndDrawMolecule(drawer, mol)
+        except Exception:
+            from rdkit.Chem import AllChem
+            # Asegura coords por si el Prepare no las dejó
+            rdDepictor.Compute2DCoords(mol)
+            drawer.DrawMolecule(mol)
+
         drawer.FinishDrawing()
         svg = drawer.GetDrawingText()
 
+        # Algunos RDKit devuelven encabezado xml con entities; lo dejamos tal cual
         return Response(svg, mimetype='image/svg+xml')
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        print("[/api/draw2d] ERROR:", repr(e))
+        traceback.print_exc()
+        return jsonify({"error": "Draw2D server failure", "detail": str(e)}), 500
 
 @app.route('/files/<filename>')
 def serve_file(filename):
@@ -111,3 +158,4 @@ def serve_file(filename):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
