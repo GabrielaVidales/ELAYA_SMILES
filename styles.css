@@ -150,7 +150,6 @@ header h1 {
     position: relative;
     display: inline-block;
     margin-bottom: 0;
-    margin-top: -5px;
 }
 
 /* Estilos base para el link */
@@ -252,6 +251,7 @@ section {
 
 .input-group-iz {
     padding-left: 15px;
+    padding-bottom: 12px; 
 }
 
 .input-group label {
@@ -264,12 +264,11 @@ section {
     max-width: 100%;
 }
 
-
 .input-group input[type="text"],
 .input-group input[type="file"],
 .input-group select {
     width: 100%;
-    padding: 0.65rem;
+    padding: 0.55rem;
     background: rgba(206, 175, 216, 0.178);
     border-radius: 60px;
     color: var(--light-text);
@@ -298,26 +297,35 @@ section {
     font-size: 0.95rem;
 }
 
+#smiles {
+    width: 98%;  
+}
+
+#single-input{
+    margin-left: -29px;
+}
+
 #single-input,
 #file-input {
     flex: 1 1 45%;
 }
 
 #smiles-file {
-    width: 115%; 
+    min-width: 110%; 
     height: 43px;
     margin-left: -7rem;                      
     font-size: 1rem;
 }
 
 #file-input label {
-    margin-left: -7rem; 
+    margin-left: -5rem; 
 }
 
 #file-input .input-overlay-wrapper {
     width: 109%;
-    margin-left: -90px;
+    margin-left: -80px;
     position: relative;
+    margin-bottom: 13px;
 }
 
 #file-input .input-overlay-wrapper input[type="file"] {
@@ -402,7 +410,7 @@ select.touched {
     max-width: 400px;
     z-index: 1000;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.01s ease;
     pointer-events: none;
     display: block;
 }
@@ -482,6 +490,27 @@ button.secondary:hover {
     display: none; /* solo se muestra al convertir */
 }
 
+#smiles-examples {
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #ccc;
+    padding-left: 10px;
+    user-select: none;
+}
+
+#smiles-examples span {
+    color: #42e27273;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: color 0.2s;
+}
+
+#smiles-examples span:hover {
+    color: #ffbf00;
+    text-decoration: underline;
+}
+
+
 @keyframes waveMove {
     0% {
         background-position: 0 0;
@@ -544,7 +573,7 @@ button.secondary:hover {
     flex: 2;
     width: 100%;
     height: auto;
-    min-height: 400px;  /* Cambié de height fijo a min-height para adaptarse */
+    min-height: 460px;  /* Cambié de height fijo a min-height para adaptarse */
     position: relative;
     background-color: #000 !important;
     overflow: hidden;
@@ -627,6 +656,7 @@ button.secondary:hover {
     display: inline-block;
     vertical-align: top;
 }
+
 #rec-controls {
   position: absolute;
   top: 8px;
@@ -698,7 +728,7 @@ button.secondary:hover {
 
 .visualization-controls {
     flex: 1;
-    display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 1rem;
 }
@@ -714,14 +744,24 @@ button.secondary:hover {
 }
 
 #xyz-display {
-    margin-top: 0.55rem;
+    width: 100%;
+    height: 350px;
+    overflow-x: auto;
+    overflow-y: auto;
+    white-space: pre; /* Respeta saltos de línea y espacios */
     font-family: monospace;
     font-size: 0.85rem;
     background: rgba(0, 0, 0, 0.3);
     padding: 0.8rem;
+    margin-top: 0.55rem;
+    margin-bottom: 1.5rem;
     border-radius: var(--border-radius);
-    max-height: 350px;
-    overflow-y: auto;
+    box-sizing: border-box;
+    border-radius: var(--border-radius);
+}
+
+/* Estilo del contenido largo para evitar que haga wrap */
+#xyz-display > * {
     white-space: pre;
 }
 
@@ -729,9 +769,15 @@ button.secondary:hover {
     display: none !important;
 }
 
+#download-xyz {
+    margin-top: 12px;
+    min-width: 100%;
+}
+
 .file-format-example {
     background: rgba(0, 0, 0, 0.4);
     padding: 1rem;
+    margin-top: -10px;
     border-radius: var(--border-radius);
     font-family: monospace;
     font-size: 0.9rem;
@@ -776,6 +822,39 @@ button.secondary:hover {
     white-space: pre;        /* ← esto preserva espacios dobles */
 }
 
+.magic-sparkle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: sparkle 1.5s infinite;
+}
+
+#download-xyz-floating {
+    background: transparent;
+    border: none;
+    padding: 6px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#download-xyz-floating:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#download-xyz-floating .icon {
+    width: 24px;
+    height: 24px;
+    fill: white;
+}
+
+@keyframes sparkle {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
 
 /* Modal de selección */
 .modal-overlay {
@@ -969,20 +1048,6 @@ footer {
     opacity: 0.8;
 }
 
-#load-confirmation {
-    background-color: rgba(85, 107, 47, 0.9); /* verde oliva translúcido */
-    color: white;
-    font-weight: bold;
-    border-radius: 20px;
-    padding: 10px 20px;
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    z-index: 10000;
-    box-shadow: 0 0 10px rgba(0,255,128,0.4);
-    animation: fadeOut 4s ease-out forwards;
-}
-
 @keyframes fadeOut {
     0% { opacity: 1; }
     80% { opacity: 1; }
@@ -1057,7 +1122,7 @@ footer {
 }
 
 .example{
-  width: 700px;
+  width: 780px;
   height: auto;
   border-radius: 12px;
 }
@@ -1082,6 +1147,19 @@ footer {
     padding: 3px 8px;
     border-radius: 8px;
     font-size: 1.3rem;
+}
+
+/* Contenedor de botones de descarga */
+#individual-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;            /* separación horizontal/vertical entre botones */
+  margin-bottom: 14px; /* espacio hacia el panel XYZ */
+}
+
+/* Asegurar separación por si el XYZ tiene otro contenedor */
+#xyz-display, #xyz-panel, #xyz-output, #molecule-xyz, pre.xyz, textarea.xyz {
+  margin-top: 6px;     /* pequeño colchón extra sobre el XYZ */
 }
 
 /* === Nuevas pestañas de formato mejoradas estilo Chrome === */
@@ -1189,6 +1267,42 @@ footer {
     transform: scale(1.05);
 }
 
+/* Ocultar el triángulo negro en datalist (solo funciona en algunos navegadores) */
+input::-webkit-calendar-picker-indicator {
+    display: none !important;
+    -webkit-appearance: none;
+}
+
+input[list]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.select-wrapper select {
+  appearance: none;
+  background-color: #f0fdfc;     /* fondo suave */
+  color: #0a0a1a;                /* texto oscuro */
+  border: none;
+  padding: 0.65rem;
+  border-radius: 60px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.select-wrapper select:hover,
+.select-wrapper select:focus {
+  background-color: #dcf5f1;     /* fondo al pasar el mouse */
+  color: #032c2c;
+  outline: none;
+  box-shadow: 0 0 8px rgba(0, 128, 128, 0.4);
+}
+
+.select-wrapper select option {
+  background-color: #f0fdfc;
+  color: #0a0a1a;
+  font-weight: 500;
+}
 
 @media screen and (max-width: 768px) {
   .navbar-container {
@@ -1230,6 +1344,19 @@ footer {
     margin-left: 0 !important;
   }
 
+  #smiles-file {
+    width: 80%;
+    min-width: 80%;
+    height: 40px;
+    margin-left: 0px;
+    margin-top: -10px;
+    box-sizing: border-box;
+   }
+
+   #single-input {
+    margin-top: -10px;
+   }
+
   /* Reordenar: ejemplo va arriba del input en móvil */
   .file-mobile-wrapper {
     display: flex;
@@ -1247,15 +1374,6 @@ footer {
     flex-direction: column;
     gap: 0.6rem;
     margin-top: -0.7rem;
-  }
-
-  /* Input general */
-  .input-group input[type="text"],
-  .input-group input[type="file"],
-  .input-group select {
-    font-size: 1rem;
-    padding: 0.6em;
-    border-radius: 12px;
   }
 
   /* Botón general */
@@ -1337,3 +1455,4 @@ footer {
     left: 50%;
   }
 }
+
