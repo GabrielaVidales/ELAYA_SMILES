@@ -97,5 +97,17 @@ def draw_2d():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/files/<filename>')
+def serve_file(filename):
+    directories = [
+        "output_xyz_rdkit",
+        "output_xyz_openbabel"
+    ]
+    for directory in directories:
+        file_path = os.path.join(directory, filename)
+        if os.path.exists(file_path):
+            return send_file(file_path, as_attachment=True)
+    return "Archivo no encontrado", 404
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
