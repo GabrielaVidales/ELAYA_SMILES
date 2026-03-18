@@ -1,97 +1,72 @@
-# 🌌 ELAYA-SMILES  
-### Molecular Intelligence from Text to Structure
+# ELAYA SMILES
+## Molecular Conversion and 3D Structural Analysis Platform
 
-<p align="center">
-  <img src="pictures/Logo_Elaya.jpg" width="180" alt="ELAYA Logo"/>
-</p>
+![Logo Elaya](pictures/Logo_Elaya.jpg)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python"/>
-  <img src="https://img.shields.io/badge/RDKit-Chemoinformatics-green?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/OpenBabel-Conversion-orange?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/ANI-Neural_Potentials-purple?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Status-Active-success?style=for-the-badge"/>
-</p>
-
-<p align="center">
-  <b>Transform SMILES into accurate 3D molecular structures with AI-enhanced conformational exploration.</b>
-</p>
+**ELAYA SMILES** is a web-based platform designed for the conversion of linear molecular representations (SMILES) into optimized three-dimensional structures, enabling visualization and structural analysis within a unified environment.
 
 ---
 
-## ✨ Overview
+## 🌐 Purpose and Relevance
 
-**ELAYA-SMILES** is a computational framework designed to convert **SMILES strings** into realistic **3D molecular geometries**, enabling downstream applications in:
+SMILES (Simplified Molecular Input Line Entry System) provides a compact and efficient way to represent molecular structures as text. However, many computational chemistry applications—such as molecular simulations, docking, and property prediction—require accurate 3D geometries.
 
-- 🧬 Molecular Dynamics  
-- ⚛️ Quantum Chemistry  
-- 🧪 Drug Discovery  
-- 🤖 Machine Learning on molecular properties  
-
-It integrates classical cheminformatics with modern **AI-based potentials** to efficiently explore conformational space.
+**ELAYA SMILES facilitates this transformation** by integrating multiple cheminformatics tools to generate reliable 3D conformations, supporting both research and educational workflows in molecular modeling.
 
 ---
 
-## 🧠 Key Features
+## 🚀 Core Features
 
-🔹 **SMILES → 3D Conversion**  
-Generate reliable 3D conformations from text-based molecular representations.
-
-🔹 **Advanced Conformer Search (GLOMOS)**  
-Genetic algorithm for exploring low-energy conformational landscapes.
-
-🔹 **AI-Powered Optimization (ANI)**  
-Near quantum-level accuracy for organic molecules at a fraction of the computational cost.
-
-🔹 **Multiple Backends**
-- RDKit (ETKDGv3)
-- OpenBabel
-- Graph-based approximations (NetworkX)
-
-🔹 **Reproducibility**
-- Deterministic workflows using fixed random seeds
+- Conversion of SMILES strings into 3D molecular structures using:
+  - RDKit (ETKDGv3)
+  - OpenBabel
+  - NetworkX (topological approximation)
+- Interactive 3D molecular visualization
+- Export of generated structures in `.xyz` format
+- User-friendly web interface for rapid molecular exploration
 
 ---
 
-## ⚙️ Methodology
+## ⚗️ Scientific Highlights
 
-### 🧪 1. Molecular Parsing
-- SMILES → Molecular graph  
-- Hydrogen completion  
+- **Multi-method SMILES → 3D conversion**  
+  Combines established cheminformatics approaches for flexible structure generation.
 
-### 🔺 2. Initial 3D Embedding
-- **ETKDGv3** (distance geometry + torsional knowledge)
+- **Distance geometry with torsional knowledge (ETKDGv3)**  
+  Produces realistic conformations using experimental and knowledge-based constraints.
 
-### 🔄 3. Conformational Exploration
-- Genetic algorithm (GLOMOS)
-- Sampling diverse conformers
+- **Force field-based optimization**  
+  Geometry refinement using classical methods such as UFF and MMFF94.
 
-### ⚛️ 4. Energy Minimization
-- Classical force fields:
-  - UFF  
-  - MMFF94  
-
-### 🤖 5. AI Refinement
-- ANI neural network potentials  
-- Fast approximation of quantum energies  
+- **Graph-based structural approximation**  
+  NetworkX provides topology-based layouts useful for visualization, though not physically accurate.
 
 ---
 
 ## 🧬 Scientific Background
 
-### 🔹 Conformers
-Molecules exist as ensembles of interconverting 3D structures due to rotation around single bonds.
+### 🔹 Conformational Flexibility
+Molecules exist as ensembles of interconverting conformers due to rotation around single bonds. Identifying low-energy conformations is essential for understanding molecular behavior.
 
-### 🔹 Force Fields
-Approximate molecular energy using parameterized functions (bonded + non-bonded interactions).
-
-### 🔹 ANI Potentials
-Neural networks trained on quantum data to predict molecular energies efficiently.
+### 🔹 Molecular Geometry
+Accurate 3D structures are critical for:
+- Molecular dynamics simulations  
+- Structure-based drug design  
+- Quantum-chemical calculations  
 
 ---
 
-## 👩‍🔬 Desarrollo
+## 🧰 Technologies
 
-Este sistema ha sido desarrollado por **Gabriela Vidales** como parte de un esfuerzo por integrar herramientas de código abierto con flujos de trabajo reproducibles para la representación y análisis molecular tridimensional.
+- **Backend:** Flask, Flask-CORS  
+- **Cheminformatics:** RDKit, OpenBabel  
+- **Visualization:** Py3Dmol  
+- **Frontend:** HTML5, CSS3, JavaScript  
 
-Se agradece especialmente el apoyo del Dr. Filiberto Ortiz Chi y el Dr. Luis Ortiz por su valiosa orientación durante el desarrollo de esta herramienta.
+---
+
+## 👩‍🔬 Development
+
+Developed by **Gabriela Yasmin Vidales Ayala** as part of an initiative to bridge cheminformatics tools with accessible, reproducible workflows for molecular modeling.
+
+Special thanks to **Dr. Filiberto Ortiz Chi** and **Dr. Luis Ortiz** for their scientific guidance and support.
