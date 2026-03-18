@@ -4,18 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="pictures/Logo_Elaya.jpg">
-    <title>Elya Smiles - Molecular Viewer</title>
+    <title>Elaya Smiles - Molecular Viewer</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.1.0/3Dmol-min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>    
-    <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
-    integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"></script>
-    <script src="/vendor/jszip/3.10.1/jszip.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
 <body>
@@ -24,9 +19,9 @@
     <nav class="navbar">
         <div class="navbar-container">
             <img src="pictures/Logo_Elaya.jpg" alt="Elaya Logo" class="navbar-logo">
-            <a href="#home">Home</a>
-            <a href="#background">Background</a>
-            <a href="#simulator" target="_self">Simulator</a>
+            <a href="#explore" id="nav-explore">Explore</a>
+            <a href="#about" id="nav-about">About</a>
+            <a href="#contact" id="nav-contact">Contact</a>
             <div class="code-links">
                 <a href="https://github.com/GabrielaVidales/Elaya_SMILES/blob/main/elaya_smiles.py" target="_blank" class="view-code-icon"> View code
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#0f6975">
@@ -34,7 +29,6 @@
                     </svg>
                 </a>
             </div> 
-            
         </div>
     </nav>
 
@@ -49,7 +43,7 @@
             <div class="input-row">
                 <div class="input-group">
                     <div class="input-group-iz">
-                        <label for="input-method">① Choose Input Type</label>
+                        <label for="input-method">① Input Type</label>
                         <div class="input-method">
                             <label>
                                 <input type="radio" name="input-method" value="single" checked>
@@ -67,14 +61,20 @@
                     <div class="input-overlay-wrapper">
                         <input type="text" id="smiles" list="smiles-history" placeholder="Enter your SMILES string eg: C1=CC2=C(C=C1O)NC=C2CCN">
                         <div id="smiles-examples" class="smiles-examples">
-                            <small><b>No SMILES in mind? Try one of these:</b>
-                                <span> </span>
-                                <span data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine,</span> 
-                                <span data-smiles="CC(C)C[C@H](NC(=O)[C@H](CC1=CC=C(O)C=C1)NC(=O)[C@H](CCCNC(=N)N)NC(=O)[C@H](CS)NC(=O)[C@H](NC(=O)[C@H](CC(C)C)NC(=O)[C@H](CO)N)C(=O)N)C(=O)N">Oxytocin,</span> 
-                                <span data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@H]1O">Glucose,</span>
-                                <span data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin,</span>
-                                <span data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</span>
-                            </small>
+                        <small>
+                            <b>No SMILES in mind? Try one of these:</b>
+                            <span data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine,</span>
+                            <span data-smiles="CC(C)C[C@H](NC(=O)[C@H](CC1=CC=C(O)C=C1)NC(=O)[C@H](CCCNC(=N)N)NC(=O)[C@H](CS)NC(=O)[C@H](NC(=O)[C@H](CC(C)C)NC(=O)[C@H](CO)N)C(=O)N)C(=O)N">Oxytocin,</span>
+                            <span data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@H]1O">Glucose,</span>
+                            <span data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin,</span>
+                            <span data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</span>
+                        </small>
+                        <small class="formula-link">
+                            <b>Have a formula but no SMILE? Click here: </b>
+                            <span>
+                            <a href="https://smilx-isogenerator.streamlit.app/" target="_blank">SMILX-isogenerator</a>
+                            </span>
+                        </small>
                         </div>
                     </div>
                     <datalist id="smiles-history"></datalist>
@@ -101,7 +101,7 @@
             <div class="method-controls">
                 <div class="input-group">
                     <label for="method">
-                        ② Select 3D Construction Method
+                        ② 3D Construction Method
                         <span class="info-icon" 
                             data-tooltip-id="tooltip-method" 
                             data-url="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System">🛈</span>
@@ -109,7 +109,7 @@
                             Algorithm used to convert a SMILES string into a 3D structure.<br><br>
                             <strong>● RDKit:</strong> Generates 3D molecular structures using distance geometry.<br>
                             <strong>● OpenBabel:</strong> Builds 3D from template-based methods and force fields.<br>
-                            <strong>● NetworkX:</strong> Estimates 3D-like coordinates by applying graph-based spring layout to molecular connectivity.<br>
+                            <strong>● NetworkX:</strong> Generates approximate 3D-like coordinates using a graph-based spring layout applied to molecular connectivity. Useful for topological visualization, but not intended to produce physically accurate molecular geometries.<br>
                             <!--<strong>● Auto3D:</strong> Deep learning-based geometry generation...-->
                         </div>
                     </label>
@@ -123,7 +123,7 @@
 
                 <div class="input-group">
                     <label for="force-field">
-                        ③ <i>(Optional)</i> Choose a Force Field for structure optimization
+                        ③ Force Field optimization (Optional)
                         <span class="info-icon" 
                             data-tooltip-id="tooltip-forcefield"
                             data-url="https://en.wikipedia.org/wiki/Force_field_(chemistry)">🛈</span>
@@ -144,11 +144,69 @@
                     </select>
                 </div>
 
+                <div class="input-group">
+                    <label for="post-optimization">
+                        ④ Post-optimization (Advanced)
+                        <span class="info-icon"
+                            data-tooltip-id="tooltip-postopt"
+                            data-url="https://github.com/GabrielaVidales/Elaya_SMILES">🛈</span>
+                        <div id="tooltip-postopt" class="custom-tooltip">
+                            Optional post-processing step applied after the initial 3D structure is generated.<br><br>
+                            <strong>● GLOMOS (ANI conformers):</strong> Genetic-algorithm-based conformational search powered by TorchANI neural network potentials. Explores the rotational space of the molecule to find low-energy conformers. Parameters such as population size, number of generations, matings, mutants, and energy cutoff can be configured. Outputs the best conformer ranked by ANI energy (kcal/mol).<br><br>
+                            Requires a working TorchANI environment. Streaming progress is shown in real time.
+                        </div>
+                    </label>
+                    <select id="post-optimization">
+                        <option value="">None</option>
+                        <option value="glomos">GLOMOS (ANI conformers)</option>
+                    </select>
+                </div>
+
                 <button id="convert-molecules">
                     <span class="button-label"><b>Convert structure</b></span>
                     <div class="water-loader" style="display: none;"></div>
                     <span class="magic-sparkle"></span>
                 </button>
+            </div>
+
+            <div id="glomos-panel" class="advanced-panel" style="display:none;">
+                <div class="glomos-title">
+                    GLOMOS Conformational Search
+                </div>
+                <div class="glomos-grid">
+                    <div class="glomos-item">
+                    <span>Initial pop.</span>
+                    <input type="number" id="glomos-initpop" value="4"  min="1">
+                    </div>
+
+                    <div class="glomos-item">
+                    <span>Matings</span>
+                    <input type="number" id="glomos-matings" value="2" min="1">
+                    </div>
+
+                    <div class="glomos-item">
+                    <span>Mutants</span>
+                    <input type="number" id="glomos-mutants" value="2" min="0">
+                    </div>
+
+                    <div class="glomos-item">
+                    <span>Generations</span>
+                    <input type="number" id="glomos-generations" value="3">
+                    </div>
+
+                    <div class="glomos-item">
+                    <span>Ecut (kcal/mol)</span>
+                    <input type="number" step="0.1" id="glomos-energy" value="4.0">
+                    </div>
+
+                    <div class="glomos-item">
+                    <span>ANI</span>
+                    <select id="glomos-ani">
+                        <option value="ANI1ccx">ANI1ccx</option>
+                        <option value="ANI2x">ANI2x</option>
+                    </select>
+                    </div>
+                </div>
             </div>
 
             <div class="conversion-row">
@@ -261,141 +319,580 @@
             <div id="comparison-results"></div>
         </section>-->
 
-        <section id="home-info" style="display: none;">
-            <div id="home-top-anchor"></div>
-            <div style="text-align: center; background-color: #000; padding: 2rem 1rem 0.5rem; margin: 0rem">
-                <h2 class="intro-heading">Welcome to <strong>ELAYA SMILES</strong></h2>
-                <p class="intro-subtitle">"Energy-minimized Linear-to-structure Atom Yielding Algorithm"</p>
-                <img src="pictures/Logo_Elaya.jpg" alt="ELAYA Logo" class="logo-img" />
+        <!-- ═══════════════════════════════════════════════════
+        <!-- ═══════════════════════════════════════════════════
+             ABOUT — redesigned landing page
+        ════════════════════════════════════════════════════ -->
+        <section id="about-section" style="display: none;">
+
+            <!-- ── HERO ─────────────────────────────────────── -->
+            <div class="lp-hero">
+                <div class="lp-hero-bg"></div>
+                <div class="lp-hero-content">
+                    <h1 class="lp-hero-title">Welcome to <span class="lp-hero-glow">ELAYA SMILES</span></h1>
+                    <p class="lp-hero-sub">Energy-minimized Linear-to-structure Atom Yielding Algorithm</p>
+                    <p class="lp-hero-desc">
+                        A web platform that converts SMILES notation into optimized 
+                        3D molecular geometries — interactively and for free.
+                    </p>
+                    <div class="lp-hero-actions">
+                        <button class="lp-cta-primary" onclick="document.querySelector('a[href=\'#explore\']').click()">
+                            Open the explorer
+                        </button>
+                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" class="lp-cta-ghost">
+                            View on GitHub
+                        </a>
+                    </div>
+                </div>
+                <div class="lp-hero-visual">
+                    <div class="lp-logo-ring">
+                        <img src="pictures/Logo_Elaya.jpg" alt="ELAYA Logo" class="lp-hero-logo"/>
+                        <svg class="lp-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <radialGradient id="rg1" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#3cb49a" stop-opacity="0.15"/>
+                                    <stop offset="100%" stop-color="#3cb49a" stop-opacity="0"/>
+                                </radialGradient>
+                            </defs>
+                            <circle cx="110" cy="110" r="105" fill="url(#rg1)"/>
+                            <circle cx="110" cy="110" r="98" fill="none" stroke="#3cb49a" stroke-width="0.8" stroke-dasharray="4,6" opacity="0.5">
+                                <animateTransform attributeName="transform" type="rotate" from="0 110 110" to="360 110 110" dur="20s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="110" cy="110" r="84" fill="none" stroke="#98ebc4" stroke-width="0.5" stroke-dasharray="2,8" opacity="0.3">
+                                <animateTransform attributeName="transform" type="rotate" from="360 110 110" to="0 110 110" dur="14s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="110" cy="12" r="4" fill="#3cb49a" opacity="0.8">
+                                <animateTransform attributeName="transform" type="rotate" from="0 110 110" to="360 110 110" dur="20s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="110" cy="208" r="3" fill="#98ebc4" opacity="0.6">
+                                <animateTransform attributeName="transform" type="rotate" from="180 110 110" to="540 110 110" dur="20s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="110" cy="26" r="3" fill="#3cb49a" opacity="0.5">
+                                <animateTransform attributeName="transform" type="rotate" from="90 110 110" to="450 110 110" dur="14s" repeatCount="indefinite"/>
+                            </circle>
+                        </svg>
+                    </div>
+                </div>
             </div>
 
-            <div class="card fade-in-section">
-                <h3>🌐 Scientific Motivation and Scope</h3>
-                <p>
-                <strong>ELAYA</strong> is a scientific web platform for converting 
-                <a href="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System" target="_blank">SMILES</a> 
-                into optimized 3D structures using methods such as 
-                <a href="https://www.rdkit.org/" target="_blank">RDKit</a>, 
-                <a href="http://openbabel.org/" target="_blank">OpenBabel</a>, and 
-                <a href="https://github.com/ShanghaiTech-IntelligentGroup/Auto3D" target="_blank">Auto3D</a>.
-                </p>
-                <p>
-                It enables interactive visualization, geometric optimization, and similarity analysis via 
-                <a href="https://en.wikipedia.org/wiki/Tanimoto_coefficient" target="_blank">Tanimoto coefficient</a>, 
-                <a href="https://singroup.github.io/dscribe/latest/tutorials/descriptors/soap.html" target="_blank">SOAP</a>, and 
-                <a href="https://www.nature.com/articles/nmat3568" target="_blank">Valle-Oganov metric</a>.
-                </p>
+            <!-- ── WHAT IS SMILES ── -->
+            <div class="lp-split lp-split--light scroll-reveal">
+                <div class="lp-split-text">
+                    <span class="lp-section-tag">The notation</span>
+                    <h2>What is a SMILES string?</h2>
+                    <p>
+                        <a href="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System" target="_blank">SMILES</a>
+                        — <em>Simplified Molecular Input Line Entry System</em> — is a compact text-based notation for encoding molecular structure. Each character encodes atoms, bonds, branches, rings, and stereochemistry.
+                    </p>
+                    <p>
+                        It is the standard exchange format in databases such as 
+                        <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank">PubChem</a>, 
+                        <a href="https://www.ebi.ac.uk/chembl/" target="_blank">ChEMBL</a>, and 
+                        <a href="https://zinc.docking.org/" target="_blank">ZINC</a> — 
+                        the starting point for any QM/MM or docking pipeline.
+                    </p>
+
+                    <!-- Molecule examples table -->
+                    <div class="ab-table-wrap">
+                        <table class="ab-table">
+                            <thead><tr><th>Molecule</th><th>SMILES</th><th>Notes</th></tr></thead>
+                            <tbody>
+                                <tr><td>Benzene</td><td><code>c1ccccc1</code></td><td>Aromatic ring</td></tr>
+                                <tr><td>Dopamine</td><td><code>C1=CC(=C(C=C1CCN)O)O</code></td><td>Catecholamine</td></tr>
+                                <tr><td>Serotonin</td><td><code>C1=CC2=C(C=C1O)NC=C2CCN</code></td><td>Indole scaffold</td></tr>
+                                <tr><td>Glucose</td><td><code>OC[C@H]1O[C@@H](O)…</code></td><td>Stereocenters (@)</td></tr>
+                                <tr><td>Oxytocin</td><td><code>CC(C)C[C@H](NC(=O)…</code></td><td>Nonapeptide</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="lp-split-visual lp-split-visual--code">
+                    <!-- Encoding rules panel -->
+                    <div class="ab-rules-panel">
+                        <div class="ab-rules-title">Encoding Rules</div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>C / c</code></div><span>Aliphatic / aromatic carbon</span></div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>= #</code></div><span>Double / triple bond</span></div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>( )</code></div><span>Branch point</span></div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>1…9</code></div><span>Ring closure number</span></div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>@ @@</code></div><span>Tetrahedral stereo (R/S)</span></div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>[NH3+]</code></div><span>Charged atom in brackets</span></div>
+                        <div class="ab-rule"><div class="ab-rule-sym"><code>/ \</code></div><span>Double-bond geometry (E/Z)</span></div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card fade-in-section">
-                <h3>🚀 Core Functionalities</h3>
-                <ul>
-                <li>SMILES → 3D conversion using multiple algorithms</li>
-                <li>Force field selection: 
-                    <a href="https://en.wikipedia.org/wiki/Universal_Force_Field" target="_blank">UFF</a>, 
-                    <a href="https://en.wikipedia.org/wiki/MMFF94" target="_blank">MMFF94</a>, 
-                    GAFF, CHARMM</li>
-                <li>Structural similarity scoring and 3D comparison</li>
-                <li>Interactive 3D rendering with 
-                    <a href="https://3dmol.csb.pitt.edu/" target="_blank">Py3Dmol</a></li>
-                <li>Export to <code>.xyz</code> format</li>
-                </ul>
+            <!-- ── WHY 3D MATTERS ── -->
+            <div class="lp-split lp-split--dark lp-split--reverse scroll-reveal scroll-reveal--right">
+                <div class="lp-split-text">
+                    <span class="lp-section-tag">The science</span>
+                    <h2>Why does 3D geometry matter?</h2>
+                    <p>
+                        A SMILES string describes how atoms are connected — but chemistry happens in three dimensions.
+                        Biological activity, receptor binding, spectroscopic signatures, and reaction pathways are all 
+                        governed by the precise spatial arrangement of atoms.
+                    </p>
+                    <p>
+                        Generating an accurate 3D structure is often a critical first step before molecular dynamics 
+                        simulations, docking studies, quantum-chemical calculations, or certain machine-learning models 
+                        that rely on structural molecular features.
+                    </p>
+                </div>
+                <div class="lp-split-visual">
+                    <svg viewBox="0 0 240 180" xmlns="http://www.w3.org/2000/svg" class="lp-3d-svg">
+                        <defs>
+                            <filter id="glow2">
+                                <feGaussianBlur stdDeviation="2.5" result="b"/>
+                                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+                        <line x1="20" y1="160" x2="220" y2="160" stroke="#1e3a52" stroke-width="1"/>
+                        <line x1="20" y1="160" x2="60"  y2="120" stroke="#1e3a52" stroke-width="1"/>
+                        <line x1="220" y1="160" x2="220" y2="60" stroke="#1e3a52" stroke-width="1"/>
+                        <text x="215" y="175" fill="#3a5a70" font-size="9" font-family="monospace">x</text>
+                        <text x="55"  y="115" fill="#3a5a70" font-size="9" font-family="monospace">y</text>
+                        <text x="224" y="55"  fill="#3a5a70" font-size="9" font-family="monospace">z</text>
+                        <circle cx="120" cy="80"  r="10" fill="#0f6975" stroke="#3cb49a" stroke-width="1.5" filter="url(#glow2)"/>
+                        <circle cx="155" cy="105" r="8"  fill="#0f6975" stroke="#3cb49a" stroke-width="1.5" filter="url(#glow2)"/>
+                        <circle cx="85"  cy="100" r="8"  fill="#0f6975" stroke="#3cb49a" stroke-width="1.5" filter="url(#glow2)"/>
+                        <circle cx="140" cy="135" r="6"  fill="#0a2a40" stroke="#98ebc4" stroke-width="1.2"/>
+                        <circle cx="100" cy="130" r="6"  fill="#0a2a40" stroke="#98ebc4" stroke-width="1.2"/>
+                        <circle cx="120" cy="50"  r="6"  fill="#0a2a40" stroke="#98ebc4" stroke-width="1.2"/>
+                        <circle cx="168" cy="80"  r="5"  fill="#0a2a40" stroke="#f0b429" stroke-width="1.2"/>
+                        <line x1="120" y1="80"  x2="155" y2="105" stroke="#3cb49a" stroke-width="1.5" opacity="0.7"/>
+                        <line x1="120" y1="80"  x2="85"  y2="100" stroke="#3cb49a" stroke-width="1.5" opacity="0.7"/>
+                        <line x1="155" y1="105" x2="140" y2="135" stroke="#98ebc4" stroke-width="1.2" opacity="0.6"/>
+                        <line x1="85"  y1="100" x2="100" y2="130" stroke="#98ebc4" stroke-width="1.2" opacity="0.6"/>
+                        <line x1="120" y1="80"  x2="120" y2="50"  stroke="#98ebc4" stroke-width="1.2" opacity="0.6"/>
+                        <line x1="155" y1="105" x2="168" y2="80"  stroke="#f0b429" stroke-width="1.2" opacity="0.6"/>
+                        <text x="116" y="83"  fill="#e0eaf5" font-size="7" font-family="monospace">C</text>
+                        <text x="151" y="108" fill="#e0eaf5" font-size="7" font-family="monospace">C</text>
+                        <text x="81"  y="103" fill="#e0eaf5" font-size="7" font-family="monospace">N</text>
+                        <text x="164" y="83"  fill="#f0b429" font-size="7" font-family="monospace">O</text>
+                    </svg>
+                </div>
             </div>
 
-            <div class="card fade-in-section">
-                <h3>🧰 Technologies</h3>
-                <ul>
-                <li><strong>Backend:</strong> 
-                    <a href="https://flask.palletsprojects.com/" target="_blank">Flask</a>, 
-                    <a href="https://www.python.org/" target="_blank">Python</a></li>
-                <li><strong>Frontend:</strong> HTML, CSS, JavaScript</li>
-                <li><strong>Libraries:</strong> 
-                    <a href="https://www.rdkit.org/" target="_blank">RDKit</a>, 
-                    <a href="http://openbabel.org/" target="_blank">OpenBabel</a>, 
-                    <a href="https://singroup.github.io/dscribe/" target="_blank">dscribe</a>, 
-                    <a href="https://github.com/ShanghaiTech-IntelligentGroup/Auto3D" target="_blank">Auto3D</a></li>
-                <li><strong>Visualization:</strong> 
-                    <a href="https://3dmol.csb.pitt.edu/" target="_blank">Py3Dmol</a>, 
-                    <a href="https://www.chartjs.org/" target="_blank">Chart.js</a></li>
-                </ul>
+            <!-- ── ALGORITHMS ── -->
+            <div class="lp-split lp-split--light scroll-reveal">
+                <div class="lp-split-text">
+                    <span class="lp-section-tag">Conversion methods</span>
+                    <h2>Three algorithms, one interface</h2>
+                    <p>ELAYA offers three complementary 3D construction methods, each suited to different use cases.</p>
+                    <div class="lp-method-list">
+                        <div class="lp-method-item">
+                            <div class="lp-method-tag">RDKit</div>
+                            <p>Distance-geometry embedding (ETKDGv3) followed by force-field minimization. The most reliable option for standard organic molecules.</p>
+                        </div>
+                        <div class="lp-method-item">
+                            <div class="lp-method-tag">OpenBabel</div>
+                            <p>Template-based coordinate builder. Offers broader chemical coverage than many toolkits, though complex systems such as organometallics may still require specialized methods for accurate geometries.</p>
+                        </div>
+                        <div class="lp-method-item">
+                            <div class="lp-method-tag">NetworkX</div>
+                            <p>Graph-theoretic spring layout. Fast and lightweight, useful for topological exploration.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="lp-split-visual lp-split-visual--methods">
+                    <div class="lp-method-visual">
+                        <div class="lp-method-row">
+                            <div class="lp-method-dot lp-method-dot--rdkit"></div>
+                            <div class="lp-method-bar-wrap">
+                                <div class="lp-method-bar-label">RDKit</div>
+                                <div class="lp-method-bar"><div class="lp-method-fill" style="width:91%"></div></div>
+                                <span class="lp-method-note">Accuracy</span>
+                            </div>
+                        </div>
+                        <div class="lp-method-row">
+                            <div class="lp-method-dot lp-method-dot--ob"></div>
+                            <div class="lp-method-bar-wrap">
+                                <div class="lp-method-bar-label">OpenBabel</div>
+                                <div class="lp-method-bar"><div class="lp-method-fill lp-method-fill--ob" style="width:78%"></div></div>
+                                <span class="lp-method-note">Coverage</span>
+                            </div>
+                        </div>
+                        <div class="lp-method-row">
+                            <div class="lp-method-dot lp-method-dot--nx"></div>
+                            <div class="lp-method-bar-wrap">
+                                <div class="lp-method-bar-label">NetworkX</div>
+                                <div class="lp-method-bar"><div class="lp-method-fill lp-method-fill--nx" style="width:62%"></div></div>
+                                <span class="lp-method-note">Speed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card fade-in-section">
-                <h3>👩‍🔬 Authorship</h3>
-                <p>
-                Developed by <strong>Gabriela Vidales</strong> with scientific guidance from 
-                Dr. Filiberto Ortiz Chi and Dr. Luis Ortiz. ELAYA is a research-grade tool that 
-                fosters open and reproducible science.
-                </p>
+            <!-- ── RDKit PIPELINE (full-width detail block) ── -->
+            <div class="lp-detail-band lp-detail-band--dark scroll-reveal">
+                <div class="ab-detail-header">
+                    <span class="lp-section-tag">Deep dive</span>
+                    <h3>RDKit — ETKDGv3 pipeline</h3>
+                    <p class="ab-detail-sub">The most precise method implemented in ELAYA</p>
+                </div>
+                <div class="ab-pipeline">
+                    <div class="ab-pipe-step">
+                        <div class="ab-pipe-num">1</div>
+                        <div class="ab-pipe-body">
+                            <strong>SMILES parsing</strong>
+                            <code>Chem.MolFromSmiles(smiles)</code>
+                            <p>Builds the molecular graph: nodes = atoms, edges = bonds. Validates SMILES syntax.</p>
+                        </div>
+                    </div>
+                    <div class="ab-pipe-step">
+                        <div class="ab-pipe-num">2</div>
+                        <div class="ab-pipe-body">
+                            <strong>Explicit hydrogens</strong>
+                            <code>Chem.AddHs(mol)</code>
+                            <p>Adds all hydrogens explicitly — required for correct 3D geometry.</p>
+                        </div>
+                    </div>
+                    <div class="ab-pipe-step">
+                        <div class="ab-pipe-num">3</div>
+                        <div class="ab-pipe-body">
+                            <strong>3D seed (ETKDGv3)</strong>
+                            <code>AllChem.EmbedMolecule(mol, ETKDGv3())</code>
+                            <p>Experimental Torsion Knowledge Distance Geometry v3 (ETKDGv3). Incorporates knowledge-based torsional preferences derived from experimental and computational data to generate realistic 3D conformations. A fixed random seed (665) is used for reproducibility.</p>                        </div>
+                    </div>
+                    <div class="ab-pipe-step">
+                        <div class="ab-pipe-num">4</div>
+                        <div class="ab-pipe-body">
+                            <strong>FF optimization</strong>
+                            <code>UFFOptimizeMolecule / MMFFMinimize</code>
+                            <p>Minimizes energy with UFF or MMFF94 (max 2000 iterations). If MMFF94 fails, falls back to UFF automatically.</p>
+                        </div>
+                    </div>
+                    <div class="ab-pipe-step">
+                        <div class="ab-pipe-num">5</div>
+                        <div class="ab-pipe-body">
+                            <strong>Export</strong>
+                            <code>→ XYZ + MOL block</code>
+                            <p>Generates the XYZ file (N atoms, SMILES comment, coordinates) and a MOL block for the 3Dmol.js viewer.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- ── FORCE FIELDS ── -->
+            <div class="lp-split lp-split--dark lp-split--reverse scroll-reveal scroll-reveal--right">
+                <div class="lp-split-text">
+                    <span class="lp-section-tag">Energy minimization</span>
+                    <h2>Force field optimization</h2>
+                    <p>
+                        A set of mathematical equations and parameters that model forces between atoms: 
+                        bond stretching, angle bending, dihedral torsion, and non-covalent interactions 
+                        (van der Waals, electrostatics). Minimizing energy with these equations produces 
+                        more realistic 3D geometries than a bare embedding.
+                    </p>
+                    <div class="lp-ff-cards">
+                        <div class="lp-ff-card">
+                            <div class="lp-ff-name"><a href="https://en.wikipedia.org/wiki/Universal_Force_Field" target="_blank">UFF</a></div>
+                            <div class="lp-ff-full">Universal Force Field</div>
+                            <div class="ab-ff-compat"><span class="ab-compat-tag">RDKit</span><span class="ab-compat-tag">OpenBabel</span></div>
+                            <p>General — covers the entire periodic table. Based on atomic hybrid geometries.</p>
+                        </div>
+                        <div class="lp-ff-card">
+                            <div class="lp-ff-name"><a href="https://en.wikipedia.org/wiki/MMFF94" target="_blank">MMFF94</a></div>
+                            <div class="lp-ff-full">Merck Molecular Force Field</div>
+                            <div class="ab-ff-compat"><span class="ab-compat-tag">RDKit</span></div>
+                            <p>Parametrized for drug-like organic molecules. High precision in bond geometry and angles.</p>
+                        </div>
+                    </div>
+                    <div class="ab-ff-note">
+                        <strong>Fallback behavior:</strong> in OpenBabel, if the force field name is not found in the system, optimization is skipped and raw OBBuilder coordinates are used. In RDKit, if MMFF94 fails for a molecule, it automatically falls back to UFF.
+                    </div>
+                </div>
+                <div class="lp-split-visual">
+                    <svg viewBox="0 0 220 180" xmlns="http://www.w3.org/2000/svg" class="lp-energy-svg">
+                        <text x="10" y="15" fill="#5a7a95" font-size="9" font-family="monospace">Energy (kcal/mol)</text>
+                        <line x1="30" y1="20" x2="30"  y2="160" stroke="#1e3a52" stroke-width="1.2"/>
+                        <line x1="30" y1="160" x2="200" y2="160" stroke="#1e3a52" stroke-width="1.2"/>
+                        <path d="M 40,50 Q 70,140 110,125 Q 150,110 190,40" fill="none" stroke="#3cb49a" stroke-width="2.5" opacity="0.85"/>
+                        <line x1="110" y1="125" x2="110" y2="160" stroke="#f0b429" stroke-width="1" stroke-dasharray="3,3"/>
+                        <circle cx="110" cy="125" r="5" fill="#f0b429" opacity="0.9"/>
+                        <text x="98" y="155" fill="#f0b429" font-size="8" font-family="monospace">min</text>
+                        <text x="135" y="95" fill="#3cb49a" font-size="8" font-family="monospace">optimized</text>
+                        <text x="138" y="106" fill="#3cb49a" font-size="8" font-family="monospace">geometry</text>
+                        <line x1="27" y1="50"  x2="33" y2="50"  stroke="#1e3a52" stroke-width="1"/>
+                        <line x1="27" y1="90"  x2="33" y2="90"  stroke="#1e3a52" stroke-width="1"/>
+                        <line x1="27" y1="130" x2="33" y2="130" stroke="#1e3a52" stroke-width="1"/>
+                        <text x="180" y="174" fill="#5a7a95" font-size="9" font-family="monospace">geometry</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ── GLOMOS ── -->
+            <div class="lp-split lp-split--light scroll-reveal">
+                <div class="lp-split-text">
+                    <span class="lp-section-tag">Advanced search</span>
+                    <h2>Conformational search with GLOMOS</h2>
+                    <p>
+                        GLOMOS (Genetic-algorithm-based Local Optimization of MOlecular Structures) implements a heuristic genetic algorithm to explore the conformational space of rotatable bonds using ANI-based neural network potentials. It is integrated as a streaming endpoint (<code>/api/convert/stream</code>) with real-time Server-Sent Events (SSE) feedback.
+                    </p>
+                    <p>
+                        Most molecules exist as a family of interconverting 3D shapes — <strong>conformers</strong> — differing in the rotation of single bonds. GLOMOS aims to identify low-energy conformers with accuracy approaching quantum-chemical methods for many organic systems, while avoiding the high computational cost of DFT calculations.
+                    </p>
+
+                    <!-- Full parameter table from image 5 -->
+                    <div class="ab-table-wrap ab-table-wrap--dark" style="margin-top:1.1rem;">
+                        <table class="ab-table ab-table--dark">
+                            <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>initpop</code></td><td>4</td><td>Initial population size</td></tr>
+                                <tr><td><code>matings</code></td><td>2</td><td>Crossovers per generation</td></tr>
+                                <tr><td><code>mutants</code></td><td>2</td><td>Random mutations per generation</td></tr>
+                                <tr><td><code>generations</code></td><td>3</td><td>Total number of generations</td></tr>
+                                <tr><td><code>energy_cutoff</code></td><td>4.0</td><td>Energy window (kcal/mol)</td></tr>
+                                <tr><td><code>tol_similarity</code></td><td>0.95</td><td>Similarity tolerance between conformers</td></tr>
+                                <tr><td><code>cutoff_population</code></td><td>8</td><td>Max population size</td></tr>
+                                <tr><td><code>nof_repeats</code></td><td>2</td><td>Repeats before stopping</td></tr>
+                                <tr><td><code>nof_stagnant</code></td><td>3</td><td>Stagnant generations → stop</td></tr>
+                                <tr><td><code>ani_model</code></td><td>ANI1ccx</td><td>Neural potential (ANI1x / ANI1ccx / ANI2x)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="lp-split-visual lp-split-visual--glomos">
+                    <svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" class="lp-glomos-svg">
+                        <text x="8" y="30" fill="#5a7a95" font-size="8" font-family="monospace">Gen 0</text>
+                        <text x="8" y="95" fill="#5a7a95" font-size="8" font-family="monospace">Gen 1</text>
+                        <text x="8" y="160" fill="#5a7a95" font-size="8" font-family="monospace">Gen 2</text>
+                        <circle cx="65"  cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="90"  cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="115" cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="140" cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <line x1="65"  y1="34" x2="65"  y2="56" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="90"  y1="34" x2="90"  y2="56" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="115" y1="34" x2="115" y2="56" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="140" y1="34" x2="115" y2="56" stroke="#f0b429" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.7"/>
+                        <text x="118" y="50" fill="#f0b429" font-size="7" font-family="monospace">mating</text>
+                        <circle cx="65"  cy="90" r="9"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="90"  cy="90" r="9"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="115" cy="90" r="10" fill="#0a2a3a" stroke="#f0b429" stroke-width="2"/>
+                        <circle cx="140" cy="90" r="7"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.2" opacity="0.5"/>
+                        <text x="106" y="108" fill="#f0b429" font-size="7" font-family="monospace">best</text>
+                        <line x1="65"  y1="99" x2="65"  y2="121" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="90"  y1="99" x2="90"  y2="121" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="115" y1="100" x2="115" y2="121" stroke="#f0b429" stroke-width="1.5" stroke-dasharray="2,2"/>
+                        <circle cx="65"  cy="155" r="7"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.2" opacity="0.5"/>
+                        <circle cx="90"  cy="155" r="9"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="115" cy="155" r="11" fill="#0a2a3a" stroke="#3cb49a" stroke-width="2.5"/>
+                        <text x="74" y="185" fill="#3cb49a" font-size="8" font-family="monospace">lowest energy conformer</text>
+                        <line x1="115" y1="166" x2="115" y2="177" stroke="#3cb49a" stroke-width="1.5"/>
+                        <circle cx="115" cy="195" r="12" fill="#0a2a3a" stroke="#3cb49a" stroke-width="2"/>
+                        <text x="111" y="198" fill="#3cb49a" font-size="9" font-weight="bold" font-family="monospace">E</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ── GLOMOS GA PIPELINE + SSE (full-width) ── -->
+            <div class="lp-detail-band lp-detail-band--teal scroll-reveal">
+                <div class="ab-detail-header">
+                    <span class="lp-section-tag">Implementation</span>
+                    <h3>Genetic algorithm pipeline &amp; real-time streaming</h3>
+                </div>
+
+                <!-- GA Steps -->
+                <div class="ab-ga-steps">
+                    <div class="ab-ga-step">
+                        <div class="ab-ga-label">Initialize</div>
+                        <div class="ab-ga-desc">Seed 3D geometry from SMILES via RDKit</div>
+                    </div>
+                    <div class="ab-ga-arrow">→</div>
+                    <div class="ab-ga-step">
+                        <div class="ab-ga-label">Population</div>
+                        <div class="ab-ga-desc">Random rotamer variants sampled from torsion angles</div>
+                    </div>
+                    <div class="ab-ga-arrow">→</div>
+                    <div class="ab-ga-step">
+                        <div class="ab-ga-label">Selection</div>
+                        <div class="ab-ga-desc">ANI potential evaluates energy of each conformer</div>
+                    </div>
+                    <div class="ab-ga-arrow">→</div>
+                    <div class="ab-ga-step">
+                        <div class="ab-ga-label">Crossover</div>
+                        <div class="ab-ga-desc">Mating and mutation of best rotamer candidates</div>
+                    </div>
+                    <div class="ab-ga-arrow">→</div>
+                    <div class="ab-ga-step ab-ga-step--best">
+                        <div class="ab-ga-label">Convergence</div>
+                        <div class="ab-ga-desc">Best conformer delivered after N generations</div>
+                    </div>
+                </div>
+
+                <!-- SSE events -->
+                <div class="ab-sse-wrap">
+                    <div class="ab-sse-title">Real-time SSE events emitted to the browser</div>
+                    <div class="ab-sse-events">
+                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--start">start</span><span>Emits total number of generations</span></div>
+                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--log">log</span><span>Each stdout line from the subprocess</span></div>
+                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--progress">progress</span><span>Current generation, min energy, conformer name</span></div>
+                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--done">done</span><span>XYZ of the best conformer found</span></div>
+                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--error">error</span><span>Error message if the process fails</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── WORKFLOW ── -->
+            <div class="lp-workflow-band scroll-reveal">
+                <span class="lp-section-tag lp-section-tag--center">Workflow</span>
+                <h2 class="lp-workflow-title">From string to structure in five steps</h2>
+                <div class="lp-workflow-steps">
+                    <div class="lp-ws"><div class="lp-ws-num">01</div><div class="lp-ws-body"><strong>Input</strong><p>Enter a SMILES string or upload a batch file with one SMILES per line.</p></div></div>
+                    <div class="lp-ws-arrow">→</div>
+                    <div class="lp-ws"><div class="lp-ws-num">02</div><div class="lp-ws-body"><strong>Configure</strong><p>Select an algorithm (RDKit, OpenBabel, or NetworkX) and an optional force field.</p></div></div>
+                    <div class="lp-ws-arrow">→</div>
+                    <div class="lp-ws"><div class="lp-ws-num">03</div><div class="lp-ws-body"><strong>Optimize</strong><p>Optionally run GLOMOS to sample low-energy conformers with ANI potentials.</p></div></div>
+                    <div class="lp-ws-arrow">→</div>
+                    <div class="lp-ws"><div class="lp-ws-num">04</div><div class="lp-ws-body"><strong>Visualize</strong><p>Inspect the interactive 3D structure or switch to a 2D diagram at any time.</p></div></div>
+                    <div class="lp-ws-arrow">→</div>
+                    <div class="lp-ws"><div class="lp-ws-num">05</div><div class="lp-ws-body"><strong>Export</strong><p>Download in XYZ, SDF, MOL, or MOL2 format for use in external software.</p></div></div>
+                </div>
+                <div style="text-align:center;margin-top:2rem;">
+                    <img src="pictures/flowchart_elaya.png" alt="ELAYA workflow diagram" class="flowchart-img">
+                </div>
+            </div>
+
+            <!-- ── VIDEO (after workflow) ── -->
+            <div class="lp-video-wrap scroll-reveal">
+                <p class="lp-video-label">See it in action</p>
+                <video src="pictures/example.webm" class="lp-video" autoplay loop muted playsinline></video>
+                <p class="lp-video-caption">Live conversion of a SMILES string into a fully optimized 3D structure</p>
+            </div>
+
+            <!-- ── TECH & AUTHORSHIP ── -->
+            <div class="lp-bottom-grid">
+                <div class="card fade-in-section lp-bottom-card">
+                    <h3>Technologies</h3>
+                    <table class="lp-tech-table">
+                        <tr><td class="lp-tt-label">Backend</td><td><a href="https://flask.palletsprojects.com/" target="_blank">Flask</a> · <a href="https://www.python.org/" target="_blank">Python 3</a></td></tr>
+                        <tr><td class="lp-tt-label">Cheminformatics</td><td><a href="https://www.rdkit.org/" target="_blank">RDKit</a> · <a href="http://openbabel.org/" target="_blank">OpenBabel</a> · <a href="https://singroup.github.io/dscribe/" target="_blank">DScribe</a></td></tr>
+                        <tr><td class="lp-tt-label">Neural potentials</td><td><a href="https://github.com/isayev/ASE_ANI" target="_blank">ANI-1ccx / ANI-2x</a> via TorchANI</td></tr>
+                        <tr><td class="lp-tt-label">Visualization</td><td><a href="https://3dmol.csb.pitt.edu/" target="_blank">3Dmol.js</a> · <a href="https://www.chartjs.org/" target="_blank">Chart.js</a></td></tr>
+                        <tr><td class="lp-tt-label">Frontend</td><td>HTML5 · CSS3 · Vanilla JavaScript</td></tr>
+                    </table>
+                </div>
+                <div class="card fade-in-section lp-bottom-card">
+                    <h3>Project Authors</h3>
+                    <p>
+                        ELAYA SMILES was designed and developed by
+                        <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" class="author-linkedin-link">Gabriela Vidales</a>,
+                        with scientific guidance from <strong>MSc Luis Ortiz</strong>, <strong>PhD Filiberto Ortiz Chi</strong> and <strong>PhD Gabriel Merino</strong>.
+                    </p>
+                    <p style="margin-top:0.75rem;">
+                        <i>Passion for building tools that bring science closer to people. Fostering open and reproducible science.</i>
+                    </p>
+                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" class="about-github-btn" style="margin-top:1rem;">
+                        View on GitHub ↗
+                    </a>
+                </div>
+            </div>
+
         </section>
 
-        <section id="background-info" style="display: none;">
-            <div style="text-align: center; background-color: #000; padding: 2rem 1rem 0.5rem; margin: 0rem">
-                <h2 class="intro-heading">Understanding ELAYA SMILES</h2>
-                <video src="pictures/example.webm" class="example" autoplay loop muted playsinline></video>
+        <!-- ═══════════════════════════════════════════════════
+             CONTACT — redesigned
+        ════════════════════════════════════════════════════ -->
+        <section id="contact-section" style="display: none;">
+
+            <!-- Animated molecule background -->
+            <div class="contact-mol-bg">
+                <svg class="contact-mol-svg" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <filter id="cglow">
+                            <feGaussianBlur stdDeviation="4" result="b"/>
+                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                        <radialGradient id="cgrad" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#3cb49a" stop-opacity="0.08"/>
+                            <stop offset="100%" stop-color="#3cb49a" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="250" cy="200" r="180" fill="url(#cgrad)"/>
+                    <g>
+                        <polygon points="250,120 300,148 300,204 250,232 200,204 200,148"
+                                 fill="none" stroke="#3cb49a" stroke-width="1.2" opacity="0.2">
+                            <animateTransform attributeName="transform" type="rotate" from="0 250 176" to="360 250 176" dur="28s" repeatCount="indefinite"/>
+                        </polygon>
+                        <circle cx="250" cy="120" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
+                        <circle cx="300" cy="148" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
+                        <circle cx="300" cy="204" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
+                        <circle cx="250" cy="232" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
+                        <circle cx="200" cy="204" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
+                        <circle cx="200" cy="148" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
+                    </g>
+                    <!-- Outer slow-pulse ring -->
+                    <circle cx="250" cy="200" r="155" fill="none" stroke="#3cb49a" stroke-width="0.6" opacity="0.1">
+                        <animate attributeName="r" values="148;162;148" dur="6s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" values="0.12;0.03;0.12" dur="6s" repeatCount="indefinite"/>
+                    </circle>
+                    <!-- Second ring -->
+                    <circle cx="250" cy="200" r="110" fill="none" stroke="#98ebc4" stroke-width="0.4" stroke-dasharray="3,7" opacity="0.12">
+                        <animateTransform attributeName="transform" type="rotate" from="0 250 200" to="-360 250 200" dur="18s" repeatCount="indefinite"/>
+                    </circle>
+                </svg>
             </div>
 
-            <div class="card fade-in-section">
-                <h3>🧪 What are SMILES?</h3>
-                <p>
-                <a href="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System" target="_blank">
-                    SMILES</a> stands for <strong>Simplified Molecular Input Line Entry System</strong>. It is a way of describing a chemical compound using a simple text string. For example, benzene is written as <code>C1=CC=CC=C1</code>.
+            <!-- Header -->
+            <div class="contact-hero scroll-reveal">
+                <h2 class="contact-title" >Share your feedback</h2>
+                <p class="contact-subtitle">
+                    Found a bug? Have a suggestion? Something you'd like to see?<br>
+                    Your input helps make ELAYA better.
                 </p>
-                <p>
-                This notation encodes atoms, bonds, and connectivity. It is readable by computers and widely used in 
-                <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank">chemical databases</a> and 
-                <a href="https://www.chemaxon.com/products/marvin" target="_blank">software tools</a>.
-                </p>
             </div>
 
-            <div class="card fade-in-section">
-                <h3>⚙️ How are 3D structures generated?</h3>
-                <p>To perform simulations or visualize molecules in 3D, SMILES must be converted into 3D atomic coordinates. ELAYA uses different algorithms for this:</p>
-                <ul>
-                <li><strong><a href="https://www.rdkit.org/" target="_blank">RDKit</a>:</strong> cheminformatics library using force fields and distance geometry</li>
-                <li><strong><a href="http://openbabel.org/" target="_blank">OpenBabel</a>:</strong> format converter and 3D structure builder</li>
-                <li><strong><a href="https://networkx.org/" target="_blank">NetworkX</a>:</strong> uses molecular graphs to approximate coordinates</li>
-                <li><strong><a href="https://github.com/ShanghaiTech-IntelligentGroup/Auto3D" target="_blank">Auto3D</a>:</strong> deep learning and AI-assisted optimization</li>
-                </ul>
-            </div>
+            <!-- Author card + action cards -->
+            <div class="contact-layout">
 
-            <div class="card fade-in-section">
-                <h3>🔋 What are force fields?</h3>
-                <p>
-                A <strong>force field</strong> is a set of mathematical equations and parameters that simulate physical forces between atoms — like bond stretching or angle bending.
-                </p>
-                <p>Common options include:</p>
-                <ul>
-                <li><a href="https://en.wikipedia.org/wiki/Universal_Force_Field" target="_blank"><strong>UFF:</strong></a> Universal Force Field — general-purpose</li>
-                <li><a href="https://en.wikipedia.org/wiki/MMFF94" target="_blank"><strong>MMFF94:</strong></a> Merck Molecular Force Field — for organic molecules</li>
-                <li><strong>GAFF:</strong> General AMBER Force Field — used in drug design</li>
-                <li><strong>CHARMM:</strong> Accurate modeling of biomolecules and proteins</li>
-                </ul>
-            </div>
+                <div class="contact-author-card scroll-reveal">
+                    <img src="pictures/Logo_Elaya.jpg" alt="ELAYA" class="contact-author-logo"/>
+                    <div class="contact-author-info">
+                        <div class="contact-author-name">
+                            <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales</a>
+                        </div>
+                        <div class="contact-author-role">Physics Engineering Student</div>
+                        <p class="contact-author-bio">
+                            Committed to using science, education, and technology to improve people's quality of life.
+                        </p>
+                        <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" class="contact-link-btn" style="margin-top:0.8rem;display:inline-block;">
+                            LinkedIn ↗
+                        </a>
+                        <a href="https://github.com/GabrielaVidales" target="_blank" class="contact-link-btn" style="margin-top:0.8rem;display:inline-block;">
+                            GitHub ↗
+                        </a>
+                    </div>
+                </div>
 
-            <div class="card fade-in-section">
-                <h3>📏 What is structural similarity?</h3>
-                <p>ELAYA can compare molecular structures using the following algorithms:</p>
-                <ul>
-                <li><strong><a href="https://en.wikipedia.org/wiki/Tanimoto_coefficient" target="_blank">Tanimoto Index:</a></strong> compares molecular fingerprints</li>
-                <li><strong><a href="https://singroup.github.io/dscribe/latest/tutorials/descriptors/soap.html" target="_blank">SOAP:</a></strong> Smooth Overlap of Atomic Positions using 3D density</li>
-                <li><strong><a href="https://www.nature.com/articles/nmat3568" target="_blank">Valle-Oganov Metric:</a></strong> comparison in structural descriptor space</li>
-                </ul>
-            </div>
+                <div class="contact-actions">
+                    <div class="contact-action-card scroll-reveal scroll-reveal--right">
+                        <div class="contact-action-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        </div>
+                        <h3>Bug report</h3>
+                        <p>Found something unexpected? Open an issue with your SMILES string and browser details.</p>
+                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues" target="_blank" class="contact-link-btn">Open an issue ↗</a>
+                    </div>
 
-            <div class="card fade-in-section">
-                <h3>📈 Workflow Overview</h3>
-                <p>The ELAYA platform works in the following sequence:</p>
-                <ol>
-                <li>User inputs a <a href="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System" target="_blank">SMILES</a> string or file</li>
-                <li>System converts it to a 3D structure using selected algorithm and force field</li>
-                <li>Molecule is rendered using <a href="https://3dmol.csb.pitt.edu/" target="_blank">Py3Dmol</a></li>
-                <li>User may compare methods or analyze similarity</li>
-                <li>Final structure is available for <code>.xyz</code> download</li>
-                <li> </li>
-                </ol>
-                <div style="text-align: center;"><img src="pictures/flowchart_elaya.png" alt="Flowchart" class="flowchart-img"></div>
+                    <div class="contact-action-card scroll-reveal scroll-reveal--right" style="animation-delay:0.12s">
+                        <div class="contact-action-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </div>
+                        <h3>Suggestion</h3>
+                        <p>Have an idea for a new feature, algorithm, or output format? I'd love to hear it.</p>
+                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues" target="_blank" class="contact-link-btn">Share an idea ↗</a>
+                    </div>
+
+                    <div class="contact-action-card scroll-reveal scroll-reveal--right" style="animation-delay:0.24s">
+                        <div class="contact-action-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                        </div>
+                        <h3>Contribute</h3>
+                        <p>Want to contribute code, tests, or documentation? Pull requests are welcome.</p>
+                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" class="contact-link-btn">View repo ↗</a>
+                    </div>
+                </div>
+
             </div>
         </section>
     </main>
@@ -403,7 +900,7 @@
     <footer class="site-footer">
         <div class="footer-content">
         <p>Elaya SMILES - Molecular Viewer© 2025</p>
-        <p><em>Developed by Gabriela Vidales, Luis Gonzalez, Filiberto Ortiz, and Gabriel Merino.</em></p>
+        <p><em>Developed by <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" class="author-linkedin-link">Gabriela Vidales</a>, Luis Gonzalez, Filiberto Ortiz, and Gabriel Merino.</em></p>
         </div>
     </footer>
 
@@ -413,10 +910,7 @@
             onerror="(function(){var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'; document.head.appendChild(s);}())">
     </script>
 
+    <script src="/glomos_progress.js" defer></script>
     <script src="/app.js" defer></script>
 </body>
 </html>
-
-
-
-

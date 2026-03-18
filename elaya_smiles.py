@@ -5,8 +5,9 @@
 Elaborado por Gabriela Vidales, Luis Gonzalez, Filiberto Ortiz, and Gabriel Merino.
 
 Funcionalidades principales
-- Conversión SMILES a 3D (RDKit, OpenBabel, NetworkX)
+- Conversión SMILES a 3D (RDKit, OpenBabel, NetworkX, Auto3D)
 - Visualización 3D (py3Dmol)
+- Generación de matrices de conectividad
 - Carga individual o por archivo.
 - Exportación de estructuras en formato .xyz.
 - Interfaz moderna y amigable.
@@ -22,7 +23,7 @@ import networkx as nx
 # RDKit and cheminformatics
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdmolops, Draw
-from rdkit.Chem.Draw import IPythonConsole,  rdMolDraw2D
+from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem import MolToMolBlock
 from rdkit.Geometry import Point3D
 
@@ -35,13 +36,15 @@ from dscribe.descriptors import SOAP, ValleOganov
 from dscribe.kernels import AverageKernel
 
 # OpenBabel
-from openbabel import openbabel, pybel
+from openbabel import openbabel as ob, pybel
 from openbabel.pybel import readstring
-from openbabel import openbabel as ob
 
 # Auto3D for AI-based optimization
 import Auto3D
 from Auto3D.auto3D import options, main
+
+# Genetic algorithm for rotamer optimization
+from glomos.heuristic_ga_rotamers import conformational
 
 class MolecularTools:
     def __init__(self):
@@ -160,9 +163,9 @@ class MolecularTools:
 
             # --- Warm-up opcional: evita fallos internos en primeras llamadas a make3D ---
             try:
-                warm_conv = openbabel.OBConversion()
+                warm_conv = ob.OBConversion()
                 warm_conv.SetInAndOutFormats("smi", "mol")
-                warm_mol = openbabel.OBMol()
+                warm_mol = ob.OBMol()
                 warm_conv.ReadString(warm_mol, '[O]')
                 warm_pybel = pybel.readstring("mol", warm_conv.WriteString(warm_mol))
                 warm_pybel.make3D(forcefield=force_field, steps=1)
@@ -171,32 +174,33 @@ class MolecularTools:
                 print("Warm-up fallido o innecesario:", warm_error)
 
             # --- Conversión principal ---
-            conv = openbabel.OBConversion()
+            conv = ob.OBConversion()
             conv.SetInAndOutFormats("smi", "mol")
 
-            mol = openbabel.OBMol()
+            mol = ob.OBMol()
             if not conv.ReadString(mol, smiles):
                 raise ValueError(f"OpenBabel no pudo interpretar el SMILES: {smiles}")
 
             mol.AddHydrogens()
             mol.PerceiveBondOrders()
-            self.add_lone_pairs_openbabel(mol)
 
             # Generar coordenadas y optimizar
-            builder = openbabel.OBBuilder()
+            builder = ob.OBBuilder()
             builder.Build(mol)
 
-            ff = openbabel.OBForceField.FindForceField(force_field.upper())
-            if ff is None:
-                raise ValueError(f"Force field '{force_field}' no encontrado en OpenBabel")
+            if force_field.lower() not in ('none', ''):
+                ff = ob.OBForceField.FindForceField(force_field.upper())
+                if ff is None:
+                    print(f"Warning: force field '{force_field}' no encontrado, omitiendo optimización")
+                else:
+                    ff.Setup(mol)
+                    ff.ConjugateGradients(2000)
+                    ff.GetCoordinates(mol)
 
-            ff.Setup(mol)
-            ff.ConjugateGradients(2000)
-            ff.GetCoordinates(mol)
-
-            # Generar archivo MOL
-            conv_mol = openbabel.OBConversion()
-            conv_mol.SetOutFormat("mol")
+            # SDF preserva órdenes de enlace (dobles/triples) para el viewer 3D
+            conv_mol = ob.OBConversion()
+            conv_mol.SetOutFormat("sdf")
+            mol.PerceiveBondOrders()
             mol_block = conv_mol.WriteString(mol)
 
             # Generar archivo XYZ
@@ -328,8 +332,236 @@ class MolecularTools:
 
         return rw_mol.GetMol()
     """
-    
-        # Visualization Methods
+
+    def _write_glomos_input(self, workdir, seed_xyz, initpop, matings, mutants,
+                              generations, energy_cutoff, ani_model, nproc):
+        """
+        Siempre nof_processes=1: evita crash de multiprocessing.spawn.
+        Parámetros ajustados para mayor velocidad en moléculas pequeñas.
+        """
+        import shutil
+        if os.path.exists(workdir):
+            shutil.rmtree(workdir)
+        os.makedirs(workdir)
+        with open(os.path.join(workdir, "seed.xyz"), "w") as f:
+            f.write(seed_xyz)
+        # prec más relajada (1E-02 1E-03) → optimizaciones más rápidas
+        # nof_repeats=1, nof_stagnant=2 → termina antes si converge
+        # cutoff_population=5 → mantiene menos conformeros activos
+        input_txt = (
+            "rotamer_seed            seed.xyz\n\n"
+            "#EVOLUTIVE PARAMETERS:\n"
+            f"nof_initpop             {initpop}\n"
+            f"nof_matings             {matings}\n"
+            f"nof_mutants             {mutants}\n\n"
+            "#DISCRIMINATION PARAMETERS:\n"
+            "tol_similarity          0.95\n"
+            f"cutoff_energy           {energy_cutoff}\n"
+            "cutoff_population       5\n\n"
+            "#STOP CRITERION:\n"
+            f"nof_generations         {generations}\n"
+            "nof_repeats             1\n"
+            "nof_stagnant            2\n\n"
+            "#THEORY LEVEL: ANI1x, ANI1ccx, ANI2x\n"
+            f"calculator              {ani_model}\n"
+            "nof_processes           1\n"
+            "prec                    1E-02 1E-03\n"
+        )
+        with open(os.path.join(workdir, "INPUT.txt"), "w") as f:
+            f.write(input_txt)
+
+    def _read_glomos_result(self, workdir):
+        summary = os.path.join(workdir, "summary.xyz")
+        if not os.path.exists(summary):
+            raise RuntimeError("GLOMOS failed: summary.xyz not found")
+        with open(summary) as f:
+            xyzs = f.read().strip().split("\n\n")
+        return xyzs[0]
+
+    def _run_glomos(self, seed_xyz, workdir, initpop=4, matings=2, mutants=2,
+                    generations=3, energy_cutoff=4.0, ani_model="ANI1ccx", nproc=2):
+        self._write_glomos_input(workdir, seed_xyz, initpop, matings, mutants,
+                                  generations, energy_cutoff, ani_model, nproc)
+        cwd = os.getcwd()
+        try:
+            os.chdir(workdir)
+            conformational("INPUT.txt")
+        finally:
+            os.chdir(cwd)
+        return self._read_glomos_result(workdir)
+
+    def run_glomos_streaming(self, seed_xyz, workdir, initpop=4, matings=2,
+                              mutants=2, generations=3, energy_cutoff=4.0,
+                              ani_model="ANI1ccx", nproc=2):
+        """
+        Generador SSE — 100 % compatible con Windows.
+
+        Estrategia: un hilo auxiliar lee stdout del subprocess línea a línea
+        y las mete en una queue.Queue. El generador principal consume la
+        queue con get(timeout=3) y emite heartbeats mientras espera.
+        Esto evita select() (que no funciona con pipes en Windows).
+        """
+        import subprocess, sys, re, time, queue, threading
+
+        self._write_glomos_input(workdir, seed_xyz, initpop, matings, mutants,
+                                  generations, energy_cutoff, ani_model, nproc)
+
+        # ── runner hijo con flush por línea ──────────────────────────────
+        runner = os.path.join(workdir, "_glomos_runner.py")
+        with open(runner, "w") as f:
+            f.write(
+                "import sys, os\n"
+                "sys.stdout.reconfigure(line_buffering=True)\n"
+                "sys.stderr.reconfigure(line_buffering=True)\n"
+                "from multiprocessing import freeze_support\n"
+                "sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n"
+                "os.chdir(os.path.dirname(os.path.abspath(__file__)))\n"
+                "from glomos.heuristic_ga_rotamers import conformational\n"
+                "if __name__ == '__main__':\n"
+                "    freeze_support()\n"
+                "    conformational('INPUT.txt')\n"
+            )
+
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        # ── Emitir inmediatamente — señal de que el proceso arrancó ────────
+        # (app.py ya emitió 'loading' antes de llamar a este generador)
+        yield {"type": "log", "line": "Lanzando subprocess GLOMOS…"}
+
+        proc = subprocess.Popen(
+            [sys.executable, "-u", runner],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,          # line-buffered en modo texto (suficiente en Windows)
+            env=env,
+        )
+
+        # ── Hilo lector: mete líneas en la queue ─────────────────────────
+        _SENTINEL = object()
+        line_queue = queue.Queue()
+
+        def _reader():
+            try:
+                for raw in proc.stdout:
+                    line_queue.put(raw.rstrip())
+            finally:
+                line_queue.put(_SENTINEL)   # señal de fin
+
+        t = threading.Thread(target=_reader, daemon=True)
+        t.start()
+
+        # ── Estado local ─────────────────────────────────────────────────
+        current_gen = 0
+        best_energy = None
+        gen_start   = time.time()
+        gen_times   = []
+        last_data_t = time.time()
+        HEARTBEAT_S = 3.0
+
+        re_gen    = re.compile(r"-{2,}GENERATION\s+(\d+)-{2,}")
+        re_energy = re.compile(r"#\d+\s+\S+\s+(-[\d.]+)\s+kcal/mol")
+        re_conf   = re.compile(r"(random|mating|mutant)_\d+_\d+\s+at\s+")
+
+        def _process_line(line):
+            """Parsea una línea y devuelve lista de eventos SSE a emitir."""
+            nonlocal current_gen, best_energy, gen_start, gen_times
+            events = [{"type": "log", "line": line}]
+
+            m = re_gen.search(line)
+            if m:
+                ng = int(m.group(1))
+                if ng > current_gen:
+                    gen_times.append(time.time() - gen_start)
+                    gen_start = time.time()
+                current_gen = ng
+                events.append({
+                    "type": "progress", "gen": current_gen, "total": generations,
+                    "conformer": "", "best_energy": best_energy, "gen_times": gen_times[:],
+                })
+
+            m = re_conf.search(line)
+            if m:
+                events.append({
+                    "type": "progress", "gen": current_gen, "total": generations,
+                    "conformer": m.group(0).strip(),
+                    "best_energy": best_energy, "gen_times": gen_times[:],
+                })
+
+            m = re_energy.search(line)
+            if m:
+                e = float(m.group(1))
+                if best_energy is None or e < best_energy:
+                    best_energy = e
+
+            return events
+
+        # ── Bucle principal: consume queue ───────────────────────────────
+        try:
+            while True:
+                try:
+                    item = line_queue.get(timeout=HEARTBEAT_S)
+                except queue.Empty:
+                    # Timeout → heartbeat (mantiene SSE vivo en el browser)
+                    elapsed = round(time.time() - last_data_t)
+                    yield {"type": "heartbeat", "elapsed": elapsed, "message": "Procesando…"}
+                    continue
+
+                if item is _SENTINEL:
+                    break   # EOF del proceso
+
+                last_data_t = time.time()
+                if item:
+                    for evt in _process_line(item):
+                        yield evt
+
+            t.join(timeout=5)
+            proc.wait()
+
+            if proc.returncode != 0:
+                yield {"type": "error", "message": f"GLOMOS terminó con código {proc.returncode}"}
+                return
+
+            yield {"type": "done", "xyz": self._read_glomos_result(workdir)}
+
+        except Exception as exc:
+            proc.kill()
+            t.join(timeout=2)
+            yield {"type": "error", "message": str(exc)}
+
+    def run_glomos_from_smiles(self, smiles, glomos_params):
+        base = self.rdkit_conversion(
+            smiles, identifier="glomos_seed", force_field="uff", optimize=True)
+        workdir = os.path.join(self.dirs["xyz_auto3d"], "glomos_tmp")
+        best_xyz = self._run_glomos(
+            seed_xyz=base["xyz"], workdir=workdir,
+            initpop=glomos_params.get("initpop", 4),
+            matings=glomos_params.get("matings", 2),
+            mutants=glomos_params.get("mutants", 2),
+            generations=glomos_params.get("generations", 3),
+            energy_cutoff=glomos_params.get("energy_cutoff", 4.0),
+            ani_model=glomos_params.get("ani_model", "ANI1ccx"),
+            nproc=1,
+        )
+        return {"xyz": best_xyz, "mol": None}
+
+    def prepare_glomos_seed(self, smiles, glomos_params):
+        base    = self.rdkit_conversion(
+            smiles, identifier="glomos_seed", force_field="uff", optimize=True)
+        workdir = os.path.join(self.dirs["xyz_auto3d"], "glomos_tmp")
+        params  = {
+            "initpop":       glomos_params.get("initpop", 4),
+            "matings":       glomos_params.get("matings", 2),
+            "mutants":       glomos_params.get("mutants", 2),
+            "generations":   glomos_params.get("generations", 3),
+            "energy_cutoff": glomos_params.get("energy_cutoff", 4.0),
+            "ani_model":     glomos_params.get("ani_model", "ANI1ccx"),
+            "nproc":         1,
+        }
+        return base["xyz"], workdir, params
     def visualize_3d(self, xyz_content, width=400, height=400):
         """Visualize molecule from XYZ content"""
         try:
@@ -613,7 +845,6 @@ class MolecularTools:
         except Exception as e:
             print(f"Error generando imagen 2D: {str(e)}")
             return None
-
 
 if __name__ == "__main__":
     tool = MolecularTools()
