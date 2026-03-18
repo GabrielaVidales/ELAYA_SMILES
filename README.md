@@ -1,9 +1,34 @@
-# ELAYA SMILES
-## Molecular Conversion and 3D Structural Analysis Platform
+<p align="center">
+  <img src="pictures/Logo_Elaya.jpg" width="240">
+</p>
 
-![Logo Elaya](pictures/Logo_Elaya.jpg)
+<h1 align="center">
+ELAYA SMILES
+</h1>
 
-**ELAYA SMILES** is a web-based platform designed for the conversion of linear molecular representations (SMILES) into optimized three-dimensional structures, enabling visualization and structural analysis within a unified environment.
+<p align="center">
+<b>Molecular Conversion and 3D Structural Analysis Platform</b>
+</p>
+
+<p align="center">
+SMILES → 3D Molecular Modeling Framework
+</p>
+
+<p align="center">
+
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![RDKit](https://img.shields.io/badge/RDKit-Compatible-green)
+![OpenBabel](https://img.shields.io/badge/OpenBabel-Supported-orange)
+![Visualization](https://img.shields.io/badge/Py3Dmol-Enabled-red)
+![Status](https://img.shields.io/badge/Status-Active-success)
+
+</p>
+
+---
+
+## What is ELAYA SMILES?
+
+**ELAYA SMILES is a web-based platform designed for the conversion of linear molecular representations (SMILES) into optimized three-dimensional structures, enabling visualization and structural analysis within a unified environment.**
 
 ---
 
