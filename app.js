@@ -69,11 +69,11 @@ document.addEventListener("DOMContentLoaded", function () {
         console.warn("⚠️ Error en toggleInputMethod:", e);
     }
 
-    // Inicializar opciones de campo de fuerza
+    // Inicializar opciones de campo de fuerza (el DOM puede no estar listo aún, se reintenta en el change handler)
     try {
         toggleForceField();
     } catch (e) {
-        console.warn("⚠ Error en toggleForceField:", e);
+        // Silenciado: se vuelve a llamar cuando el usuario cambia el método de conversión
     }
 
     // Autocarga de la molécula de oxitocina
@@ -98,12 +98,11 @@ document.addEventListener("DOMContentLoaded", function () {
         console.warn("⚠️ Error en checkBackendConnection:", e);
     }
 
-    // Historial y botón de conversión
+    // Historial
     try {
         loadSmilesHistory();
-        setupConversionHandler();
     } catch (e) {
-        console.warn("⚠️ Error cargando historial o handler de conversión:", e);
+        console.warn("⚠️ Error cargando historial:", e);
     }
 
         const smilesInputEl = document.getElementById('smiles');
@@ -119,9 +118,43 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // Navegación: Home
-    const homeLink = document.querySelector('a[href="#home"]');
-    const homeSection = document.getElementById('home-info');
+    // ── Helper: set active nav tab ───────────────────────────
+    function setActiveNav(id) {
+        document.querySelectorAll('.navbar a').forEach(a => a.classList.remove('nav-active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('nav-active');
+    }
+
+    // ── Scroll-triggered animations (fade-in + scroll-reveal) ──
+    const fadeObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                entry.target.classList.add('sr-visible');
+                fadeObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.07 });
+
+    function observeFadeIns() {
+        document.querySelectorAll('.fade-in-section, .scroll-reveal').forEach(el => {
+            // Only reset elements inside hidden sections to avoid flashing
+            // content that is already visible on screen.
+            const parentSection = el.closest('section, [id$="-section"]');
+            const isInVisibleSection = parentSection
+                ? window.getComputedStyle(parentSection).display !== 'none'
+                : true;
+            if (!isInVisibleSection) {
+                el.classList.remove('visible', 'sr-visible');
+            }
+            fadeObserver.observe(el);
+        });
+    }
+    observeFadeIns();
+
+    // Navegación: About
+    const aboutLink = document.querySelector('a[href="#about"]');
+    const aboutSection = document.getElementById('about-section');
     const inputSection = document.querySelector('.input-section');
     const conversionSection = document.querySelector('.conversion-section');
     const header = document.querySelector('header');
@@ -134,22 +167,32 @@ document.addEventListener("DOMContentLoaded", function () {
         console.warn("⚠️ conversion-method no encontrado");
     }
 
-    if (homeLink) {
-        homeLink.addEventListener('click', function (e) {
+    if (aboutLink) {
+        aboutLink.addEventListener('click', function (e) {
             e.preventDefault();
             document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
-            if (homeSection) {
-                homeSection.style.display = 'block';
+            if (aboutSection) {
+                aboutSection.style.display = 'block';
                 setTimeout(() => {
-                    window.scrollTo({ top: homeSection.offsetTop - 40, behavior: 'smooth' });
+                    window.scrollTo({ top: aboutSection.offsetTop - 40, behavior: 'smooth' });
+                    observeFadeIns();
                 }, 100);
             }
             if (header) header.style.display = 'none';
+            setActiveNav('nav-about');
         });
     }
 
-    // Navegación: Simulator
-    const simulatorLink = document.querySelector('a[href="#simulator"]');
+    const postOptSelect = document.getElementById("post-optimization");
+    const glomosPanel = document.getElementById("glomos-panel");
+
+    postOptSelect.addEventListener("change", () => {
+      glomosPanel.style.display =
+        postOptSelect.value === "glomos" ? "block" : "none";
+    });
+
+    // Navegación: Explore
+    const simulatorLink = document.querySelector('a[href="#explore"]');
     if (simulatorLink) {
         simulatorLink.addEventListener('click', function (e) {
             e.preventDefault();
@@ -158,26 +201,33 @@ document.addEventListener("DOMContentLoaded", function () {
             if (conversionSection) conversionSection.style.display = 'flex';
             if (header) header.style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveNav('nav-explore');
+            setTimeout(() => { observeFadeIns(); }, 100);
         });
     }
 
-    // Navegación: Background
-    const backgroundLink = document.querySelector('a[href="#background"]');
-    const backgroundSection = document.getElementById('background-info');
+    // Navegación: Contact
+    const contactLink = document.querySelector('a[href="#contact"]');
+    const contactSection = document.getElementById('contact-section');
 
-    if (backgroundLink) {
-        backgroundLink.addEventListener('click', function (e) {
+    if (contactLink) {
+        contactLink.addEventListener('click', function (e) {
             e.preventDefault();
             document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
-            if (backgroundSection) {
-                backgroundSection.style.display = 'block';
+            if (contactSection) {
+                contactSection.style.display = 'block';
                 setTimeout(() => {
-                    window.scrollTo({ top: backgroundSection.offsetTop - 40, behavior: 'smooth' });
+                    window.scrollTo({ top: contactSection.offsetTop - 40, behavior: 'smooth' });
+                    observeFadeIns();
                 }, 100);
             }
             if (header) header.style.display = 'none';
+            setActiveNav('nav-contact');
         });
     }
+
+    // Default: Explore is the landing tab
+    setActiveNav('nav-explore');
 
     const btnConvert = document.getElementById('convert-molecules');
     if (btnConvert) {
@@ -216,6 +266,66 @@ document.addEventListener("DOMContentLoaded", function () {
             window.molecules = [{ smiles, id: smiles }];
             window.currentMoleculeIndex = 0;
             if (typeof updateSmilesHistory === 'function') updateSmilesHistory(smiles);
+
+            // Siempre quitar el panel GLOMOS si no se usa GLOMOS
+            const postOpt = document.getElementById('post-optimization')?.value;
+            if (postOpt !== 'glomos') {
+              document.getElementById('glomos-live-panel')?.remove();
+            }
+
+            // ── GLOMOS streaming ─────────────────────────────────────
+            if (postOpt === 'glomos' && typeof window.runGlomosWithStream === 'function') {
+              // Limpiar viewer y XYZ para que no confunda con resultado previo
+              currentXYZ = '';
+              const viewerEl = document.getElementById('viewer-container');
+              if (viewerEl) {
+                viewerEl.innerHTML = '<div class="placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#3cb49a;font-size:0.9rem;">⟳ GLOMOS running…</div>';
+              }
+              const xyzDisplayEl = document.getElementById('xyz-display');
+              if (xyzDisplayEl) { xyzDisplayEl.textContent = ''; xyzDisplayEl.style.display = 'none'; }
+              updateDownloadButtons?.();
+
+              const glomosParams = {
+                initpop:       Number(document.getElementById('glomos-initpop')?.value   || 4),
+                matings:       Number(document.getElementById('glomos-matings')?.value   || 2),
+                mutants:       Number(document.getElementById('glomos-mutants')?.value   || 2),
+                generations:   Number(document.getElementById('glomos-generations')?.value || 3),
+                energy_cutoff: Number(document.getElementById('glomos-energy')?.value    || 4.0),
+                ani_model:     document.getElementById('glomos-ani')?.value || 'ANI1ccx',
+              };
+
+              window.runGlomosWithStream(
+                smiles,
+                glomosParams,
+                (xyzResult) => {
+                  if (loader && label) {
+                    loader.style.display = 'none';
+                    label.style.opacity  = '1';
+                    convertBtn.disabled  = false;
+                    loader.innerHTML     = '';
+                  }
+                  currentXYZ = xyzResult;
+                  window.molecules[0] = { smiles, id: smiles, xyz: xyzResult, molBlock: null };
+                  updateXYZDisplay?.();
+                  updateViewerContainerLayout();
+                  updateDownloadButtons?.();
+                  updateNavigationButtons?.();
+                                  showSuccess?.('<strong>✔ GLOMOS completed</strong><br>Best conformer loaded.');
+                },
+                (errMsg) => {
+                  if (loader && label) {
+                    loader.style.display = 'none';
+                    label.style.opacity  = '1';
+                    convertBtn.disabled  = false;
+                    loader.innerHTML     = '';
+                  }
+                  showError?.('GLOMOS error: ' + errMsg);
+                }
+              );
+              return;
+            }
+            // ─────────────────────────────────────────────────────────
+
             await convertSingleMolecule();
 
             // Reset UI
@@ -250,6 +360,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 const smilesInput = document.getElementById('smiles');
                 if (smilesInput) smilesInput.value = '';
 
+            const postOptFile = document.getElementById('post-optimization')?.value;
+            if (postOptFile !== 'glomos') document.getElementById('glomos-live-panel')?.remove();
             await convertMolecules(picked);   // <- importante pasar picked
             } else {
             showError("No molecules selected.");
@@ -397,11 +509,6 @@ document.querySelectorAll('.tab-btn').forEach(button => {
   });
 });
 
-    // Nuevos event listeners
-if (prevMoleculeBtn) prevMoleculeBtn.addEventListener('click', () => navigateMolecules(-1));
-if (nextMoleculeBtn) nextMoleculeBtn.addEventListener('click', () => navigateMolecules(1));
-if (rotationSpeedInput) rotationSpeedInput.addEventListener('input', (e) => changeRotationSpeed(e.target.value));
-
     // Inicializar 3Dmol después de que se cargue la librería
 init3DMol();
 
@@ -418,14 +525,7 @@ document.querySelectorAll('input, select').forEach(el => {
 
 loadSmilesHistory();
 
-        /* Cargar por defecto la oxitocina al iniciar
-    if (!molecules.length) {
-        const oxytocinSmiles = "CC(C)C[C@H](NC(=O)[C@H](CC(=O)N[C@@H](CCCNC(=N)N)C(=O)N[C@H](CSSC[C@H](C(=O)N[C@H](C)C(=O)N[C@H](CCC(=O)O)C(=O)N[C@H](CO)C(=O)N1CCC[C@H]1C(=O)N[C@H](CCCCN)C(=O)N2CCCC2)NC(=O)[C@H](Cc1ccc(O)cc1)NC(=O)[C@H](N)C(C)C)NC(=O)[C@H](N)CO)NC(=O)[C@H](N)CC(=O)O)C(=O)O";
-        document.getElementById('smiles').value = oxytocinSmiles;
-        molecules = [{ smiles: oxytocinSmiles, id: "Oxitocina" }];
-        updateSmilesHistory(oxytocinSmiles);  // opcional si quieres agregarla al historial
-        convertSingleMolecule(); // Lanza la conversión automática
-        }*/
+
 
 // Efecto de rayo dorado al hacer clic en el título
 const goldFlashLink = document.querySelector('.gold-flash');
@@ -1031,6 +1131,11 @@ function insertTitleLine(xyz, title) {
 }
 
 async function convertSingleMolecule() {
+  // Grab button refs here so finally() can always unlock the UI
+  const _convertBtn = document.getElementById('convert-molecules');
+  const _loader     = _convertBtn?.querySelector('.water-loader');
+  const _label      = _convertBtn?.querySelector('.button-label');
+
   try {
     if (!Array.isArray(molecules) || molecules.length === 0 || !molecules[currentMoleculeIndex]) {
       const smilesInput = document.getElementById('smiles');
@@ -1044,15 +1149,29 @@ async function convertSingleMolecule() {
     const forceField = document.getElementById('force-field')?.value || 'UFF';
     const molecule   = molecules[currentMoleculeIndex];
 
+    // GLOMOS is handled by the streaming path – never run a blocking fetch for it
+    const postOpt = document.getElementById("post-optimization")?.value || null;
+    if (postOpt === "glomos") return;
+
     const response = await fetch(`${API_BASE_URL}/convert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ smiles: molecule.smiles, identifier: molecule.id, method, force_field: forceField })
+      body: JSON.stringify({
+        smiles: molecule.smiles,
+        identifier: molecule.id,
+        method,
+        force_field: forceField,
+        post_opt: null,
+        glomos_params: null
+      })
     });
 
     if (!response.ok) {
       let serverErr = 'Error en la conversión';
-      try { const e = await response.json(); if (e?.error) serverErr = e.error; } catch {}
+      try {
+        const e = await response.json();
+        if (e?.error) serverErr = e.error;
+      } catch {}
       throw new Error(serverErr);
     }
 
@@ -1067,9 +1186,6 @@ async function convertSingleMolecule() {
     const titleLine     = `0  0   ${molecule.smiles}`;
     const xyzWithHeader = insertTitleLine(xyzText, titleLine);
     currentXYZ = xyzWithHeader;
-    updateXYZDisplay?.();
-    const xyzDisplay = document.getElementById('xyz-display');
-    if (xyzDisplay) xyzDisplay.style.display = 'block';
 
     const molText =
       (typeof data?.mol === 'string' && data.mol) ? data.mol :
@@ -1081,11 +1197,13 @@ async function convertSingleMolecule() {
       molBlock: molText || null
     };
 
-    updateViewerContainerLayout();
+    updateXYZDisplay?.();
+    const xyzDisplay = document.getElementById('xyz-display');
+    if (xyzDisplay) xyzDisplay.style.display = 'block';
 
+    updateViewerContainerLayout();
     showSuccess?.(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${molecule.smiles}`);
 
-    // ✅ Asegurar visibilidad de controles y slider en single
     const moleculeCtrls = document.getElementById('molecule-controls');
     const speedControl  = document.querySelector('.speed-control');
     if (moleculeCtrls) moleculeCtrls.style.display = 'flex';
@@ -1093,45 +1211,60 @@ async function convertSingleMolecule() {
 
     updateDownloadButtons?.();
     updateNavigationButtons?.();
-    updateDownloadButtons();
 
-    // === Forzar visibilidad del deslizador de velocidad (sin redeclarar) ===
-    const speedControlEl = document.querySelector('.speed-control');
-    if (speedControlEl) {
-      speedControlEl.style.display = 'flex';
-      const rotationInput = document.getElementById('rotation-speed');
-      if (rotationInput) {
-        rotationInput.min = 0;
-        rotationInput.max = 5;
-        rotationInput.step = 0.5;
-        rotationInput.value = rotationSpeed;
-      }
-    }
   } catch (err) {
     console.error(err);
     showError?.(err?.message || 'Unexpected error during conversion');
+  } finally {
+    // Always unlock the button, no matter what happened
+    if (_loader && _label) {
+      _loader.style.display = 'none';
+      _label.style.opacity  = '1';
+      _loader.innerHTML     = '';
+    }
+    if (_convertBtn) _convertBtn.disabled = false;
   }
 }
 
 function updateXYZDisplay() {
     const xyzDisplay = document.getElementById('xyz-display');
-    if (xyzDisplay) {
-        const lines = currentXYZ.trim().split('\n');
-        xyzDisplay.style.display = 'block';
-        if (lines.length >= 3) {
-            const header = lines.slice(0, 2);
-            const atoms = lines.slice(2).map(line => {
-                const parts = line.trim().split(/\s+/);
-                return parts.length === 4
-                ? `${parts[0].padEnd(2)} ${parts[1].padStart(8)} ${parts[2].padStart(8)} ${parts[3].padStart(8)}`
-                : line;
-            });
-            xyzDisplay.textContent = [...header, ...atoms].join('\n');
-        } else {
-            xyzDisplay.textContent = currentXYZ; // fallback
-        }
-        xyzDisplay.style.display = 'block';
+    if (!xyzDisplay) return;
+
+    const raw = (currentXYZ || '').trim();
+    if (!raw) { xyzDisplay.style.display = 'none'; return; }
+
+    const lines = raw.split('\n');
+    xyzDisplay.style.display = 'block';
+
+    if (lines.length < 3) {
+        xyzDisplay.textContent = raw;
+        return;
     }
+
+    // Line 0: atom count, Line 1: comment/title
+    const atomCount = lines[0].trim();
+    const comment   = lines[1] || '';
+
+    // Column header ruler
+    const ruler = `${'Atom'.padEnd(4)} ${'X (Å)'.padStart(10)} ${'Y (Å)'.padStart(10)} ${'Z (Å)'.padStart(10)}`;
+    const sep   = '-'.repeat(ruler.length);
+
+    const atoms = lines.slice(2).map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 4) {
+            return `${parts[0].padEnd(4)} ${parseFloat(parts[1]).toFixed(6).padStart(10)} ${parseFloat(parts[2]).toFixed(6).padStart(10)} ${parseFloat(parts[3]).toFixed(6).padStart(10)}`;
+        }
+        return line;
+    });
+
+    xyzDisplay.textContent = [
+        `Atoms: ${atomCount}`,
+        `Note:  ${comment}`,
+        sep,
+        ruler,
+        sep,
+        ...atoms
+    ].join('\n');
 }
 
 function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContainer = viewerContainer) {
@@ -1168,60 +1301,72 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         return;
     }
 
-    // Crear viewer en el contenedor indicado
-    const viewer = $3Dmol.createViewer(targetContainer, {
-        width: targetContainer.offsetWidth || 500,
-        height: targetContainer.offsetHeight || 400,
-        backgroundColor: 'black'
-    });
+    // ── Defer WebGL init until the container has real pixel dimensions ──────
+    // Calling $3Dmol.createViewer on a 0×0 element triggers GL_INVALID_FRAMEBUFFER_OPERATION.
+    // We retry via requestAnimationFrame until the browser has painted the layout.
+    function _initViewer() {
+        const w = targetContainer.offsetWidth;
+        const h = targetContainer.offsetHeight;
 
-    try {
-        viewer.addModel(modelData, format, {
-            keepH: true,
-            noComputeSecondaryStructure: true
-        });
+        if (w === 0 || h === 0) {
+            _initViewer._retries = (_initViewer._retries || 0) + 1;
+            if (_initViewer._retries < 20) {     // up to ~330 ms at 60 fps
+                requestAnimationFrame(_initViewer);
+                return;
+            }
+            // Fallback: force an explicit height so WebGL can allocate the framebuffer
+            if (!targetContainer.style.height) targetContainer.style.height = '400px';
+        }
 
-        viewer.setStyle({}, {
-            stick: { radius: 0.15 },
-            sphere: { scale: 0.25 }
-        });
+        const viewerW = targetContainer.offsetWidth  || 500;
+        const viewerH = targetContainer.offsetHeight || 400;
 
-        viewer.zoomTo();
-        viewer.zoom(1);
-        viewer.render();
-    } catch (e) {
-        console.error("❌ Error al renderizar modelo:", e);
-        targetContainer.innerHTML = `<div class="placeholder error">Error al renderizar molécula</div>`;
-        return;
+        let viewer;
+        try {
+            viewer = $3Dmol.createViewer(targetContainer, {
+                width: viewerW,
+                height: viewerH,
+                backgroundColor: 'black'
+            });
+        } catch (e) {
+            console.error("❌ Error al crear viewer 3Dmol:", e);
+            targetContainer.innerHTML = '<div class="placeholder error">Error al inicializar visor 3D</div>';
+            return;
+        }
+
+        try {
+            viewer.addModel(modelData, format, { keepH: true, noComputeSecondaryStructure: true });
+            viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.25 } });
+            viewer.zoomTo();
+            viewer.zoom(1);
+            viewer.render();
+        } catch (e) {
+            console.error("❌ Error al renderizar modelo:", e);
+            targetContainer.innerHTML = '<div class="placeholder error">Error al renderizar molécula</div>';
+            return;
+        }
+
+        const animate = () => {
+            if (!isRotationPaused) {
+                viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
+                viewer.render();
+            }
+            rotationAnimationId = requestAnimationFrame(animate);
+        };
+        animate();
+
+        currentVisualizations = [viewer];
+
+        const placeholder = document.querySelector('.placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+
+        setTimeout(() => {
+            try { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); }
+            catch (err) { console.warn("⚠ Error al redibujar viewer:", err); }
+        }, 150);
     }
 
-    // Animación de rotación
-    const animate = () => {
-        if (!isRotationPaused) {
-            viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
-            viewer.render();
-        }
-        rotationAnimationId = requestAnimationFrame(animate);
-    };
-    animate();
-
-    // Guardar instancia actual
-    currentVisualizations = [viewer];
-
-    // Ocultar placeholder si está presente
-    const placeholder = document.querySelector('.placeholder');
-    if (placeholder) placeholder.style.display = 'none';
-
-    // Redibujar con retardo para asegurar dimensiones
-    setTimeout(() => {
-        try {
-            viewer.resize();
-            viewer.zoomTo(1.2);
-            viewer.render();
-        } catch (err) {
-            console.warn("⚠ Error al redibujar viewer:", err);
-        }
-    }, 100);
+    requestAnimationFrame(_initViewer);
 }
 
 function navigateMolecules(direction) {
@@ -1461,61 +1606,6 @@ async function loadSmiles(showConfirmation = true) {
         console.error("Error en loadSmiles:", error);
         showError(`Error al cargar SMILES: ${error.message}`);
         throw error;
-    }
-}
-
-function updateLoadConfirmation() {
-    if (!loadConfirmation) {
-        loadConfirmation = document.getElementById('load-confirmation');
-    }
-
-    if (loadConfirmation) {
-        const moleculeInfo = molecules.map(mol => 
-            `<div><strong>SMILES:</strong> ${mol.smiles}</div><div><strong>ID:</strong> ${mol.id}</div>`
-        ).join('<hr>');
-        
-        loadConfirmation.innerHTML = `
-            <div class="alert success">
-                ${molecules.length === 1 ? 'Molécula cargada exitosamente:' : `${molecules.length} moléculas cargadas exitosamente:`}
-                ${moleculeInfo}
-            </div>
-        `;
-        loadConfirmation.style.display = 'block';
-        setTimeout(() => {
-            loadConfirmation.style.display = 'none';
-        }, 5000);
-    }
-}
-
-function enableConversionControls() {
-    const convertBtn = document.getElementById('convert-molecules');
-    const mol1Select = document.getElementById('mol1');
-    const mol2Select = document.getElementById('mol2');
-    const compareMolSelect = document.getElementById('compare-molecule');
-
-    if (convertBtn) convertBtn.disabled = false;
-    
-    if (mol1Select && mol2Select && compareMolSelect) {
-        // Limpiar y llenar selects
-        mol1Select.innerHTML = '';
-        mol2Select.innerHTML = '';
-        compareMolSelect.innerHTML = '';
-        
-        molecules.forEach(mol => {
-            const option = document.createElement('option');
-            option.value = mol.id;
-            option.textContent = `${mol.id} (${mol.smiles})`;
-            
-            mol1Select.appendChild(option.cloneNode(true));
-            mol2Select.appendChild(option.cloneNode(true));
-            compareMolSelect.appendChild(option);
-        });
-        
-        mol1Select.disabled = false;
-        mol2Select.disabled = false;
-        compareMolSelect.disabled = false;
-        document.getElementById('calculate-similarity').disabled = false;
-        document.getElementById('compare-methods').disabled = false;
     }
 }
 
@@ -1823,17 +1913,6 @@ function loadSmilesHistory() {
     }
 }
 
-function setupConversionHandler() {
-  // Legacy / no-op: el listener correcto ya está definido arriba.
-}
-
-function showLoader(show) {
-    const loader = document.querySelector('.water-loader');
-    if (loader) {
-        loader.style.display = show ? 'block' : 'none';
-    }
-}
-
 function updateNavigationButtons() {
   const prevBtn = document.getElementById('prev-molecule');
   const nextBtn = document.getElementById('next-molecule');
@@ -1939,7 +2018,6 @@ function populateIndividualDownloads() {
   updateDownloadButtons();
 }
 
-
 function updateDownloadButtons() {
   const box = document.getElementById('individual-downloads');
   if (!box) return;
@@ -1993,13 +2071,130 @@ function updateDownloadButtons() {
     btnAll.addEventListener('click', downloadAllXYZ);
     box.appendChild(btnAll);
   }
+
 }
+
+// === SMILES overflow UI (ancho completo + indicador + popover) ===
+function initSmilesOverflowUI() {
+  const input = document.getElementById('smiles');
+  if (!input) return;
+
+  // 🛡️ evita doble init (ya envuelto o ya existe el botón)
+  if (input.parentElement && input.parentElement.classList.contains('smiles-wrap')) return;
+  if (document.getElementById('smiles-indicator')) return;
+
+  // 1) estilos una sola vez
+  if (!document.getElementById('smiles-overflow-styles')) {
+    const style = document.createElement('style');
+    style.id = 'smiles-overflow-styles';
+    style.textContent = `
+      .smiles-wrap{ position:relative; display:flex; align-items:center; width:100%; }
+      .smiles-wrap > input#smiles{
+        flex:1 1 auto; min-width:0; width:100%;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        padding-right:2.2rem;
+      }
+      /* sin sombreado */
+      .smiles-wrap.overflowing::after{
+        content:""; position:absolute; right:2.0rem; top:0; bottom:0; width:2.5rem; pointer-events:none; background:none;
+      }
+      #smiles-indicator{
+        position:absolute; right:6px; top:50%; transform:translateY(-50%);
+        border:none; cursor:pointer; padding:.25rem .45rem; border-radius:8px;
+        background:#2b2b4a; color:#fff; font-weight:700; line-height:1;
+        opacity:0; pointer-events:none; transition:opacity .15s ease;
+        z-index:2; /* ⬅️ que nunca quede debajo del input */
+      }
+      .smiles-wrap.overflowing #smiles-indicator{ opacity:1; pointer-events:auto; }
+
+      #smiles-popover{
+        position:absolute; z-index:2500; display:none;
+        background:#12122B; border:1px solid #243149; border-radius:12px;
+        box-shadow:0 12px 30px rgba(0,0,0,.45); padding:12px;
+      }
+      #smiles-popover.open{ display:block; }
+      #smiles-popover .smiles-pop-content{ display:flex; flex-direction:column; gap:.75rem; }
+      #smiles-popover pre{
+        max-height:40vh; overflow:auto; margin:0; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space:pre-wrap; word-break:break-all; color:#e8e8ff; background:#0e0f25; padding:10px; border-radius:8px;
+      }
+      #smiles-popover .smiles-actions{ display:flex; gap:.5rem; justify-content:flex-end; }
+      #smiles-popover .smiles-actions button{ border:none; padding:.45rem .8rem; border-radius:10px; cursor:pointer; color:#fff; }
+      #smiles-copy{ background:linear-gradient(135deg,#9D4EDD,#3CB49A); }
+      #smiles-close{ background:#612020b0; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // 2) envolver y botón
+  const wrap = document.createElement('div');
+  wrap.className = 'smiles-wrap';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const indicator = document.createElement('button');
+  indicator.id = 'smiles-indicator';
+  indicator.type = 'button';
+  indicator.title = 'Ver completo';
+  indicator.setAttribute('aria-label', 'Ver SMILES completo');
+  indicator.textContent = '▸';
+  wrap.appendChild(indicator);
+
+  // 3) popover
+  const pop = document.createElement('div');
+  pop.id = 'smiles-popover';
+  pop.innerHTML = `
+    <div class="smiles-pop-content">
+      <pre id="smiles-full"></pre>
+      <div class="smiles-actions">
+        <button id="smiles-copy">Copiar</button>
+        <button id="smiles-close">Cerrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(pop);
+
+  const preFull = pop.querySelector('#smiles-full');
+  const btnCopy = pop.querySelector('#smiles-copy');
+  const btnClose = pop.querySelector('#smiles-close');
+
+  // 4) overflow detector
+  const checkOverflow = () => requestAnimationFrame(() => {
+    wrap.classList.toggle('overflowing', input.scrollWidth > input.clientWidth);
+  });
+  input.addEventListener('input', checkOverflow);
+  window.addEventListener('resize', checkOverflow);
+  setTimeout(checkOverflow, 0);
+
+  // 5) abrir popover
+  indicator.addEventListener('click', () => {
+    preFull.textContent = input.value || '';
+    pop.classList.add('open');
+    const r = wrap.getBoundingClientRect();
+    pop.style.top = `${r.bottom + 8 + window.scrollY}px`;
+    pop.style.left = `${r.left + window.scrollX}px`;
+    pop.style.width = `${Math.max(r.width, 320)}px`;
+  });
+
+  // 6) cerrar/copiar
+  btnClose.addEventListener('click', () => pop.classList.remove('open'));
+  btnCopy.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(input.value || ''); showSuccess?.('✔ Copiado al portapapeles'); }
+    catch(e) { console.warn(e); }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') pop.classList.remove('open'); });
+  document.addEventListener('click', (e) => {
+    if (!pop.classList.contains('open')) return;
+    if (!pop.contains(e.target) && !wrap.contains(e.target)) pop.classList.remove('open');
+  });
+}
+
+// Llama a la inicialización cuando el DOM esté listo (si aún no lo haces)
+document.addEventListener('DOMContentLoaded', () => {
+  try { initSmilesOverflowUI(); } catch (e) { console.warn(e); }
+});
+
 
 window.retryVisualization = retryVisualization;
 window.navigateMolecules = navigateMolecules;
 window.toggleRotation = toggleRotation;
 window.changeRotationSpeed = changeRotationSpeed;
-window.navigateMolecules = navigateMolecules;
-window.toggleRotation = toggleRotation;
-window.changeRotationSpeed = changeRotationSpeed;
-window.retryVisualization = retryVisualization;
