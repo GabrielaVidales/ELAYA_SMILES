@@ -1,69 +1,92 @@
-# ELAYA-Smiles: Herramienta de Conversión y Análisis Molecular ✨
+# 🌌 ELAYA-SMILES  
+### Molecular Intelligence from Text to Structure
 
-![Logo Elaya](pictures/Logo_Elaya.jpg)
+<p align="center">
+  <img src="pictures/Logo_Elaya.jpg" width="180" alt="ELAYA Logo"/>
+</p>
 
-**ELAYA** (_Energy-minimized Linear-to-structure Atom Yielding Algorithm_) es una aplicación web para la conversión de representaciones moleculares lineales (SMILES) a estructuras tridimensionales optimizadas, permitiendo su visualización y análisis comparativo. Desarrollada como una herramienta de apoyo en química computacional, esta plataforma integra múltiples motores de conversión y métodos de análisis estructural.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python"/>
+  <img src="https://img.shields.io/badge/RDKit-Chemoinformatics-green?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/OpenBabel-Conversion-orange?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/ANI-Neural_Potentials-purple?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Status-Active-success?style=for-the-badge"/>
+</p>
 
----
-
-## 🌐 Propósito y relevancia
-
-La representación lineal SMILES ha sido ampliamente utilizada por su simplicidad sintáctica y compatibilidad con bases de datos químicas. Sin embargo, su utilidad para la simulación, visualización tridimensional y predicción molecular depende críticamente de su transformación en geometrías 3D realistas.
-
-**ELAYA-Smiles automatiza y democratiza este proceso** al integrar distintos motores de conversión y algoritmos de optimización estructural, permitiendo además el análisis de similitud molecular desde múltiples enfoques.
-
----
-
-## 🚀 Funcionalidades principales
-
-- ✅ Conversión de cadenas SMILES a estructuras 3D con **RDKit**, **OpenBabel**, **NetworkX** o **Auto3D**.
-- ✅ Visualización interactiva con **Py3Dmol**.
-- ✅ Análisis de similitud molecular mediante **Tanimoto**, **SOAP** y **Valle-Oganov**.
-- ✅ Carga individual o por archivo.
-- ✅ Exportación de estructuras en formato `.xyz`.
-- ✅ Interfaz moderna y amigable.
+<p align="center">
+  <b>Transform SMILES into accurate 3D molecular structures with AI-enhanced conformational exploration.</b>
+</p>
 
 ---
 
-## ⚗️ Características científicas destacadas
+## ✨ Overview
 
-- **Conversión multi-método SMILES → 3D**: soporta RDKit, OpenBabel, Auto3D y NetworkX.
-- **Optimización geométrica por energía** (Auto3D) con soporte para desactivación de GPU.
-- **Análisis estructural de similitud molecular** mediante:
-  - Índices topológicos (Tanimoto sobre fingerprints)
-  - Descriptores atómicos y SOAP (Smooth Overlap of Atomic Positions)
-  - Distancias en el espacio de configuraciones (Valle-Oganov)
-- **Visualización molecular interactiva** mediante Py3Dmol.
-- **Exportación en formato XYZ para simulaciones posteriores.**
-- 
----
+**ELAYA-SMILES** is a computational framework designed to convert **SMILES strings** into realistic **3D molecular geometries**, enabling downstream applications in:
 
-## 🧰 Tecnologías utilizadas
+- 🧬 Molecular Dynamics  
+- ⚛️ Quantum Chemistry  
+- 🧪 Drug Discovery  
+- 🤖 Machine Learning on molecular properties  
 
-| Categoría             | Herramientas                                       |
-|-----------------------|----------------------------------------------------|
-| Backend               | Flask, Flask-CORS                                  |
-| Química computacional | RDKit, OpenBabel, Auto3D, ASE, dscribe             |
-| Visualización         | Py3Dmol, Chart.js                                  |
-| Frontend              | HTML5, CSS3, JavaScript                            |
-| Infraestructura       | Docker, Render                                     |
-| Machine Learning      | PyTorch (Auto3D dependency)                        |
+It integrates classical cheminformatics with modern **AI-based potentials** to efficiently explore conformational space.
 
 ---
 
-## 🧪 Ejemplo de uso
+## 🧠 Key Features
 
-### Conversión SMILES a 3D
+🔹 **SMILES → 3D Conversion**  
+Generate reliable 3D conformations from text-based molecular representations.
 
-1. Ingresa una cadena SMILES como: `C1=CC=CC=C1`.
-2. Elige el método de conversión (RDKit, OpenBabel, etc.).
-3. Visualiza y descarga el archivo `.xyz` generado.
+🔹 **Advanced Conformer Search (GLOMOS)**  
+Genetic algorithm for exploring low-energy conformational landscapes.
 
-### Análisis de Similitud
+🔹 **AI-Powered Optimization (ANI)**  
+Near quantum-level accuracy for organic molecules at a fraction of the computational cost.
 
-1. Selecciona dos moléculas convertidas.
-2. Elige el método de análisis.
-3. Visualiza el resultado numérico y gráfico.
+🔹 **Multiple Backends**
+- RDKit (ETKDGv3)
+- OpenBabel
+- Graph-based approximations (NetworkX)
+
+🔹 **Reproducibility**
+- Deterministic workflows using fixed random seeds
+
+---
+
+## ⚙️ Methodology
+
+### 🧪 1. Molecular Parsing
+- SMILES → Molecular graph  
+- Hydrogen completion  
+
+### 🔺 2. Initial 3D Embedding
+- **ETKDGv3** (distance geometry + torsional knowledge)
+
+### 🔄 3. Conformational Exploration
+- Genetic algorithm (GLOMOS)
+- Sampling diverse conformers
+
+### ⚛️ 4. Energy Minimization
+- Classical force fields:
+  - UFF  
+  - MMFF94  
+
+### 🤖 5. AI Refinement
+- ANI neural network potentials  
+- Fast approximation of quantum energies  
+
+---
+
+## 🧬 Scientific Background
+
+### 🔹 Conformers
+Molecules exist as ensembles of interconverting 3D structures due to rotation around single bonds.
+
+### 🔹 Force Fields
+Approximate molecular energy using parameterized functions (bonded + non-bonded interactions).
+
+### 🔹 ANI Potentials
+Neural networks trained on quantum data to predict molecular energies efficiently.
 
 ---
 
