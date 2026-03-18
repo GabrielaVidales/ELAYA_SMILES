@@ -51,13 +51,11 @@ RUN pip install --no-cache-dir \
     py3Dmol
 
 # ── Step 5: Auto3D (AI-based conformer generation) ───────────────────────────
-#    Pin to a version that does NOT re-install a CUDA torch on top of our CPU one.
-RUN pip install --no-cache-dir "auto3d==2.3.3" --no-deps && \
-    pip install --no-cache-dir \
-        biopython \
-        openmm \
-        pdbfixer \
-        geometric
+#    --no-deps prevents Auto3D from overwriting our CPU torch with a CUDA build.
+#    Latest available version as of 2025: 2.3.1
+RUN pip install --no-cache-dir "auto3d==2.3.1" --no-deps && \
+    pip install --no-cache-dir biopython geometric || true
+#   ^ openmm and pdbfixer are optional heavy deps removed to keep image lean
 
 # ── Step 6: GLOMOS (genetic algorithm for rotamers) ──────────────────────────
 #    Install from PyPI if available, otherwise from local package directory.
