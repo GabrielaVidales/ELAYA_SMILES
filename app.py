@@ -273,10 +273,12 @@ def static_file(path):
 
 
 if __name__ == '__main__':
+    # Render (and most PaaS) injects a PORT env var — fall back to 5000 locally
+    port = int(os.environ.get('PORT', 5000))
     try:
         from waitress import serve
-        print("Servidor iniciado con Waitress en http://localhost:5000")
-        serve(app, host='0.0.0.0', port=5000, threads=8, channel_timeout=600)
+        print(f"Servidor iniciado con Waitress en http://0.0.0.0:{port}")
+        serve(app, host='0.0.0.0', port=port, threads=8, channel_timeout=600)
     except ImportError:
         print("AVISO: instala waitress con:  pip install waitress")
-        app.run(port=5000, debug=False, threaded=True, use_reloader=False)
+        app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
