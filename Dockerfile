@@ -37,12 +37,9 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir torchani
 
 # ── Step 3: Core science stack ────────────────────────────────────────────────
-RUN pip install --no-cache-dir \
-    numpy \
-    scipy \
-    networkx \
-    ase \
-    dscribe
+#    numpy must be <2 — torch 2.2.x, dscribe, and ase were all compiled against
+#    numpy 1.x ABI. numpy 2.x breaks them at import time.
+RUN pip install --no-cache-dir "numpy<2" scipy networkx ase dscribe
 
 # ── Step 4: Cheminformatics ───────────────────────────────────────────────────
 RUN pip install --no-cache-dir \
@@ -51,11 +48,10 @@ RUN pip install --no-cache-dir \
     py3Dmol
 
 # ── Step 5: Auto3D (AI-based conformer generation) ───────────────────────────
-#    --no-deps prevents Auto3D from overwriting our CPU torch with a CUDA build.
-#    Latest available version as of 2025: 2.3.1
+#    --no-deps prevents Auto3D from re-installing a CUDA torch on top of our CPU one.
+#    psutil is a direct import in auto3D.py but not declared in its setup.py.
 RUN pip install --no-cache-dir "auto3d==2.3.1" --no-deps && \
-    pip install --no-cache-dir biopython geometric || true
-#   ^ openmm and pdbfixer are optional heavy deps removed to keep image lean
+    pip install --no-cache-dir psutil biopython geometric || true
 
 # ── Step 6: GLOMOS (genetic algorithm for rotamers) ──────────────────────────
 #    Install from PyPI if available, otherwise from local package directory.
