@@ -44,7 +44,12 @@ function createGlomosPanel() {
 
       <div class="glomos-log-header">
         <span>Live log</span>
-        <button class="glomos-log-toggle" id="glomos-log-toggle" onclick="toggleGlomosLog()">Hide</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="glomos-log-toggle" id="glomos-log-copy" onclick="copyGlomosLog()" title="Copy log">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy
+          </button>
+          <button class="glomos-log-toggle" id="glomos-log-toggle" onclick="toggleGlomosLog()">Hide</button>
+        </div>
       </div>
       <div id="glomos-log-box" class="glomos-log-box"></div>
     </div>
@@ -117,6 +122,26 @@ function toggleGlomosLog() {
   const hidden = box.style.display === 'none';
   box.style.display = hidden ? '' : 'none';
   btn.textContent   = hidden ? 'Hide' : 'Show';
+}
+
+function copyGlomosLog() {
+  const box = document.getElementById('glomos-log-box');
+  const btn = document.getElementById('glomos-log-copy');
+  if (!box || !btn) return;
+  const text = Array.from(box.querySelectorAll('div'))
+    .map(d => d.textContent)
+    .join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    // Show checkmark
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>Copied`;
+    btn.style.color = '#3cb49a';
+    btn.style.borderColor = '#3cb49a';
+    setTimeout(() => {
+      btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy`;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  }).catch(() => {});
 }
 
 function fmtTime(secs) {
