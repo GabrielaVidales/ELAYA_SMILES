@@ -50,8 +50,9 @@ RUN pip install --no-cache-dir \
 # ── Step 5: Auto3D (AI-based conformer generation) ───────────────────────────
 #    --no-deps prevents Auto3D from re-installing a CUDA torch on top of our CPU one.
 #    psutil is a direct import in auto3D.py but not declared in its setup.py.
+#    send2trash is required by Auto3D's isomer_engine but omitted when using --no-deps.
 RUN pip install --no-cache-dir "auto3d==2.3.1" --no-deps && \
-    pip install --no-cache-dir psutil biopython geometric || true
+    pip install --no-cache-dir psutil biopython geometric send2trash || true
 
 # ── Step 6: GLOMOS (genetic algorithm for rotamers) ──────────────────────────
 #    Install from PyPI if available, otherwise from local package directory.
