@@ -3342,3 +3342,24 @@ h1, h2, h3, .lp-hero-title, .lp-section-tag, .navbar a {
     .ab-ga-step  { max-width: 100%; width: 100%; }
     .lp-detail-band { padding: 2rem 1rem; }
 }
+
+/* ── Fullscreen: bar visible over canvas ── */
+.visualization-container:fullscreen,
+.visualization-container:-webkit-full-screen {
+  overflow: visible !important;
+  position: relative !important;
+}
+.visualization-container:fullscreen #viewer-container,
+.visualization-container:-webkit-full-screen #viewer-container {
+  height: calc(100% - 52px) !important;
+}
+/* Ensure the JS-injected bar paints above the WebGL canvas */
+#fs-controls-bar {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 52px !important;
+  z-index: 999999 !important;
+  pointer-events: all !important;
+}
