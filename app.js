@@ -741,10 +741,8 @@ btn2D.addEventListener("click", () => toggleView("2d"));
 
 function toggleView(mode) {
   if (mode === "3d") {
-    // Cambia el estado de 3D (permite activar/desactivar)
     is3DEnabled = !is3DEnabled;
   } else if (mode === "2d") {
-    // Cambia el estado de 2D (permite activar/desactivar)
     is2DEnabled = !is2DEnabled;
   }
 
@@ -764,8 +762,13 @@ function toggleView(mode) {
   if (is2DEnabled) btn2D.classList.add("active");
   else btn2D.classList.remove("active");
 
-  // Si ambos están activos, mostrar vista combinada
-  // Si solo uno, mostrar su modo completo
+  // Toggle mode-2d class for contrast styling (pure 2D = white bg)
+  const visContainer = document.querySelector('.visualization-container');
+  if (visContainer) {
+    if (is2DEnabled && !is3DEnabled) visContainer.classList.add('mode-2d');
+    else visContainer.classList.remove('mode-2d');
+  }
+
   updateViewerContainerLayout();
 }
 
@@ -1241,30 +1244,23 @@ function updateXYZDisplay() {
         return;
     }
 
-    // Line 0: atom count, Line 1: comment/title
+    // Standard XYZ: line 0 = atom count, line 1 = comment, rest = coords
     const atomCount = lines[0].trim();
     const comment   = lines[1] || '';
-
-    // Column header ruler
-    const ruler = `${'Atom'.padEnd(4)} ${'X (Å)'.padStart(10)} ${'Y (Å)'.padStart(10)} ${'Z (Å)'.padStart(10)}`;
-    const sep   = '-'.repeat(ruler.length);
 
     const atoms = lines.slice(2).map(line => {
         const parts = line.trim().split(/\s+/);
         if (parts.length >= 4) {
-            return `${parts[0].padEnd(4)} ${parseFloat(parts[1]).toFixed(6).padStart(10)} ${parseFloat(parts[2]).toFixed(6).padStart(10)} ${parseFloat(parts[3]).toFixed(6).padStart(10)}`;
+            const sym = parts[0].padEnd(2);
+            const x   = parseFloat(parts[1]).toFixed(4).padStart(10);
+            const y   = parseFloat(parts[2]).toFixed(4).padStart(10);
+            const z   = parseFloat(parts[3]).toFixed(4).padStart(10);
+            return `${sym}  ${x}  ${y}  ${z}`;
         }
         return line;
     });
 
-    xyzDisplay.textContent = [
-        `Atoms: ${atomCount}`,
-        `Note:  ${comment}`,
-        sep,
-        ruler,
-        sep,
-        ...atoms
-    ].join('\n');
+    xyzDisplay.textContent = [atomCount, comment, ...atoms].join('\n');
 }
 
 function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContainer = viewerContainer) {
@@ -1412,6 +1408,126 @@ function toggleRotation() {
 function changeRotationSpeed(speed) {
     rotationSpeed = parseFloat(speed);
 }
+
+// ── Fullscreen ───────────────────────────────────────────────────────────────
+// Strategy: requestFullscreen on the card div.
+// The controls bar is injected with position:absolute + very high z-index.
+// viewer-container height is reduced so the bar is not covered.
+
+function _buildFsBar() {
+  document.getElementById('fs-controls-bar')?.remove();
+
+  const is2D  = is2DEnabled && !is3DEnabled;
+  const multi = Array.isArray(molecules) && molecules.length > 1;
+  const spd   = document.getElementById('rotation-speed')?.value ?? rotationSpeed;
+  const bg    = is2D ? 'rgba(12,22,52,0.94)' : 'rgba(0,0,0,0.86)';
+
+  const bar = document.createElement('div');
+  bar.id = 'fs-controls-bar';
+  // Use inline style only — no class conflicts
+  bar.setAttribute('style', [
+    'position:absolute',
+    'bottom:0',
+    'left:0',
+    'right:0',
+    'width:100%',
+    'height:52px',
+    `background:${bg}`,
+    'display:flex',
+    'align-items:center',
+    'justify-content:space-between',
+    'padding:0 24px',
+    'box-sizing:border-box',
+    'z-index:999999',
+    'font-family:Inter,system-ui,sans-serif',
+    'backdrop-filter:blur(6px)',
+    'border-top:1px solid rgba(255,255,255,0.08)',
+  ].join(';'));
+
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;color:#cce0ff;font-size:0.88rem;flex-shrink:0;">
+      <span style="white-space:nowrap;">Speed</span>
+      <input id="fs-speed-input" type="range" min="0" max="5" step="0.5" value="${spd}"
+        style="width:120px;accent-color:#3cb49a;cursor:pointer;vertical-align:middle;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button id="fs-exit-btn" title="Exit Fullscreen"
+        style="background:transparent;border:none;cursor:pointer;padding:5px;display:flex;align-items:center;opacity:0.85;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+        </svg>
+      </button>
+      <button id="fs-prev-btn"
+        style="display:${multi?'inline-flex':'none'};align-items:center;
+               padding:5px 16px;background:rgba(40,90,200,0.65);border:none;
+               border-radius:8px;color:#fff;cursor:pointer;font-size:0.88rem;">← Back</button>
+      <button id="fs-next-btn"
+        style="display:${multi?'inline-flex':'none'};align-items:center;
+               padding:5px 16px;background:rgba(40,90,200,0.65);border:none;
+               border-radius:8px;color:#fff;cursor:pointer;font-size:0.88rem;">Next →</button>
+    </div>`;
+
+  bar.querySelector('#fs-speed-input').addEventListener('input', e => {
+    rotationSpeed = parseFloat(e.target.value);
+    const orig = document.getElementById('rotation-speed');
+    if (orig) orig.value = e.target.value;
+  });
+  bar.querySelector('#fs-exit-btn').addEventListener('click', () => document.exitFullscreen());
+  bar.querySelector('#fs-prev-btn').addEventListener('click', () => navigateMolecules(-1));
+  bar.querySelector('#fs-next-btn').addEventListener('click', () => navigateMolecules(1));
+
+  return bar;
+}
+
+function toggleVisualizationFullscreen() {
+  const card = document.querySelector('.visualization-container');
+  if (!card) return;
+  if (!document.fullscreenElement) {
+    card.requestFullscreen().catch(e => console.warn('FS failed:', e));
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  const card = document.querySelector('.visualization-container');
+  const vc   = document.getElementById('viewer-container');
+  const fsBtn= document.getElementById('fullscreen-btn');
+
+  if (isFs && card) {
+    // card is now the fullscreen viewport — make sure it is position:relative
+    // so absolute children are contained within it
+    card.style.setProperty('position', 'relative', 'important');
+    card.style.setProperty('overflow', 'visible', 'important'); // allow bar to paint
+
+    // Shrink viewer-container to leave room for the 52px bar
+    if (vc) {
+      vc._fsOrigHeight = vc.style.height;
+      vc.style.setProperty('height', 'calc(100% - 52px)', 'important');
+    }
+
+    // Append bar as last child of the fullscreen element (paints on top)
+    card.appendChild(_buildFsBar());
+
+  } else {
+    // Restore
+    document.getElementById('fs-controls-bar')?.remove();
+    if (vc && vc._fsOrigHeight !== undefined) {
+      vc.style.height = vc._fsOrigHeight;
+    }
+    if (card) {
+      card.style.removeProperty('overflow');
+    }
+  }
+
+  // Swap in-page button icon
+  if (fsBtn) {
+    fsBtn.innerHTML = isFs
+      ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 13h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/></svg>';
+  }
+});
 
 document.addEventListener('click', function (event) {
     const overlay = document.getElementById('modal-overlay');
@@ -1635,15 +1751,23 @@ function formatXYZWithAlignment(xyzText) {
     const lines = xyzText.trim().split('\n');
     if (lines.length < 3) return xyzText;
 
-    const header = lines.slice(0, 2);
+    // Standard XYZ format: line 0 = atom count, line 1 = comment, lines 2+ = atom coords
+    const atomCount = lines[0].trim();
+    const comment   = lines[1];          // preserve exactly as-is (SMILES title etc.)
     const atomLines = lines.slice(2).map(line => {
         const parts = line.trim().split(/\s+/);
-        return parts.length === 4
-            ? `${parts[0].padEnd(2)} ${parts[1].padStart(8)} ${parts[2].padStart(8)} ${parts[3].padStart(8)}`
-            : line;
+        if (parts.length >= 4) {
+            const sym = parts[0];
+            const x   = parseFloat(parts[1]).toFixed(4);
+            const y   = parseFloat(parts[2]).toFixed(4);
+            const z   = parseFloat(parts[3]).toFixed(4);
+            // Align columns: symbol left-padded 2, coords right-aligned in 10-char fields
+            return `${sym.padEnd(2)}  ${x.padStart(10)}  ${y.padStart(10)}  ${z.padStart(10)}`;
+        }
+        return line;
     });
 
-    return [...header, ...atomLines].join('\n');
+    return [atomCount, comment, ...atomLines].join('\n');
 }
 
 // Funciones de ayuda
