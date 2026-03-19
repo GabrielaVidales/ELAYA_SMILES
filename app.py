@@ -271,7 +271,6 @@ def static_file(path):
     base = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(base, path)
 
-
 if __name__ == '__main__':
     # Render (and most PaaS) injects a PORT env var — fall back to 5000 locally
     port = int(os.environ.get('PORT', 5000))
