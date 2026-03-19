@@ -189,69 +189,30 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError) {
     clearInterval(clockInterval);
     if (pollTimer) clearTimeout(pollTimer);
     // Limpiar job guardado al terminar (éxito o error definitivo)
-    localStorage.removeItem('glomos_job_id');
-    localStorage.removeItem('glomos_cursor');
     if (isError) {
       elBadge.className = 'glomos-badge error';
       elBadge.textContent = 'Error';
     }
   }
 
-  // 3) Start job — o retomar uno existente si quedó pendiente
-  const savedJobId = localStorage.getItem('glomos_job_id');
-  const savedCursor = parseInt(localStorage.getItem('glomos_cursor') || '0', 10);
+  // 3) Start the job on the backend
+  fetch('/api/glomos/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ smiles, glomos_params: glomosParams }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) throw new Error(data.error);
+    schedulePoll(data.job_id);
+  })
+  .catch(err => {
+    stop(true);
+    elEta.textContent = err.message;
+    if (onError) onError(err.message);
+  });
 
-  if (savedJobId) {
-    // Verificar si el job guardado sigue vivo en el servidor
-    elEta.textContent = 'Retomando cálculo anterior…';
-    fetch(`/api/glomos/poll/${savedJobId}?cursor=0`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data && !data.error) {
-          // Job sigue vivo — retomar desde donde quedó
-          cursor = savedCursor;
-          elLog.innerHTML = '';
-          const resumeDiv = document.createElement('div');
-          resumeDiv.className = 'glomos-log-line-gen';
-          resumeDiv.textContent = '--- Retomando sesión anterior ---';
-          elLog.appendChild(resumeDiv);
-          schedulePoll(savedJobId);
-        } else {
-          // Job ya no existe — iniciar uno nuevo
-          localStorage.removeItem('glomos_job_id');
-          localStorage.removeItem('glomos_cursor');
-          startNewJob();
-        }
-      })
-      .catch(() => startNewJob());
-  } else {
-    startNewJob();
-  }
-
-  function startNewJob() {
-    fetch('/api/glomos/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ smiles, glomos_params: glomosParams }),
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) throw new Error(data.error);
-      // Guardar job_id en localStorage para poder retomar si se recarga la página
-      localStorage.setItem('glomos_job_id', data.job_id);
-      localStorage.setItem('glomos_cursor', '0');
-      schedulePoll(data.job_id);
-    })
-    .catch(err => {
-      stop(true);
-      elEta.textContent = err.message;
-      if (onError) onError(err.message);
-    });
-  }
-
-  // 4) Polling loop con retry automático ante 502/503/504
-  let consecutiveErrors = 0;
-  const MAX_ERRORS = 10; // tolerar hasta 10 errores seguidos antes de rendirse
+  // 4) Polling loop with auto-retry
 
   function schedulePoll(jobId) {
     if (stopped) return;
@@ -290,7 +251,6 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError) {
         }
         cursor = data.cursor;
         // Actualizar cursor guardado para poder retomar si se recarga
-        localStorage.setItem('glomos_cursor', String(cursor));
 
         if (!data.done) {
           schedulePoll(jobId);
