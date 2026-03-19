@@ -55,7 +55,10 @@ RUN pip install --no-cache-dir "auto3d==2.3.1" --no-deps && \
     pip install --no-cache-dir psutil biopython geometric send2trash || true
 
 # ── Step 6: GLOMOS (genetic algorithm for rotamers) ──────────────────────────
-#    Install from PyPI if available, otherwise from local package directory.
+#    glomos requires 'aegon' (compiled C extensions). Both are installed here.
+#    If aegon is unavailable on PyPI, the app still starts — GLOMOS features
+#    are disabled gracefully via try/except in elaya_smiles.py.
+RUN pip install --no-cache-dir aegon || echo "WARNING: aegon not found on PyPI — GLOMOS will be disabled"
 RUN pip install --no-cache-dir glomos || \
     ([ -d "/app/glomos" ] && pip install --no-cache-dir /app/glomos) || \
     echo "WARNING: glomos not found on PyPI or local path — GLOMOS features will be unavailable"
