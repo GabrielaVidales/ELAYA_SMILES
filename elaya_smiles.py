@@ -414,7 +414,9 @@ class MolecularTools:
                 "sys.stdout.reconfigure(line_buffering=True)\n"
                 "sys.stderr.reconfigure(line_buffering=True)\n"
                 "from multiprocessing import freeze_support\n"
-                "sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n"
+                # Inserta /app al inicio del path para que el glomos local
+                # (en /app/glomos/) tenga prioridad sobre el de PyPI
+                "sys.path.insert(0, '/app')\n"
                 "os.chdir(os.path.dirname(os.path.abspath(__file__)))\n"
                 "from glomos.heuristic_ga_rotamers import conformational\n"
                 "if __name__ == '__main__':\n"
