@@ -43,15 +43,8 @@ from openbabel.pybel import readstring
 import Auto3D
 from Auto3D.auto3D import options, main
 
-# Genetic algorithm for rotamer optimization
-# glomos depends on 'aegon' (compiled C extensions) which may not be available
-# in all environments. If missing, GLOMOS features will be disabled gracefully.
-try:
-    from glomos.heuristic_ga_rotamers import conformational
-    GLOMOS_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
-    conformational = None
-    GLOMOS_AVAILABLE = False
+# Genetic algorithm for rotamer optimization (bundled as /app/glomos local package)
+from glomos.heuristic_ga_rotamers import conformational
 
 class MolecularTools:
     def __init__(self):
