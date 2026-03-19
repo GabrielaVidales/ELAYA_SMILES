@@ -1,916 +1,2324 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="pictures/Logo_Elaya.jpg">
-    <title>Elaya Smiles - Molecular Viewer</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.1.0/3Dmol-min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-</head>
+console.log(">>> app.js está cargado");
 
-<body>
-    <div id="load-confirmation" style="display: none;"></div>
+/// Configuración global
+const API_BASE_URL = window.location.origin + '/api';
+let molecules = [];
+let selected = new Set();
+let currentVisualizations = [];
+let currentXYZ = '';
+let currentMoleculeIndex = 0;
+let rotationSpeed = 0.8;
+let isRotationPaused = false;
+let rotationAnimationId = null;
+let selectedMolecules = new Set();
+let visualizationContainer, viewerContainer, moleculeTitle, moleculeControls;
+let prevMoleculeBtn, nextMoleculeBtn, rotationSpeedInput;
+let showConfirmation = true;
+let allMolecules = [];
+const legacyDownloadBtn = document.getElementById('download-xyz');
 
-    <nav class="navbar">
-        <div class="navbar-container">
-            <img src="pictures/Logo_Elaya.jpg" alt="Elaya Logo" class="navbar-logo">
-            <a href="#explore" id="nav-explore">Explore</a>
-            <a href="#about" id="nav-about">About</a>
-            <a href="#contact" id="nav-contact">Contact</a>
-            <div class="code-links">
-                <a href="https://github.com/GabrielaVidales/Elaya_SMILES/blob/main/elaya_smiles.py" target="_blank" class="view-code-icon"> View code
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#0f6975">
-                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path>
-                    </svg>
-                </a>
-            </div> 
+// === BRIDGE: sincroniza let-globales con window.* ===
+Object.defineProperty(window, 'molecules', {
+  get: () => molecules,
+  set: (v) => { molecules = Array.isArray(v) ? v : []; }
+});
+Object.defineProperty(window, 'currentMoleculeIndex', {
+  get: () => currentMoleculeIndex,
+  set: (v) => { currentMoleculeIndex = Number.isInteger(v) ? v : 0; }
+});
+Object.defineProperty(window, 'currentXYZ', {
+  get: () => currentXYZ,
+  set: (v) => { currentXYZ = (v ?? '').toString(); }
+});
+Object.defineProperty(window, 'allMolecules', {
+  get: () => allMolecules,
+  set: (v) => { allMolecules = Array.isArray(v) ? v : []; }
+});
+
+console.log("DOM fully loaded and parsed");
+
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("✅ DOM fully loaded and parsed");
+
+    // === Cache UI elements early ===
+    visualizationContainer = document.querySelector('.visualization-container');
+    viewerContainer        = document.getElementById('viewer-container');
+    moleculeTitle          = document.getElementById('molecule-title');
+    moleculeControls       = document.getElementById('molecule-controls');
+    prevMoleculeBtn        = document.getElementById('prev-molecule');
+    nextMoleculeBtn        = document.getElementById('next-molecule');
+    rotationSpeedInput     = document.getElementById('rotation-speed');
+
+    // Hook prev/next once
+    if (prevMoleculeBtn) prevMoleculeBtn.addEventListener('click', () => navigateMolecules(-1));
+    if (nextMoleculeBtn) nextMoleculeBtn.addEventListener('click', () => navigateMolecules(1));
+
+    // Setup slider once
+    if (rotationSpeedInput) {
+    rotationSpeedInput.min   = 0;
+    rotationSpeedInput.max   = 5;
+    rotationSpeedInput.step  = 0.5;
+    rotationSpeedInput.value = String(rotationSpeed);
+    rotationSpeedInput.addEventListener('input', (e) => changeRotationSpeed(e.target.value));
+    }
+
+    // Inicializar modo de entrada
+    try {
+        toggleInputMethod();
+    } catch (e) {
+        console.warn("⚠️ Error en toggleInputMethod:", e);
+    }
+
+    // Inicializar opciones de campo de fuerza (el DOM puede no estar listo aún, se reintenta en el change handler)
+    try {
+        toggleForceField();
+    } catch (e) {
+        // Silenciado: se vuelve a llamar cuando el usuario cambia el método de conversión
+    }
+
+    // Autocarga de la molécula de oxitocina
+    const smilesInput = document.getElementById('smiles');
+    if (smilesInput && !sessionStorage.getItem('oxytocinShown')) {
+        const oxytocinSmiles = "CC(C)C[C@H](NC(=O)[C@H](CC(C)C)NC(=O)CN)C(=O)N";
+        smilesInput.value = oxytocinSmiles;
+        molecules = [{ smiles: oxytocinSmiles, id: oxytocinSmiles }];
+        updateSmilesHistory(oxytocinSmiles);
+
+        convertSingleMolecule().catch(err => {
+            console.error("❌ Error al convertir oxitocina automáticamente:", err);
+        });
+
+        sessionStorage.setItem('oxytocinShown', 'true');
+    }
+
+    // Conexión al backend
+    try {
+        checkBackendConnection();
+    } catch (e) {
+        console.warn("⚠️ Error en checkBackendConnection:", e);
+    }
+
+    // Historial
+    try {
+        loadSmilesHistory();
+    } catch (e) {
+        console.warn("⚠️ Error cargando historial:", e);
+    }
+
+        const smilesInputEl = document.getElementById('smiles');
+    if (smilesInputEl) {
+      smilesInputEl.addEventListener('input', () => {
+        // Al teclear un SMILES, asumimos modo single y “olvidamos” el archivo previo
+        window.allMolecules = [];
+        const singleRadio = document.querySelector('input[name="input-method"][value="single"]');
+        if (singleRadio) singleRadio.checked = true;
+        toggleInputMethod?.();
+        updateNavigationButtons?.();
+        updateDownloadButtons();
+      });
+    }
+
+    // ── Helper: set active nav tab ───────────────────────────
+    function setActiveNav(id) {
+        document.querySelectorAll('.navbar a').forEach(a => a.classList.remove('nav-active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('nav-active');
+    }
+
+    // ── Scroll-triggered animations (fade-in + scroll-reveal) ──
+    const fadeObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                entry.target.classList.add('sr-visible');
+                fadeObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.07 });
+
+    function observeFadeIns() {
+        document.querySelectorAll('.fade-in-section, .scroll-reveal').forEach(el => {
+            // Only reset elements inside hidden sections to avoid flashing
+            // content that is already visible on screen.
+            const parentSection = el.closest('section, [id$="-section"]');
+            const isInVisibleSection = parentSection
+                ? window.getComputedStyle(parentSection).display !== 'none'
+                : true;
+            if (!isInVisibleSection) {
+                el.classList.remove('visible', 'sr-visible');
+            }
+            fadeObserver.observe(el);
+        });
+    }
+    observeFadeIns();
+
+    // Navegación: About
+    const aboutLink = document.querySelector('a[href="#about"]');
+    const aboutSection = document.getElementById('about-section');
+    const inputSection = document.querySelector('.input-section');
+    const conversionSection = document.querySelector('.conversion-section');
+    const header = document.querySelector('header');
+    const viewer = document.getElementById('viewer-container');
+    const conversionMethod = document.getElementById('conversion-method');
+
+    if (conversionMethod) {
+        conversionMethod.addEventListener('change', toggleForceField);
+    } else {
+        console.warn("⚠️ conversion-method no encontrado");
+    }
+
+    if (aboutLink) {
+        aboutLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
+            if (aboutSection) {
+                aboutSection.style.display = 'block';
+                setTimeout(() => {
+                    window.scrollTo({ top: aboutSection.offsetTop - 40, behavior: 'smooth' });
+                    observeFadeIns();
+                }, 100);
+            }
+            if (header) header.style.display = 'none';
+            setActiveNav('nav-about');
+        });
+    }
+
+    const postOptSelect = document.getElementById("post-optimization");
+    const glomosPanel = document.getElementById("glomos-panel");
+
+    postOptSelect.addEventListener("change", () => {
+      glomosPanel.style.display =
+        postOptSelect.value === "glomos" ? "block" : "none";
+    });
+
+    // Navegación: Explore
+    const simulatorLink = document.querySelector('a[href="#explore"]');
+    if (simulatorLink) {
+        simulatorLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
+            if (inputSection) inputSection.style.display = 'block';
+            if (conversionSection) conversionSection.style.display = 'flex';
+            if (header) header.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveNav('nav-explore');
+            setTimeout(() => { observeFadeIns(); }, 100);
+        });
+    }
+
+    // Navegación: Contact
+    const contactLink = document.querySelector('a[href="#contact"]');
+    const contactSection = document.getElementById('contact-section');
+
+    if (contactLink) {
+        contactLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
+            if (contactSection) {
+                contactSection.style.display = 'block';
+                setTimeout(() => {
+                    window.scrollTo({ top: contactSection.offsetTop - 40, behavior: 'smooth' });
+                    observeFadeIns();
+                }, 100);
+            }
+            if (header) header.style.display = 'none';
+            setActiveNav('nav-contact');
+        });
+    }
+
+    // Default: Explore is the landing tab
+    setActiveNav('nav-explore');
+
+    const btnConvert = document.getElementById('convert-molecules');
+    if (btnConvert) {
+    btnConvert.addEventListener('click', async (e) => {
+        // 1) Evita submit/refresh si está dentro de un <form>
+        e.preventDefault();
+        e.stopPropagation();
+
+        // 2) Normaliza el método seleccionado (evita espacios y mayúsculas)
+        const selectedEl = document.querySelector('input[name="input-method"]:checked');
+        let selectedMethod = selectedEl?.value;
+        selectedMethod = selectedMethod?.trim().toLowerCase(); // <-- clave
+
+        try {
+        if (selectedMethod === 'single') {
+            const smilesInput = document.getElementById('smiles');
+            const smiles = smilesInput?.value?.trim();
+
+            if (!smiles) {
+            showError("Please enter a valid SMILES string.");
+            return;
+            }
+
+            // Loader / bloqueo
+            const convertBtn = document.getElementById('convert-molecules');
+            const loader = convertBtn?.querySelector('.water-loader');
+            const label  = convertBtn?.querySelector('.button-label');
+            if (loader && label) {
+            loader.style.display = 'block';
+            label.style.opacity  = '0.3';
+            convertBtn.disabled  = true;
+            if (typeof createBubbles === 'function') createBubbles(loader);
+            }
+
+            // Estado y conversión
+            window.molecules = [{ smiles, id: smiles }];
+            window.currentMoleculeIndex = 0;
+            if (typeof updateSmilesHistory === 'function') updateSmilesHistory(smiles);
+
+            // Siempre quitar el panel GLOMOS si no se usa GLOMOS
+            const postOpt = document.getElementById('post-optimization')?.value;
+            if (postOpt !== 'glomos') {
+              document.getElementById('glomos-live-panel')?.remove();
+            }
+
+            // ── GLOMOS streaming ─────────────────────────────────────
+            if (postOpt === 'glomos' && typeof window.runGlomosWithStream === 'function') {
+              // Limpiar viewer y XYZ para que no confunda con resultado previo
+              currentXYZ = '';
+              const viewerEl = document.getElementById('viewer-container');
+              if (viewerEl) {
+                viewerEl.innerHTML = '<div class="placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#3cb49a;font-size:0.9rem;">⟳ GLOMOS running…</div>';
+              }
+              const xyzDisplayEl = document.getElementById('xyz-display');
+              if (xyzDisplayEl) { xyzDisplayEl.textContent = ''; xyzDisplayEl.style.display = 'none'; }
+              updateDownloadButtons?.();
+
+              const glomosParams = {
+                initpop:       Number(document.getElementById('glomos-initpop')?.value   || 4),
+                matings:       Number(document.getElementById('glomos-matings')?.value   || 2),
+                mutants:       Number(document.getElementById('glomos-mutants')?.value   || 2),
+                generations:   Number(document.getElementById('glomos-generations')?.value || 3),
+                energy_cutoff: Number(document.getElementById('glomos-energy')?.value    || 4.0),
+                ani_model:     document.getElementById('glomos-ani')?.value || 'ANI1ccx',
+              };
+
+              window.runGlomosWithStream(
+                smiles,
+                glomosParams,
+                (xyzResult) => {
+                  if (loader && label) {
+                    loader.style.display = 'none';
+                    label.style.opacity  = '1';
+                    convertBtn.disabled  = false;
+                    loader.innerHTML     = '';
+                  }
+                  currentXYZ = xyzResult;
+                  window.molecules[0] = { smiles, id: smiles, xyz: xyzResult, molBlock: null };
+                  updateXYZDisplay?.();
+                  updateViewerContainerLayout();
+                  updateDownloadButtons?.();
+                  updateNavigationButtons?.();
+                                  showSuccess?.('<strong>✔ GLOMOS completed</strong><br>Best conformer loaded.');
+                },
+                (errMsg) => {
+                  if (loader && label) {
+                    loader.style.display = 'none';
+                    label.style.opacity  = '1';
+                    convertBtn.disabled  = false;
+                    loader.innerHTML     = '';
+                  }
+                  showError?.('GLOMOS error: ' + errMsg);
+                }
+              );
+              return;
+            }
+            // ─────────────────────────────────────────────────────────
+
+            await convertSingleMolecule();
+
+            // Reset UI
+            if (loader && label) {
+            loader.style.display = 'none';
+            label.style.opacity  = '1';
+            convertBtn.disabled  = false;
+            loader.innerHTML = '';
+            }
+            if (typeof updateNavigationButtons === 'function') updateNavigationButtons();
+            return;
+
+        } else if (selectedMethod === 'file') {
+            // Asegura que exista allMolecules
+            if (!Array.isArray(window.allMolecules) || window.allMolecules.length === 0) {
+            showError("No molecules loaded from file.");
+            return;
+            }
+
+            // Limpia modal viejo si quedó alguno
+            document.getElementById('molecule-selection-modal')?.remove();
+
+            // Abre modal selección múltiple
+            const selectedSet = await showMoleculeSelectionModal(window.allMolecules);
+            if (selectedSet && selectedSet.size) {
+                const pickedIdx = [...selectedSet].map(Number).filter(i => i >= 0 && i < window.allMolecules.length).sort((a,b)=>a-b);
+                const picked    = pickedIdx.map(i => window.allMolecules[i]);
+
+                window.molecules = picked;
+                window.currentMoleculeIndex = 0;
+
+                const smilesInput = document.getElementById('smiles');
+                if (smilesInput) smilesInput.value = '';
+
+            const postOptFile = document.getElementById('post-optimization')?.value;
+            if (postOptFile !== 'glomos') document.getElementById('glomos-live-panel')?.remove();
+            await convertMolecules(picked);   // <- importante pasar picked
+            } else {
+            showError("No molecules selected.");
+            }
+
+        } else {
+            showError("Please select an input method.");
+        }
+        } catch (error) {
+        console.error(error);
+        showError(error?.message || "Conversion failed.");
+        }
+    });
+    }
+
+    // === FILE CHANGE HANDLER (ajuste) ===
+    const smilesFileEl = document.getElementById('smiles-file');
+    if (smilesFileEl) {
+    smilesFileEl.addEventListener('change', async function () {
+        try {
+        const file = this.files?.[0];
+        if (!file) throw new Error("No file selected");
+
+        // Marca 'file' y actualiza UI del método
+        const fileRadio = document.querySelector('input[name="input-method"][value="file"]');
+        if (fileRadio) {
+            fileRadio.checked = true;
+            toggleInputMethod?.();
+        }
+
+        const fileSpan = document.getElementById('file-selected');
+        if (fileSpan) fileSpan.textContent = file.name;
+
+        const text = await file.text();
+
+        const parsed = [];
+        text.split('\n').forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            if (/^#|^\/\//.test(trimmed)) return;
+
+            const parts  = trimmed.split(/\s+/);
+            const smiles = parts[0]?.trim();
+            const id     = (parts.length >= 2 ? parts[1] : `mol_${parsed.length + 1}`)?.trim();
+            if (smiles) parsed.push({ smiles, id });
+        });
+
+        if (parsed.length === 0) throw new Error("Archivo vacío o inválido");
+
+        // Reset de estado global
+        window.allMolecules = parsed.slice();
+        window.molecules    = parsed.slice();
+        window.currentMoleculeIndex = 0;
+        window.selected?.clear?.();
+
+        const loadConfirmation = document.getElementById('load-confirmation');
+        if (loadConfirmation && window.showConfirmation) {
+            const moleculeInfo = window.molecules
+            .map(mol => `<div><strong>SMILES:</strong> ${mol.smiles}</div>`)
+            .join('<hr>');
+            loadConfirmation.innerHTML = `
+            <div class="alert success">
+                <strong>${window.molecules.length} molécula(s) cargadas:</strong><br>
+                ${moleculeInfo}
+            </div>`;
+            loadConfirmation.style.display = 'block';
+            setTimeout(() => (loadConfirmation.style.display = 'none'), 2000);
+        }
+
+        const convertBtn = document.getElementById('convert-molecules');
+        if (convertBtn) convertBtn.disabled = false;
+
+        } catch (error) {
+        console.error("❌ Error al cargar archivo:", error);
+        showError(`Error al cargar SMILES: ${error.message}`);
+        }
+    });
+    }
+});
+
+document.querySelectorAll('#smiles-examples span').forEach(span => {
+    span.addEventListener('click', () => {
+        const smiles = span.getAttribute('data-smiles');
+        const smilesInput = document.getElementById('smiles');
+        if (smilesInput) {
+            smilesInput.value = smiles;
+            smilesInput.classList.add('touched');
+        }
+    });
+});
+
+    // Event listeners
+document.querySelectorAll('input[name="input-method"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        // Cambia la vista del input según la opción seleccionada
+        toggleInputMethod();
+
+        // Si se selecciona "single", limpia cualquier molécula previa
+        if (e.target.value === 'single') {
+            window.allMolecules = [];  // limpia las moléculas cargadas desde archivo
+            window.currentMoleculeIndex = 0;  // reinicia el índice
+            updateNavigationButtons?.();      // actualiza botones next/before
+            updateDownloadButtons();
+        }
+    });
+});
+
+const btnLoadSmiles = document.getElementById('load-smiles');
+if (btnLoadSmiles) btnLoadSmiles.addEventListener('click', loadSmiles);
+
+const btnDownloadXYZ = document.getElementById('download-xyz');
+if (btnDownloadXYZ) {
+  btnDownloadXYZ.addEventListener('click', () => {
+    if (molecules && molecules.length > 1) {
+      downloadAllXYZ();
+    } else {
+      downloadXYZ(); // tu función actual para el "currentXYZ"
+    }
+  });
+}
+
+const btnDownloadImage = document.getElementById('download-image');
+if (btnDownloadImage) btnDownloadImage.addEventListener('click', downloadImage);
+
+const btnDownloadFloating = document.getElementById('download-xyz-floating');
+if (btnDownloadFloating) {
+    btnDownloadFloating.addEventListener('click', () => {
+        downloadXYZ(); // Esta función ya usa currentXYZ y currentMoleculeIndex
+    });
+}
+
+document.querySelectorAll('.tab-btn').forEach(button => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+
+    const format = button.getAttribute('data-format');
+    document.querySelectorAll('.format-display').forEach(div => div.style.display = 'none');
+    const displayDiv = document.getElementById(`${format}-display`);
+    if (displayDiv) {
+        displayDiv.style.display = 'block';
+    } else {
+        console.warn(`⚠ No se encontró el contenedor para el formato: ${format}-display`);
+    }
+  });
+});
+
+    // Inicializar 3Dmol después de que se cargue la librería
+init3DMol();
+
+document.querySelectorAll('input, select').forEach(el => {
+    const type = el.getAttribute('type');
+    
+    // Para select y file usamos 'change', para text también usamos 'input'
+    const eventType = (el.tagName === 'SELECT' || type === 'file') ? 'change' : 'input';
+    
+    el.addEventListener(eventType, () => {
+        el.classList.add('touched');
+    });
+});
+
+loadSmilesHistory();
+
+
+
+// Efecto de rayo dorado al hacer clic en el título
+const goldFlashLink = document.querySelector('.gold-flash');
+const modal = document.createElement('div');
+modal.className = 'modal-overlay';
+
+if (goldFlashLink) {
+    goldFlashLink.addEventListener('click', function (e) {
+    e.preventDefault();
+    this.classList.remove('clicked'); // reinicia si estaba activo
+    void this.offsetWidth; // fuerza reflow para reiniciar animación
+    this.classList.add('clicked');
+
+    // quitar clase después de que termine la animación (~1s)
+    setTimeout(() => {
+            this.classList.remove('clicked');
+        }, 1000); // debe coincidir con la duración del @keyframes
+    });
+}
+
+console.log("Conexión con backend establecida");
+
+let is3DEnabled = true;
+let is2DEnabled = false;
+
+// === Funciones de grabación y captura de imagen ===
+const recordBtn = document.getElementById('record-btn');
+const screenshotBtn = document.getElementById('screenshot-btn');
+const countdownEl = document.getElementById('countdown');
+
+let mediaRecorder;
+let recordedChunks = [];
+let isRecording = false;
+
+if (recordBtn && screenshotBtn) {
+    recordBtn.addEventListener('click', () => {
+        if (!isRecording) {
+            // Mostrar cuenta regresiva y luego iniciar grabación
+            countdown(3, () => {
+                startRecording();
+                toggleRecordingUI(true);
+                isRecording = true;
+            });
+        } else {
+            stopRecording();
+            toggleRecordingUI(false);
+            isRecording = false;
+        }
+    });
+
+    screenshotBtn.addEventListener('click', downloadImage);
+}
+
+function extractXYZString(payload) {
+  if (!payload) return '';
+  // casos comunes
+  if (typeof payload === 'string') return payload.trim();
+  if (typeof payload.xyz === 'string') return payload.xyz.trim();
+  if (payload.xyz && typeof payload.xyz.xyz === 'string') return payload.xyz.xyz.trim();
+  if (typeof payload.XYZ === 'string') return payload.XYZ.trim();
+  if (typeof payload.xyz_text === 'string') return payload.xyz_text.trim();
+  if (payload.data && typeof payload.data === 'string') return payload.data.trim();
+  // última opción: intenta JSON.stringify si viene objeto con campos sueltos
+  try {
+    const s = JSON.stringify(payload);
+    return s || '';
+  } catch { return ''; }
+}
+
+function selectFormatTab(fmt) {
+  // activa la pestaña y el panel correspondientes si existen
+  const tabs = document.querySelectorAll('[data-format-tab]');
+  const panels = document.querySelectorAll('[data-format-panel]');
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.formatTab === fmt));
+  panels.forEach(p => p.style.display = (p.dataset.formatPanel === fmt ? 'block' : 'none'));
+}
+
+function toggleRecordingUI(recording) {
+    const svg = recordBtn.querySelector('svg');
+    svg.innerHTML = recording
+        ? `<rect x="8" y="8" width="8" height="8" />`
+        : `<circle cx="12" cy="12" r="8" />`;
+
+    recordBtn.classList.toggle('recording-blink', recording);
+    recordBtn.title = recording ? "Stop Recording" : "Start Recording";
+}
+
+function countdown(seconds, callback) {
+    countdownEl.style.display = 'block';
+    let current = seconds;
+    const timer = setInterval(() => {
+        countdownEl.textContent = current;
+        current--;
+        if (current < 0) {
+            clearInterval(timer);
+            countdownEl.style.display = 'none';
+            callback();
+        }
+    }, 1000);
+}
+
+let timerInterval;
+let startTime;
+
+function startRecording() {
+    const canvas = document.querySelector('#viewer-container canvas');
+    if (!canvas) {
+        console.error("⚠ No se encontró canvas para capturar.");
+        return;
+    }
+    const stream = canvas.captureStream(30);
+    console.log("Stream capturado desde canvas:", stream);
+    
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+    mediaRecorder.ondataavailable = function (e) {
+        if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+        }
+    };
+
+    mediaRecorder.onstop = function () {
+        clearInterval(timerInterval);
+        document.getElementById('countdown').style.display = 'none';
+
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const smilesId = window.molecules?.[window.currentMoleculeIndex]?.smiles?.replace(/[^a-zA-Z0-9]/g, "_") || `video_${Date.now()}`;
+        const filename = `molecule_video_${smilesId}.webm`;
+
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        recordedChunks = [];
+    };
+
+    mediaRecorder.start();
+    startTimer();
+}
+
+function startTimer() {
+    startTime = Date.now();
+    const countdownEl = document.getElementById('countdown');
+    countdownEl.style.display = 'block';
+    timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        countdownEl.textContent = formatTime(elapsed);
+    }, 1000);
+}
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+}
+
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+}
+
+function safeFileName(name) {
+  return (name || 'unknown').replace(/[\\/:*?"<>|]/g, '_');
+}
+
+document.querySelectorAll('.info-icon').forEach(icon => {
+    let timer;
+    const tooltipId = icon.getAttribute('data-tooltip-id');
+    const tooltip = document.getElementById(tooltipId);
+    const url = icon.getAttribute('data-url');
+
+    // Manejar hover para tooltip
+    icon.addEventListener('mouseenter', () => {
+        timer = setTimeout(() => {
+            if (tooltip) tooltip.classList.add('visible');
+        }, 300);
+    });
+
+    icon.addEventListener('mouseleave', () => {
+        clearTimeout(timer);
+        if (tooltip) tooltip.classList.remove('visible');
+    });
+
+    // Manejar click para abrir URL
+    icon.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evitar que el evento se propague
+        if (url) window.open(url, '_blank');
+    });
+});
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const format = btn.dataset.format;
+        fetch(`/files/mol_ejemplo.${format}`)
+          .then(res => res.text())
+          .then(data => {
+              document.getElementById("text-preview").textContent = data;
+          });
+    });
+});
+
+const btn3D = document.getElementById("toggle-3d");
+const btn2D = document.getElementById("toggle-2d");
+    
+btn3D.addEventListener("click", () => toggleView("3d"));
+btn2D.addEventListener("click", () => toggleView("2d"));
+
+function toggleView(mode) {
+  if (mode === "3d") {
+    is3DEnabled = !is3DEnabled;
+  } else if (mode === "2d") {
+    is2DEnabled = !is2DEnabled;
+  }
+
+  // Asegura que al menos uno esté activo
+  if (!is3DEnabled && !is2DEnabled) {
+    if (mode === "3d") {
+      is2DEnabled = true;
+    } else {
+      is3DEnabled = true;
+    }
+  }
+
+  // Actualiza estilos de botones
+  if (is3DEnabled) btn3D.classList.add("active");
+  else btn3D.classList.remove("active");
+
+  if (is2DEnabled) btn2D.classList.add("active");
+  else btn2D.classList.remove("active");
+
+  // Toggle mode-2d class for contrast styling (pure 2D = white bg)
+  const visContainer = document.querySelector('.visualization-container');
+  if (visContainer) {
+    if (is2DEnabled && !is3DEnabled) visContainer.classList.add('mode-2d');
+    else visContainer.classList.remove('mode-2d');
+  }
+
+  updateViewerContainerLayout();
+}
+
+function updateViewerContainerLayout() {
+  const viewer = document.getElementById('viewer-container') || document.querySelector('.visualization-container');
+  const speedControl = document.querySelector(".speed-control");
+  const mol = molecules[currentMoleculeIndex];
+
+  if (!viewer) {
+    console.warn("No viewer container found");
+    return;
+  }
+
+  // 🔧 Forzamos que el root ocupe el área y use flex
+  viewer.innerHTML = '';
+  viewer.style.display = 'flex';
+  viewer.style.flexDirection = 'row';
+  viewer.style.alignItems = 'stretch';
+  viewer.style.justifyContent = 'stretch';
+  viewer.style.width = '100%';
+  viewer.style.height = '100%';
+  viewer.style.gap = '0';
+  viewer.style.position = 'relative';
+
+  if (!mol) {
+    if (moleculeControls) moleculeControls.style.display = 'flex';
+    if (speedControl) speedControl.style.display = (is3DEnabled) ? 'flex' : 'none';
+    updateNavigationButtons?.();
+    return;
+  }
+
+    // 🧪 Caso: 3D + 2D (mitad/mitad con 3D a la izquierda, 2D a la derecha)
+  if (is3DEnabled && is2DEnabled) {
+    const viewer3D = document.createElement('div');
+    viewer3D.id = 'viewer-3d';
+    viewer3D.style.flex = '1 1 50%';
+    viewer3D.style.minWidth = '0';
+    viewer3D.style.height = '100%';
+    viewer3D.style.position = 'relative';
+
+    const viewer2D = document.createElement('div');
+    viewer2D.id = 'viewer-2d';
+    viewer2D.style.flex = '1 1 50%';
+    viewer2D.style.minWidth = '0';
+    viewer2D.style.height = '100%';
+    viewer2D.style.position = 'relative';
+    viewer2D.style.display = 'flex';
+    viewer2D.style.alignItems = 'center';       // centra verticalmente
+    viewer2D.style.justifyContent = 'center';   // centra horizontalmente
+    viewer2D.style.overflow = 'hidden';
+    viewer2D.style.background = '#ffffff';      // fondo blanco para 2D
+    viewer2D.style.borderLeft = '1px solid rgba(255,255,255,.12)';
+
+    viewer.appendChild(viewer3D);
+    viewer.appendChild(viewer2D);
+
+    // 🔹 3D a la izquierda (igual que antes)
+    const format = mol.molBlock ? 'sdf' : 'xyz';
+    const modelData = mol.molBlock || mol.xyz;
+    render3DMolecule(modelData, mol.smiles, format, viewer3D);
+
+    // 🔹 2D a la derecha usando tu endpoint SVG (en lugar de Kekule)
+    fetch('/api/draw2d', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ smiles: mol.smiles })
+    })
+    .then(r => { if (!r.ok) throw new Error('Error al obtener imagen 2D'); return r.text(); })
+    .then(svg => {
+        viewer2D.innerHTML = svg;
+        const svgEl = viewer2D.querySelector('svg');
+        if (svgEl) {
+            // que llene su panel, centrado y sin deformar
+            svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            svgEl.style.display   = 'block';
+            svgEl.style.width     = '100%';
+            svgEl.style.height    = '100%';
+            svgEl.style.maxWidth  = '95%';
+            svgEl.style.maxHeight = '95%';
+            }
+    })
+    .catch(err => {
+        console.error("Error cargando visualización 2D:", err);
+        viewer2D.textContent = "Error al mostrar estructura 2D.";
+    });
+
+    if (speedControl) speedControl.style.display = 'flex';
+        return; // evita que siga evaluando otros casos
+    }
+
+  // 🧪 Solo 3D (ocupa todo)
+  else if (is3DEnabled) {
+    const viewer3D = document.createElement('div');
+    viewer3D.id = 'viewer-3d';
+    viewer3D.style.flex = '1 1 100%';
+    viewer3D.style.minWidth = '0';
+    viewer3D.style.height = '100%';
+    viewer3D.style.position = 'relative';
+    viewer.appendChild(viewer3D);
+
+    const format = mol.molBlock ? 'sdf' : 'xyz';
+    const modelData = mol.molBlock || mol.xyz;
+    render3DMolecule(modelData, mol.smiles, format, viewer3D);
+
+    if (speedControl) speedControl.style.display = 'flex';
+  }
+
+  // 🧪 Solo 2D (ocupa todo)
+  else if (is2DEnabled) {
+    const viewer2D = document.createElement('div');
+    viewer2D.id = 'viewer-2d';
+    viewer2D.style.flex = '0 0 100%';
+    viewer2D.style.minWidth = '0';
+    viewer2D.style.height = '180%';
+    viewer2D.style.display = 'flex';
+    viewer2D.style.alignItems = 'center';      // centra verticalmente
+    viewer2D.style.justifyContent = 'center';  // centra horizontalmente
+    viewer2D.style.overflow = 'hidden';
+    viewer2D.style.position = 'relative';
+    viewer2D.style.transform = 'translateY(-11.5rem)';
+    viewer.appendChild(viewer2D);
+
+    // Usando tu endpoint SVG; lo hacemos "responsive"
+    fetch('/api/draw2d', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ smiles: mol.smiles })
+    })
+      .then(r => { if (!r.ok) throw new Error('Error al obtener imagen 2D'); return r.text(); })
+      .then(svg => {
+        viewer2D.innerHTML = svg;
+        const svgEl = viewer2D.querySelector('svg');
+        if (svgEl) {
+          svgEl.setAttribute('width', '100%');
+          svgEl.setAttribute('height', '100%');
+          svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgEl.style.width = '50%';
+          svgEl.style.height = '50%';
+          svgEl.style.display = 'block';
+        }
+      })
+      .catch(err => {
+        console.error("Error cargando visualización 2D:", err);
+        viewer2D.textContent = "Error al mostrar estructura 2D.";
+      });
+
+    if (speedControl) speedControl.style.display = 'none';
+  }
+
+  // Barra de controles
+  if (moleculeControls) {
+    moleculeControls.style.display = 'flex';
+    const total = Array.isArray(molecules) ? molecules.length : 0;
+    document.getElementById('prev-molecule')?.style && (document.getElementById('prev-molecule').style.display = total > 1 ? 'inline-block' : 'none');
+    document.getElementById('next-molecule')?.style && (document.getElementById('next-molecule').style.display = total > 1 ? 'inline-block' : 'none');
+    updateNavigationButtons?.();
+  }
+}
+
+function createBubbles(container, count = 15) {
+    container.innerHTML = '';  // limpia burbujas anteriores
+    for (let i = 0; i < count; i++) {
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble');
+        bubble.style.left = `${Math.random() * 100}%`;
+        const size = `${6 + Math.random() * 6}px`;
+        bubble.style.width = size;
+        bubble.style.height = size;
+        bubble.style.animationDuration = `${3 + Math.random() * 2}s`;
+        bubble.style.animationDelay = `${Math.random() * 5}s`;
+        container.appendChild(bubble);
+    }
+}
+
+function init3DMol() {
+    // Verificar si 3Dmol está cargado
+    if (window.$3Dmol) {
+        console.log("3Dmol está cargado correctamente");
+    } else {
+        console.error("3Dmol no se cargó correctamente");
+        // Podrías recargar la librería aquí si es necesario
+    }
+}
+
+document.querySelectorAll('.mol-entry').forEach((entry, idx) => {
+    entry.addEventListener('click', () => {
+        selected.clear();
+        selected.add(idx);
+
+        // Remover estilo 'selected' de todas las entradas
+        document.querySelectorAll('.mol-entry').forEach(e => e.classList.remove('selected'));
+        entry.classList.add('selected');
+
+        // Actualizar el índice y cambiar la visualización a 2D
+        currentMoleculeIndex = idx;
+        is2DEnabled = true;
+        is3DEnabled = false;
+        btn2D.classList.add("active");
+        btn3D.classList.remove("active");
+
+        // Actualizar visualización
+        updateViewerContainerLayout();
+    });
+});
+
+// Funciones principales
+async function checkBackendConnection() {
+    try {
+        console.log("Verificando conexión con el backend...");
+        const response = await fetch(API_BASE_URL);
+        if (!response.ok) {
+            console.error('Error en el backend:', await response.text());
+            showError('Error en el servidor backend');
+        } else {
+            const data = await response.json();
+            console.log('Backend conectado:', data);
+            showSuccess('<strong>✔ Connection established.</strong> Ready for use.');
+        }
+    } catch (error) {
+        console.error('Conexión fallida con el backend:', error);
+        showError('<strong>Connection failed.</strong><br>Please try again.');
+    }
+}
+
+// Reemplaza toda tu convertMolecules() por esta versión
+// Reemplazo completo
+async function convertMolecules(pickedList = null) {
+  const convertBtn = document.getElementById('convert-molecules');
+  const loader = convertBtn?.querySelector('.water-loader');
+  const label  = convertBtn?.querySelector('.button-label');
+
+  if (loader && label) {
+    loader.style.display = 'block';
+    label.style.opacity  = '0.3';
+    convertBtn.disabled  = true;
+    if (typeof createBubbles === 'function') createBubbles(loader);
+  }
+
+  try {
+    // Determina el método actual (single/file)
+    const selectedEl = document.querySelector('input[name="input-method"]:checked');
+    const selectedMethod = selectedEl?.value?.trim().toLowerCase();
+
+    // 1) Si viene una lista desde el modal, úsala tal cual
+    if (Array.isArray(pickedList) && pickedList.length > 0) {
+      window.molecules = pickedList;
+      window.currentMoleculeIndex = 0;
+      const smilesInput = document.getElementById('smiles');
+      if (smilesInput) smilesInput.value = '';
+    }
+    // 2) Si el método es 'single', toma el texto
+    else if (selectedMethod === 'single') {
+      const smilesInput = document.getElementById('smiles');
+      const smilesText  = smilesInput?.value?.trim();
+      if (smilesText) {
+        window.molecules = [{ smiles: smilesText, id: `mol_manual_${Date.now()}` }];
+        window.currentMoleculeIndex = 0;
+        if (typeof updateSmilesHistory === 'function') updateSmilesHistory(smilesText);
+      }
+    }
+
+    // 3) Validación final
+    if (!Array.isArray(window.molecules) || window.molecules.length === 0) {
+      throw new Error('No molecules loaded to convert');
+    }
+
+    const method     = document.getElementById('conversion-method')?.value;
+    const forceField = document.getElementById('force-field')?.value;
+    const convertedMolecules = [];
+
+    for (const mol of window.molecules) {
+      const response = await fetch(`${API_BASE_URL}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          smiles: mol.smiles,
+          identifier: mol.id,
+          method,
+          force_field: forceField
+        })
+      });
+
+      if (!response.ok) {
+        let errorText = 'Error during conversion';
+        try { errorText = (await response.json())?.error || errorText; } catch {}
+        throw new Error(errorText);
+      }
+
+      const data = await response.json();
+      const xyzText  = extractXYZString(data.xyz ?? data.XYZ ?? data);
+      const molBlock = (typeof data.mol === 'string') ? data.mol : (data.mol?.mol || null);
+
+      convertedMolecules.push({
+        ...mol,
+        xyz: (xyzText || '').trim(),
+        molBlock: molBlock || null
+      });
+
+      showSuccess(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${mol.smiles}`);
+    }
+
+    // Estado final + render/XYZ
+    window.molecules = convertedMolecules;
+    window.currentMoleculeIndex = 0;
+
+    const currentMol = window.molecules[0];
+    window.currentXYZ = currentMol.xyz || '';
+
+    const formatTabBar = document.getElementById('format-tab-bar');
+    if (formatTabBar) formatTabBar.style.display = 'flex';
+
+    const hasXYZ = !!currentMol.xyz;
+    const hasMol = !!currentMol.molBlock;
+    const format    = hasXYZ ? 'xyz' : (hasMol ? 'sdf' : 'xyz');
+    const modelData = hasXYZ ? currentMol.xyz : (hasMol ? currentMol.molBlock : '');
+
+    updateViewerContainerLayout();
+    updateXYZDisplay();
+
+    // Fuerza visibilidad del panel de XYZ
+    const xyzDisplay = document.getElementById('xyz-display');
+    if (xyzDisplay) xyzDisplay.style.display = 'block';
+
+    // Reconstruye layout/controles
+    try { updateViewerContainerLayout(); } catch {}
+    updateNavigationButtons();
+    populateIndividualDownloads?.();
+
+    // Controles/botones
+    const multiple       = window.molecules.length > 1;
+    const prevBtn        = document.getElementById('prev-molecule');
+    const nextBtn        = document.getElementById('next-molecule');
+    const speedControl   = document.querySelector('.speed-control');
+    const moleculeCtrls  = document.getElementById('molecule-controls');
+
+    updateDownloadButtons();
+    if (moleculeCtrls) {
+      if (prevBtn) prevBtn.style.display = multiple ? 'inline-block' : 'none';
+      if (nextBtn) nextBtn.style.display = multiple ? 'inline-block' : 'none';
+      if (speedControl) speedControl.style.display = 'flex';
+      moleculeCtrls.style.display = 'flex';
+    }
+  } catch (error) {
+    console.error("Error in convertMolecules:", error);
+    showError(`Error converting molecule: ${error.message}`);
+  } finally {
+    if (loader && label) {
+      loader.style.display = 'none';
+      label.style.opacity  = '1';
+      convertBtn.disabled  = false;
+      loader.innerHTML     = '';
+    }
+    updateNavigationButtons();
+    updateDownloadButtons();
+  }
+}
+
+function insertTitleLine(xyz, title) {
+    const lines = xyz.trim().split('\n');
+    if (lines.length < 2) return xyz;
+    lines[1] = title;
+    return lines.join('\n');
+}
+
+async function convertSingleMolecule() {
+  // Grab button refs here so finally() can always unlock the UI
+  const _convertBtn = document.getElementById('convert-molecules');
+  const _loader     = _convertBtn?.querySelector('.water-loader');
+  const _label      = _convertBtn?.querySelector('.button-label');
+
+  try {
+    if (!Array.isArray(molecules) || molecules.length === 0 || !molecules[currentMoleculeIndex]) {
+      const smilesInput = document.getElementById('smiles');
+      const smilesText  = smilesInput?.value?.trim();
+      if (!smilesText) throw new Error('No molecule selected. Please enter a SMILES string.');
+      molecules = [{ smiles: smilesText, id: smilesText }];
+      currentMoleculeIndex = 0;
+    }
+
+    const method     = document.getElementById('conversion-method')?.value || 'rdkit';
+    const forceField = document.getElementById('force-field')?.value || 'UFF';
+    const molecule   = molecules[currentMoleculeIndex];
+
+    // GLOMOS is handled by the streaming path – never run a blocking fetch for it
+    const postOpt = document.getElementById("post-optimization")?.value || null;
+    if (postOpt === "glomos") return;
+
+    const response = await fetch(`${API_BASE_URL}/convert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        smiles: molecule.smiles,
+        identifier: molecule.id,
+        method,
+        force_field: forceField,
+        post_opt: null,
+        glomos_params: null
+      })
+    });
+
+    if (!response.ok) {
+      let serverErr = 'Error en la conversión';
+      try {
+        const e = await response.json();
+        if (e?.error) serverErr = e.error;
+      } catch {}
+      throw new Error(serverErr);
+    }
+
+    const data = await response.json();
+
+    const xyzText =
+      (typeof data?.xyz === 'string' && data.xyz) ? data.xyz :
+      (data?.xyz && typeof data.xyz.xyz === 'string' ? data.xyz.xyz : '');
+
+    if (!xyzText) throw new Error('No se recibieron datos XYZ del servidor');
+
+    const titleLine     = `0  0   ${molecule.smiles}`;
+    const xyzWithHeader = insertTitleLine(xyzText, titleLine);
+    currentXYZ = xyzWithHeader;
+
+    const molText =
+      (typeof data?.mol === 'string' && data.mol) ? data.mol :
+      (data?.mol && typeof data.mol.mol === 'string' ? data.mol.mol : '');
+
+    molecules[currentMoleculeIndex] = {
+      ...molecules[currentMoleculeIndex],
+      xyz: xyzWithHeader,
+      molBlock: molText || null
+    };
+
+    updateXYZDisplay?.();
+    const xyzDisplay = document.getElementById('xyz-display');
+    if (xyzDisplay) xyzDisplay.style.display = 'block';
+
+    updateViewerContainerLayout();
+    showSuccess?.(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${molecule.smiles}`);
+
+    const moleculeCtrls = document.getElementById('molecule-controls');
+    const speedControl  = document.querySelector('.speed-control');
+    if (moleculeCtrls) moleculeCtrls.style.display = 'flex';
+    if (speedControl)  speedControl.style.display  = is3DEnabled ? 'flex' : 'none';
+
+    updateDownloadButtons?.();
+    updateNavigationButtons?.();
+
+  } catch (err) {
+    console.error(err);
+    showError?.(err?.message || 'Unexpected error during conversion');
+  } finally {
+    // Always unlock the button, no matter what happened
+    if (_loader && _label) {
+      _loader.style.display = 'none';
+      _label.style.opacity  = '1';
+      _loader.innerHTML     = '';
+    }
+    if (_convertBtn) _convertBtn.disabled = false;
+  }
+}
+
+function updateXYZDisplay() {
+    const xyzDisplay = document.getElementById('xyz-display');
+    if (!xyzDisplay) return;
+
+    const raw = (currentXYZ || '').trim();
+    if (!raw) { xyzDisplay.style.display = 'none'; return; }
+
+    const lines = raw.split('\n');
+    xyzDisplay.style.display = 'block';
+
+    if (lines.length < 3) {
+        xyzDisplay.textContent = raw;
+        return;
+    }
+
+    // Standard XYZ: line 0 = atom count, line 1 = comment, rest = coords
+    const atomCount = lines[0].trim();
+    const comment   = lines[1] || '';
+
+    const atoms = lines.slice(2).map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 4) {
+            const sym = parts[0].padEnd(2);
+            const x   = parseFloat(parts[1]).toFixed(4).padStart(10);
+            const y   = parseFloat(parts[2]).toFixed(4).padStart(10);
+            const z   = parseFloat(parts[3]).toFixed(4).padStart(10);
+            return `${sym}  ${x}  ${y}  ${z}`;
+        }
+        return line;
+    });
+
+    xyzDisplay.textContent = [atomCount, comment, ...atoms].join('\n');
+}
+
+function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContainer = viewerContainer) {
+    if (!targetContainer) {
+        viewerContainer = document.getElementById('viewer-container') || null;
+        targetContainer = viewerContainer;
+    }
+
+    if (!targetContainer) {
+        console.error("⚠ targetContainer no está definido.");
+        return;
+    }
+
+    // Cancelar animación previa si existe
+    if (rotationAnimationId) {
+        cancelAnimationFrame(rotationAnimationId);
+        rotationAnimationId = null;
+    }
+
+    // Limpiar contenedor y actualizar título
+    targetContainer.innerHTML = '';
+    if (moleculeTitle) {
+        moleculeTitle.textContent = smiles;
+        moleculeTitle.style.display = 'block';
+    }
+
+    // Verificar si 3Dmol está disponible
+    if (!window.$3Dmol || !window.$3Dmol.createViewer) {
+        targetContainer.innerHTML = `
+            <div class="placeholder error">
+                Error: La biblioteca 3Dmol no está disponible
+            </div>
+        `;
+        return;
+    }
+
+    // ── Defer WebGL init until the container has real pixel dimensions ──────
+    // Calling $3Dmol.createViewer on a 0×0 element triggers GL_INVALID_FRAMEBUFFER_OPERATION.
+    // We retry via requestAnimationFrame until the browser has painted the layout.
+    function _initViewer() {
+        const w = targetContainer.offsetWidth;
+        const h = targetContainer.offsetHeight;
+
+        if (w === 0 || h === 0) {
+            _initViewer._retries = (_initViewer._retries || 0) + 1;
+            if (_initViewer._retries < 20) {     // up to ~330 ms at 60 fps
+                requestAnimationFrame(_initViewer);
+                return;
+            }
+            // Fallback: force an explicit height so WebGL can allocate the framebuffer
+            if (!targetContainer.style.height) targetContainer.style.height = '400px';
+        }
+
+        const viewerW = targetContainer.offsetWidth  || 500;
+        const viewerH = targetContainer.offsetHeight || 400;
+
+        let viewer;
+        try {
+            viewer = $3Dmol.createViewer(targetContainer, {
+                width: viewerW,
+                height: viewerH,
+                backgroundColor: 'black'
+            });
+        } catch (e) {
+            console.error("❌ Error al crear viewer 3Dmol:", e);
+            targetContainer.innerHTML = '<div class="placeholder error">Error al inicializar visor 3D</div>';
+            return;
+        }
+
+        try {
+            viewer.addModel(modelData, format, { keepH: true, noComputeSecondaryStructure: true });
+            viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.25 } });
+            viewer.zoomTo();
+            viewer.zoom(1);
+            viewer.render();
+        } catch (e) {
+            console.error("❌ Error al renderizar modelo:", e);
+            targetContainer.innerHTML = '<div class="placeholder error">Error al renderizar molécula</div>';
+            return;
+        }
+
+        const animate = () => {
+            if (!isRotationPaused) {
+                viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
+                viewer.render();
+            }
+            rotationAnimationId = requestAnimationFrame(animate);
+        };
+        animate();
+
+        currentVisualizations = [viewer];
+
+        const placeholder = document.querySelector('.placeholder');
+        if (placeholder) placeholder.style.display = 'none';
+
+        setTimeout(() => {
+            try { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); }
+            catch (err) { console.warn("⚠ Error al redibujar viewer:", err); }
+        }, 150);
+    }
+
+    requestAnimationFrame(_initViewer);
+}
+
+function navigateMolecules(direction) {
+  const newIndex = currentMoleculeIndex + direction;
+
+  if (newIndex < 0 || newIndex >= molecules.length) {
+    console.warn('⚠ Invalid molecule navigation index:', newIndex);
+    return;
+  }
+
+  currentMoleculeIndex = newIndex;
+  const mol = molecules[newIndex];
+  if (!mol) {
+    console.warn('⚠ No molecule data found at index:', newIndex);
+    return;
+  }
+
+  // Actualiza el XYZ global para el panel
+  currentXYZ = mol.xyz || '';
+
+  // 🔁 Render SIEMPRE a través del layout (se encargará de 2D/3D)
+  updateViewerContainerLayout();
+
+  // Refresca vistas auxiliares y controles
+  updateXYZDisplay?.();
+  updateNavigationButtons?.();
+  updateDownloadButtons?.();
+
+  const moleculeCtrls = document.getElementById('molecule-controls');
+  const speedControl  = document.querySelector('.speed-control');
+  if (moleculeCtrls) moleculeCtrls.style.display = 'flex';
+  if (speedControl)  speedControl.style.display  = is3DEnabled ? 'flex' : 'none';
+}
+
+function toggleRotation() {
+    isRotationPaused = !isRotationPaused;
+    const btn = document.getElementById('pause-btn');
+    if (btn) {
+        btn.textContent = isRotationPaused ? 'Reanudar' : 'Pausar';
+    }
+}
+
+function changeRotationSpeed(speed) {
+    rotationSpeed = parseFloat(speed);
+}
+
+// ── Fullscreen ───────────────────────────────────────────────────────────────
+// Strategy: requestFullscreen on the card div.
+// The controls bar is injected with position:absolute + very high z-index.
+// viewer-container height is reduced so the bar is not covered.
+
+function _buildFsBar() {
+  document.getElementById('fs-controls-bar')?.remove();
+
+  const is2D  = is2DEnabled && !is3DEnabled;
+  const multi = Array.isArray(molecules) && molecules.length > 1;
+  const spd   = document.getElementById('rotation-speed')?.value ?? rotationSpeed;
+  const bg    = is2D ? 'rgba(12,22,52,0.94)' : 'rgba(0,0,0,0.86)';
+
+  const bar = document.createElement('div');
+  bar.id = 'fs-controls-bar';
+  // Use inline style only — no class conflicts
+  bar.setAttribute('style', [
+    'position:absolute',
+    'bottom:0',
+    'left:0',
+    'right:0',
+    'width:100%',
+    'height:52px',
+    `background:${bg}`,
+    'display:flex',
+    'align-items:center',
+    'justify-content:space-between',
+    'padding:0 24px',
+    'box-sizing:border-box',
+    'z-index:999999',
+    'font-family:Inter,system-ui,sans-serif',
+    'backdrop-filter:blur(6px)',
+    'border-top:1px solid rgba(255,255,255,0.08)',
+  ].join(';'));
+
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;color:#cce0ff;font-size:0.88rem;flex-shrink:0;">
+      <span style="white-space:nowrap;">Speed</span>
+      <input id="fs-speed-input" type="range" min="0" max="5" step="0.5" value="${spd}"
+        style="width:120px;accent-color:#3cb49a;cursor:pointer;vertical-align:middle;">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <button id="fs-exit-btn" title="Exit Fullscreen"
+        style="background:transparent;border:none;cursor:pointer;padding:5px;display:flex;align-items:center;opacity:0.85;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+        </svg>
+      </button>
+      <button id="fs-prev-btn"
+        style="display:${multi?'inline-flex':'none'};align-items:center;
+               padding:5px 16px;background:rgba(40,90,200,0.65);border:none;
+               border-radius:8px;color:#fff;cursor:pointer;font-size:0.88rem;">← Back</button>
+      <button id="fs-next-btn"
+        style="display:${multi?'inline-flex':'none'};align-items:center;
+               padding:5px 16px;background:rgba(40,90,200,0.65);border:none;
+               border-radius:8px;color:#fff;cursor:pointer;font-size:0.88rem;">Next →</button>
+    </div>`;
+
+  bar.querySelector('#fs-speed-input').addEventListener('input', e => {
+    rotationSpeed = parseFloat(e.target.value);
+    const orig = document.getElementById('rotation-speed');
+    if (orig) orig.value = e.target.value;
+  });
+  bar.querySelector('#fs-exit-btn').addEventListener('click', () => document.exitFullscreen());
+  bar.querySelector('#fs-prev-btn').addEventListener('click', () => navigateMolecules(-1));
+  bar.querySelector('#fs-next-btn').addEventListener('click', () => navigateMolecules(1));
+
+  return bar;
+}
+
+function toggleVisualizationFullscreen() {
+  const card = document.querySelector('.visualization-container');
+  if (!card) return;
+  if (!document.fullscreenElement) {
+    card.requestFullscreen().catch(e => console.warn('FS failed:', e));
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  const card = document.querySelector('.visualization-container');
+  const vc   = document.getElementById('viewer-container');
+  const fsBtn= document.getElementById('fullscreen-btn');
+
+  if (isFs && card) {
+    // card is now the fullscreen viewport — make sure it is position:relative
+    // so absolute children are contained within it
+    card.style.setProperty('position', 'relative', 'important');
+    card.style.setProperty('overflow', 'visible', 'important'); // allow bar to paint
+
+    // Shrink viewer-container to leave room for the 52px bar
+    if (vc) {
+      vc._fsOrigHeight = vc.style.height;
+      vc.style.setProperty('height', 'calc(100% - 52px)', 'important');
+    }
+
+    // Append bar as last child of the fullscreen element (paints on top)
+    card.appendChild(_buildFsBar());
+
+  } else {
+    // Restore
+    document.getElementById('fs-controls-bar')?.remove();
+    if (vc && vc._fsOrigHeight !== undefined) {
+      vc.style.height = vc._fsOrigHeight;
+    }
+    if (card) {
+      card.style.removeProperty('overflow');
+    }
+  }
+
+  // Swap in-page button icon
+  if (fsBtn) {
+    fsBtn.innerHTML = isFs
+      ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 13h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/></svg>';
+  }
+});
+
+document.addEventListener('click', function (event) {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.querySelector('.modal-content');
+
+    // Si no está abierto el modal, no hacemos nada
+    if (!overlay || overlay.style.display === 'none') return;
+
+    // Si se hizo clic fuera del modal-content, cerramos
+    if (!event.target.closest('.modal-content')) {
+        overlay.style.display = 'none';
+    }
+});
+
+// Cierre directo desde botón Cancel
+const cancelButton = document.getElementById('cancel-button');
+if (cancelButton) {
+    cancelButton.addEventListener('click', () => {
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) overlay.style.display = 'none';
+    });
+}
+
+function downloadXYZ() {
+    if (!currentXYZ) {
+        showError('No hay datos XYZ para descargar');
+        return;
+    }
+
+    try {
+        const formattedXYZ = formatXYZWithAlignment(currentXYZ);
+        const blob = new Blob([formattedXYZ], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const smilesName = molecules[currentMoleculeIndex]?.smiles || 'unknown';
+        const safeName = smilesName.replace(/[\\/:*?"<>|]/g, '_'); 
+        a.download = `${safeName}.xyz`;                 
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess('✔ XYZ file downloaded');
+    } catch (error) {
+        console.error("Error al descargar XYZ:", error);
+        showError('Error al descargar el archivo XYZ');
+    }
+}
+
+function downloadImage() {
+    if (!currentVisualizations.length) {
+        showError('No hay visualización para descargar');
+        return;
+    }
+
+    try {
+        const viewer = currentVisualizations[0];
+        const imgData = viewer.pngURI();
+        const a = document.createElement('a');
+        a.href = imgData;
+        a.download = `molecule_${molecules[currentMoleculeIndex]?.id || 'unknown'}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showSuccess('✔ Downloaded image');
+    } catch (error) {
+        console.error("Error al descargar imagen:", error);
+        showError('Error al descargar la imagen');
+    }
+}
+function toggleInputMethod() {
+    try {
+        const selected = document.querySelector('input[name="input-method"]:checked');
+        if (!selected) {
+            console.warn("⚠ No se encontró el radio seleccionado");
+            return;
+        }
+
+        const method = selected.value;
+
+        const singleInput = document.getElementById('single-input');
+        const fileInput = document.getElementById('file-input');
+        const loadButton = document.getElementById('load-smiles');
+        const fileFormatExample = document.getElementById('file-format-example');
+
+        if (singleInput) singleInput.style.display = method === 'single' ? 'block' : 'none';
+        if (fileInput) fileInput.style.display = method === 'file' ? 'block' : 'none';
+        if (fileFormatExample) fileFormatExample.style.display = method === 'file' ? 'block' : 'none';
+
+        if (loadButton) {
+            if (method === 'single') {
+                loadButton.style.display = 'inline-block';
+                loadButton.disabled = false;
+            } else {
+                loadButton.style.display = 'none';
+            }
+        }
+
+    } catch (error) {
+        console.error("⚠ Error en toggleInputMethod:", error);
+    }
+}
+
+async function loadSmiles(showConfirmation = true) {
+    try {
+        console.log("Iniciando carga de SMILES...");
+        if (moleculeControls) {
+            const prevBtn = document.getElementById('prev-molecule');
+            const nextBtn = document.getElementById('next-molecule');
+            const speedControl = document.querySelector('.speed-control');
+            const moleculeControls = document.getElementById('molecule-controls');
+        
+            if (molecules.length > 1) {
+                moleculeControls.style.display = 'flex';
+                if (prevBtn) prevBtn.style.display = 'inline-block';
+                if (nextBtn) nextBtn.style.display = 'inline-block';
+            } else {
+                moleculeControls.style.display = 'flex'; // Mantener visible la barra
+                if (prevBtn) prevBtn.style.display = 'none';
+                if (nextBtn) nextBtn.style.display = 'none';
+            }
+        
+            if (speedControl) speedControl.style.display = 'flex'; // Asegurar visibilidad
+        }       
+        const method = document.querySelector('input[name="input-method"]:checked').value;
+        console.log("Método seleccionado:", method);
+
+        if (method === 'single') {
+            const smiles = document.getElementById('smiles').value.trim();
+            console.log("SMILES ingresado:", smiles);
+            updateSmilesHistory(smiles);
+
+            if (!smiles) {
+                throw new Error('Por favor ingrese un string SMILES');
+            }
+            molecules = [{ smiles, id: smiles }];
+
+        } else {
+            const fileInput = document.getElementById('smiles-file');
+            console.log("Archivo seleccionado:", fileInput?.files[0]);
+
+            if (!fileInput?.files?.length) {
+                throw new Error('Por favor seleccione un archivo');
+            }
+
+            const text = await fileInput.files[0].text();
+            molecules = [];
+            console.log("Contenido del archivo:", text);
+
+            text.split('\n').forEach(line => {
+                const trimmedLine = line.trim();
+                if (trimmedLine) {
+                    const parts = trimmedLine.split(/\s+/);
+                    if (parts.length >= 1) {
+                        const smiles = parts[0];
+                        const id = parts.length >= 2 ? parts[1] : `mol_${molecules.length + 1}`;
+                        molecules.push({ smiles, id });
+                    }
+                }
+            });
+
+            if (molecules.length === 0) {
+                throw new Error('El archivo no contiene moléculas válidas');
+            }
+        }
+        
+        console.log("Moléculas cargadas:", molecules);
+        const loadConfirmation = document.getElementById('load-confirmation');
+
+        if (loadConfirmation && showConfirmation) {
+            const moleculeInfo = molecules.map(mol => 
+                `<div><strong>SMILE:</strong> ${mol.smiles}</div>`
+            ).join('<hr>');
+            loadConfirmation.innerHTML = `
+                <div class="alert success" style="text-align: left; padding: 10px 15px;">
+                    <strong>${molecules.length === 1 ? 'Molécula cargada exitosamente:' : `${molecules.length} moléculas cargadas exitosamente:`}</strong><br>
+                    ${moleculeInfo}
+                </div>
+            `;
+            loadConfirmation.style.display = 'block';
+            setTimeout(() => {
+                loadConfirmation.style.display = 'none';
+            }, 5000);
+        }
+
+        const convertBtn = document.getElementById('convert-molecules');
+        if (convertBtn) {
+            convertBtn.disabled = false;
+            console.log("Botón Convert habilitado");
+        }
+    } catch (error) {
+        console.error("Error en loadSmiles:", error);
+        showError(`Error al cargar SMILES: ${error.message}`);
+        throw error;
+    }
+}
+
+function toggleForceField() {
+    const method = document.getElementById('conversion-method')?.value;
+    const forceFieldDiv = document.getElementById('force-field-options');
+
+    if (!method || !forceFieldDiv) {
+        console.warn("Elementos necesarios para toggleForceField no están disponibles aún.");
+        return;
+    }
+
+    if (method === 'networkx' || method === 'auto3d') {
+        forceFieldDiv.style.display = 'none';
+    } else {
+        forceFieldDiv.style.display = 'block';
+    }
+}
+
+function retryVisualization() {
+    if (currentXYZ && molecules[currentMoleculeIndex]) {
+        render3DMolecule(currentXYZ, molecules[currentMoleculeIndex].smiles);
+    }
+}
+
+function formatXYZWithAlignment(xyzText) {
+    const lines = xyzText.trim().split('\n');
+    if (lines.length < 3) return xyzText;
+
+    // Standard XYZ format: line 0 = atom count, line 1 = comment, lines 2+ = atom coords
+    const atomCount = lines[0].trim();
+    const comment   = lines[1];          // preserve exactly as-is (SMILES title etc.)
+    const atomLines = lines.slice(2).map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 4) {
+            const sym = parts[0];
+            const x   = parseFloat(parts[1]).toFixed(4);
+            const y   = parseFloat(parts[2]).toFixed(4);
+            const z   = parseFloat(parts[3]).toFixed(4);
+            // Align columns: symbol left-padded 2, coords right-aligned in 10-char fields
+            return `${sym.padEnd(2)}  ${x.padStart(10)}  ${y.padStart(10)}  ${z.padStart(10)}`;
+        }
+        return line;
+    });
+
+    return [atomCount, comment, ...atomLines].join('\n');
+}
+
+// Funciones de ayuda
+function showSuccess(message) {
+    console.log("Mostrando mensaje de éxito:", message);
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert success';
+    alertDiv.innerHTML = message;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+function showError(message) {
+    console.error("Mostrando mensaje de error:", message);
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert error';
+    const [first, ...rest] = message.split(':');
+    const formattedMessage = rest.length
+        ? `⚠ <strong>${first}:</strong><br>${rest.join(':').trim()}`
+        : `⚠ ${message}`;
+
+    alertDiv.innerHTML = formattedMessage;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Antes: async function showMoleculeSelectionModal() {
+async function showMoleculeSelectionModal(moleculeList) {
+  return new Promise((resolve) => {
+    let selected = new Set();
+    let focusedIndex = 0;
+    let shiftAnchor = null;
+    let lastClicked = null;
+
+    // ¡No uses el modal global! Crea uno local aquí:
+    const modal = document.createElement('div');
+    modal.id = 'molecule-selection-modal';   
+    modal.className = 'modal-overlay';
+    modal.style.cssText = `
+      position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:2000;
+      display:flex; align-items:center; justify-content:center; font-family:Inter,system-ui;
+    `;
+
+    const box = document.createElement('div');
+    box.className = 'modal-content';
+    box.tabIndex = 0;
+    box.style.cssText = `
+      background:#12122B; color:#f5f5f5; width:min(720px,92vw); max-height:80vh;
+      border-radius:12px; padding:16px; outline:none; display:flex; flex-direction:column; gap:12px;
+    `;
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px;';
+
+    const title = document.createElement('h3');
+    title.textContent = 'Select SMILES to convert';
+    title.style.margin = '0';
+
+    const selectAllLabel = document.createElement('label');
+    selectAllLabel.style.cssText = 'display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;';
+    selectAllLabel.innerHTML = `<input id="sel-all" type="checkbox" style="transform:scale(1.2)"/> Select all`;
+
+    header.appendChild(title);
+    header.appendChild(selectAllLabel);
+
+    const list = document.createElement('div');
+    list.id = 'molecule-list';
+    list.style.cssText = `
+      border:1px solid #243149; border-radius:10px; overflow:auto; max-height:56vh;
+      display:flex; flex-direction:column;
+    `;
+
+    // Render items desde moleculeList (NO desde 'molecules')
+    moleculeList.forEach((mol, i) => {
+      const row = document.createElement('div');
+      row.className = 'mol-row';
+      row.dataset.index = i;
+      row.style.cssText = `
+        padding:8px 10px; border-bottom:1px solid #0f697533; cursor:pointer;
+        display:flex; align-items:center; gap:10px; user-select:none;
+      `;
+      row.innerHTML = `
+        <input type="checkbox" class="chk" aria-label="select row ${i}" />
+        <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <strong>${mol.id}</strong>: ${mol.smiles}
         </div>
-    </nav>
+      `;
+      list.appendChild(row);
+    });
 
-    <header>
-        <h1><a href="#home" class="gold-flash">ELAYA SMILES</a></h1>
-        <h2><em>"Convert SMILES to 3D/2D structure"</em>
-             <!--Centro de Investigación y Estudios Avanzados (CINVESTAV) Mérida, Yucatán, México</h2>-->
-    </header>
+    const footer = document.createElement('div');
+    footer.style.cssText = 'display:flex; justify-content:flex-end; gap:10px;';
 
-    <main>
-        <section class="input-section">
-            <div class="input-row">
-                <div class="input-group">
-                    <div class="input-group-iz">
-                        <label for="input-method">① Input Type</label>
-                        <div class="input-method">
-                            <label>
-                                <input type="radio" name="input-method" value="single" checked>
-                                Single SMILE
-                            </label>
-                            <label>
-                                <input type="radio" name="input-method" value="file">
-                                SMILES File
-                            </label>
-                        </div>
-                    </div>
-                </div>
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'background:#612020b0; color:#fff; border:none; border-radius:10px; padding:8px 14px; cursor:pointer;';
 
-                <div id="single-input" class="input-group">
-                    <div class="input-overlay-wrapper">
-                        <input type="text" id="smiles" list="smiles-history" placeholder="Enter your SMILES string eg: C1=CC2=C(C=C1O)NC=C2CCN">
-                        <div id="smiles-examples" class="smiles-examples">
-                        <small>
-                            <b>No SMILES in mind? Try one of these:</b>
-                            <span data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine,</span>
-                            <span data-smiles="CC(C)C[C@H](NC(=O)[C@H](CC1=CC=C(O)C=C1)NC(=O)[C@H](CCCNC(=N)N)NC(=O)[C@H](CS)NC(=O)[C@H](NC(=O)[C@H](CC(C)C)NC(=O)[C@H](CO)N)C(=O)N)C(=O)N">Oxytocin,</span>
-                            <span data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@H]1O">Glucose,</span>
-                            <span data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin,</span>
-                            <span data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</span>
-                        </small>
-                        <small class="formula-link">
-                            <b>Have a formula but no SMILE? Click here: </b>
-                            <span>
-                            <a href="https://smilx-isogenerator.streamlit.app/" target="_blank">SMILX-isogenerator</a>
-                            </span>
-                        </small>
-                        </div>
-                    </div>
-                    <datalist id="smiles-history"></datalist>
-                </div>
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Convert selected';
+    confirmBtn.style.cssText = 'background:linear-gradient(135deg,#9D4EDD,rgb(60,180,154)); color:#fff; border:none; border-radius:10px; padding:8px 14px; cursor:pointer;';
 
-                <div id="file-input" class="input-group" style="display: none;">
-                    <div class="input-overlay-wrapper">
-                        <input type="file" id="smiles-file" accept=".smi,.txt">
-                        <!--<button id="load-smiles-file">Upload SMILES File</button>-->
-                    </div>
-                </div>
-            </div>
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
 
-            <div id="file-format-example" class="file-format-example" style="display: none;">
-                <strong>Document content example:</strong><br>
-                C1CN1<br>
-                C#CCC#CC<br>
-                CN1C=NC2=C1C(=O)N(C(=O)N2C)<br><br>
-                Format: <strong>[SMILE]</strong> (one per line)<br>
-            </div>
-        </section>
+    box.appendChild(header);
+    box.appendChild(list);
+    box.appendChild(footer);
+    modal.appendChild(box);
+    document.body.appendChild(modal);
 
-        <section class="conversion-section">
-            <div class="method-controls">
-                <div class="input-group">
-                    <label for="method">
-                        ② 3D Construction Method
-                        <span class="info-icon" 
-                            data-tooltip-id="tooltip-method" 
-                            data-url="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System">🛈</span>
-                        <div id="tooltip-method" class="custom-tooltip">
-                            Algorithm used to convert a SMILES string into a 3D structure.<br><br>
-                            <strong>● RDKit:</strong> Generates 3D molecular structures using distance geometry.<br>
-                            <strong>● OpenBabel:</strong> Builds 3D from template-based methods and force fields.<br>
-                            <strong>● NetworkX:</strong> Generates approximate 3D-like coordinates using a graph-based spring layout applied to molecular connectivity. Useful for topological visualization, but not intended to produce physically accurate molecular geometries.<br>
-                            <!--<strong>● Auto3D:</strong> Deep learning-based geometry generation...-->
-                        </div>
-                    </label>
-                    <select id="conversion-method">
-                        <option value="rdkit">RDKit</option>
-                        <option value="openbabel">OpenBabel</option>
-                        <option value="networkx">NetworkX</option>
-                        <!--<option value="auto3d">Auto3D</option>-->
-                    </select>
-                </div>
+    const rows = [...list.querySelectorAll('.mol-row')];
+    const chks = [...list.querySelectorAll('.mol-row .chk')];
+    const selAll = selectAllLabel.querySelector('#sel-all');
 
-                <div class="input-group">
-                    <label for="force-field">
-                        ③ Force Field optimization (Optional)
-                        <span class="info-icon" 
-                            data-tooltip-id="tooltip-forcefield"
-                            data-url="https://en.wikipedia.org/wiki/Force_field_(chemistry)">🛈</span>
-                        <div id="tooltip-forcefield" class="custom-tooltip">
-                            Mathematical models that describe the potential energy of a system.<br><br>
-                            <strong>● UFF:</strong> Universal Force Field – covers most elements, good for general use.<br>
-                            <strong>● MMFF94:</strong> Merck Molecular Force Field – optimized for organic molecules.<br>
-                            <!--<strong>● GAFF:</strong> General Amber Force Field – for drug-like molecules.<br>
-                            <strong>● CHARMM:</strong> Chemistry at HARvard Macromolecular Mechanics...-->
-                        </div>
-                    </label>
-                    <select id="force-field">
-                        <option>None</option>
-                        <option value="uff">UFF</option>
-                        <option value="mmff94">MMFF94</option>
-                        <!--<option value="gaff">GAFF</option>
-                        <option value="charmm">CHARMM</option>-->
-                    </select>
-                </div>
+    function paint() {
+      rows.forEach((r, i) => {
+        const isSel = selected.has(i);
+        const isFocus = i === focusedIndex;
+        r.style.background = isSel ? '#1e2a44' : 'transparent';
+        r.style.outline = isFocus ? '1px solid #5aa9e6' : 'none';
+        r.style.outlineOffset = isFocus ? '-1px' : '0';
+        chks[i].checked = isSel;
+      });
+      selAll.checked = selected.size === rows.length;
+      if (focusedIndex >= 0) rows[focusedIndex].scrollIntoView({ block: 'nearest' });
+    }
 
-                <div class="input-group">
-                    <label for="post-optimization">
-                        ④ Post-optimization (Advanced)
-                        <span class="info-icon"
-                            data-tooltip-id="tooltip-postopt"
-                            data-url="https://github.com/GabrielaVidales/Elaya_SMILES">🛈</span>
-                        <div id="tooltip-postopt" class="custom-tooltip">
-                            Optional post-processing step applied after the initial 3D structure is generated.<br><br>
-                            <strong>● GLOMOS (ANI conformers):</strong> Genetic-algorithm-based conformational search powered by TorchANI neural network potentials. Explores the rotational space of the molecule to find low-energy conformers. Parameters such as population size, number of generations, matings, mutants, and energy cutoff can be configured. Outputs the best conformer ranked by ANI energy (kcal/mol).<br><br>
-                            Requires a working TorchANI environment. Streaming progress is shown in real time.
-                        </div>
-                    </label>
-                    <select id="post-optimization">
-                        <option value="">None</option>
-                        <option value="glomos">GLOMOS (ANI conformers)</option>
-                    </select>
-                </div>
+    function selectRange(a, b) {
+      const [s, e] = [Math.min(a, b), Math.max(a, b)];
+      selected.clear();
+      for (let i = s; i <= e; i++) selected.add(i);
+      paint();
+    }
 
-                <button id="convert-molecules">
-                    <span class="button-label"><b>Convert structure</b></span>
-                    <div class="water-loader" style="display: none;"></div>
-                    <span class="magic-sparkle"></span>
-                </button>
-            </div>
+    function toggleIndex(i) {
+      if (selected.has(i)) selected.delete(i); else selected.add(i);
+      paint();
+    }
 
-            <div id="glomos-panel" class="advanced-panel" style="display:none;">
-                <div class="glomos-title">
-                    GLOMOS Conformational Search
-                </div>
-                <div class="glomos-grid">
-                    <div class="glomos-item">
-                    <span>Initial pop.</span>
-                    <input type="number" id="glomos-initpop" value="4"  min="1">
-                    </div>
+    rows.forEach((row, i) => {
+      row.addEventListener('click', (ev) => {
+        focusedIndex = i;
+        if (ev.shiftKey && lastClicked != null) {
+          shiftAnchor = lastClicked;
+          selectRange(shiftAnchor, i);
+        } else if (ev.metaKey || ev.ctrlKey) {
+          toggleIndex(i);
+          lastClicked = i;
+          shiftAnchor = i;
+        } else {
+          selected.clear();
+          selected.add(i);
+          lastClicked = i;
+          shiftAnchor = i;
+          paint();
+        }
+      });
+      row.querySelector('.chk').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (ev.shiftKey && lastClicked != null) {
+          shiftAnchor = lastClicked;
+          selectRange(shiftAnchor, i);
+        } else {
+          toggleIndex(i);
+          lastClicked = i;
+          shiftAnchor = i;
+        }
+      });
+    });
 
-                    <div class="glomos-item">
-                    <span>Matings</span>
-                    <input type="number" id="glomos-matings" value="2" min="1">
-                    </div>
+    selAll.addEventListener('change', () => {
+      if (selAll.checked) {
+        selected = new Set(rows.map((_, i) => i));
+      } else {
+        selected.clear();
+      }
+      paint();
+    });
 
-                    <div class="glomos-item">
-                    <span>Mutants</span>
-                    <input type="number" id="glomos-mutants" value="2" min="0">
-                    </div>
+    function onKey(e) {
+      const max = rows.length - 1;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const old = focusedIndex;
+        focusedIndex += (e.key === 'ArrowDown' ? 1 : -1);
+        focusedIndex = Math.max(0, Math.min(max, focusedIndex));
+        if (e.shiftKey) {
+          if (shiftAnchor == null) shiftAnchor = old;
+          selectRange(shiftAnchor, focusedIndex);
+        } else {
+          shiftAnchor = null;
+          paint();
+        }
+      } else if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        toggleIndex(focusedIndex);
+        if (lastClicked == null) lastClicked = focusedIndex;
+      } else if (e.key === 'Enter') {
+        finish(true);
+      } else if (e.key === 'Escape') {
+        finish(false);
+      }
+    }
 
-                    <div class="glomos-item">
-                    <span>Generations</span>
-                    <input type="number" id="glomos-generations" value="3">
-                    </div>
+    function finish(ok) {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onOutside);
+      document.body.removeChild(modal);
+      resolve(ok ? selected : null);
+    }
 
-                    <div class="glomos-item">
-                    <span>Ecut (kcal/mol)</span>
-                    <input type="number" step="0.1" id="glomos-energy" value="4.0">
-                    </div>
+    // Cerrar al hacer clic fuera del contenido (dentro de la MISMA función)
+    function onOutside(e) {
+      if (!box.contains(e.target)) finish(false);
+    }
 
-                    <div class="glomos-item">
-                    <span>ANI</span>
-                    <select id="glomos-ani">
-                        <option value="ANI1ccx">ANI1ccx</option>
-                        <option value="ANI2x">ANI2x</option>
-                    </select>
-                    </div>
-                </div>
-            </div>
+    cancelBtn.addEventListener('click', () => finish(false));
+    confirmBtn.addEventListener('click', () => finish(true));
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => document.addEventListener('click', onOutside), 0);
 
-            <div class="conversion-row">
-                <div class="visualization-container">
-                    <div id="rec-controls">
-                        <!-- Capturar imagen -->
-                        <button id="screenshot-btn" title="Take a Screenshot">
-                            <svg viewBox="0 0 24 24" class="icon">
-                            <path d="M20 5h-3.17l-1.84-2H9.01L7.17 5H4a2 2 0 0 0-2 2v11a2 
-                                    2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 
-                                    13a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 
-                                    6 3 3 0 0 0 0-6z"/>
-                            </svg>
-                        </button>
-                        <!-- Botón único que cambia de forma -->
-                        <button id="record-btn" title="Start Recording">
-                            <svg viewBox="0 0 24 24" class="icon">
-                            <circle cx="12" cy="12" r="8" />
-                            </svg>
-                        </button>
-                    </div>
+    paint();
+    box.focus();
+  });
+}
 
-            <!-- Cuenta regresiva -->
-                    <div id="countdown"></div>
+window.showMoleculeSelectionModal = showMoleculeSelectionModal;
 
-                    <div class="view-toggle">
-                        <button id="toggle-3d" class="view-btn active">3D</button>
-                        <button id="toggle-2d" class="view-btn">2D</button>
-                    </div>
+function updateSmilesHistory(newSmiles) {
+    const key = 'smilesHistory';
+    let history = JSON.parse(localStorage.getItem(key)) || [];
 
-                    <div class="placeholder">3D Visualization will appear here</div>
+    // Elimina duplicados y agrega nuevo al principio
+    history = [newSmiles, ...history.filter(s => s !== newSmiles)];
 
-                    <!-- Título y contenedor de visualización -->
-                    <div id="molecule-title" style="display: none;"></div>
-                    <div id="viewer-container" style="width: 100%; height: calc(100% - 80px); position: relative;">
-                        <div id="viewer-3d" style="width: 100%; height: 100%;"></div>
-                        <!-- Flechita para descargar XYZ actual -->
-                        <button id="download-xyz-floating" title="Descargar XYZ"
-                                style="position: absolute; top: 10px; right: 10px; z-index: 10; background: transparent; border: none; padding: 6px; border-radius: 50%; cursor: pointer;">
-                            <svg viewBox="0 0 24 24" width="24" height="24" fill="#ffffff">
-                                <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.34v4h4.66v-4h3.34L12 2z"/>
-                            </svg>
-                        </button>
-                        <img id="image-2d" style="display: none; width: 100%; height: 100%; object-fit: contain; background: white; border-radius: 15px;" />
-                    </div>
-                    
-                    <div id="molecule-controls" style="display: none;">
-                        <div class="controls-left">
-                            <div class="speed-control">
-                                <span>Speed</span>
-                                <input type="range" id="rotation-speed" min="0" max="2" step="0.1" value="1.0">
-                            </div>
-                        </div>
-                        <div class="controls-right">
-                            <button id="prev-molecule" class="control-btn">← Back</button>
-                            <button id="next-molecule" class="control-btn">Next →</button>
-                        </div>
-                    </div>
-                </div>
+    // Limita a 5 entradas
+    history = history.slice(0, 5);
 
-                <div class="visualization-controls">
-                   
-                     <!--<div class="tab-bar" id="format-tab-bar" style="display: none;">
-                        <button class="tab-btn" data-format="xyz">XYZ</button>
-                        <button class="tab-btn" data-format="sdf">SDF</button>
-                        <button class="tab-btn" data-format="mol">MOL</button>
-                        <button class="tab-btn" data-format="pdb">PDB</button>
-                    </div>-->
+    // Guarda en localStorage
+    localStorage.setItem(key, JSON.stringify(history));
 
-                    <div id="xyz-display" style="display: none;"></div>
-                    <div id="sdf-display" class="format-display" style="display: none;"></div>
-                    <div id="mol-display" class="format-display" style="display: none;"></div>
-                    <div id="mol2-display" class="format-display" style="display: none;"></div>
-                    <div id="pdb-display" class="format-display" style="display: none;"></div>
-                    <div id="individual-downloads" class="individual-downloads" style="display:none;"></div>
+    // Actualiza el datalist
+    const datalist = document.getElementById('smiles-history');
+    datalist.innerHTML = '';
+    history.forEach(smiles => {
+        const option = document.createElement('option');
+        option.value = smiles;
+        datalist.appendChild(option);
+    });
+}
 
-                    <button id="download-xyz" class="secondary">Download XYZ file</button>
-                    <button id="download-image" class="secondary">Download Image</button>
-                </div>
-            </div>
+function loadSmilesHistory() {
+    const key = 'smilesHistory';
+    const history = JSON.parse(localStorage.getItem(key)) || [];
+    const datalist = document.getElementById('smiles-history');
+    if (datalist) {
+        datalist.innerHTML = '';
+        history.forEach(smiles => {
+            const option = document.createElement('option');
+            option.value = smiles;
+            datalist.appendChild(option);
+        });
+    }
+}
 
-            <div id="molecule-list" class="molecule-list" style="display: none;"></div>
-        </section>
+function updateNavigationButtons() {
+  const prevBtn = document.getElementById('prev-molecule');
+  const nextBtn = document.getElementById('next-molecule');
+  const ctrls   = document.getElementById('molecule-controls');
+  const speed   = document.querySelector('.speed-control');
 
-        <!--<section class="analysis-section">
-            <h3>Molecular Analysis</h3>
-            <div class="input-row">
-                <div class="input-group">
-                    <label for="mol1">Molecule 1</label>
-                    <select id="mol1" disabled></select>
-                </div>
-                <div class="input-group">
-                    <label for="mol2">Molecule 2</label>
-                    <select id="mol2" disabled></select>
-                </div>
-                <button id="calculate-similarity" disabled>Calculate Similarity</button>
-            </div>
-            <div id="similarity-results"></div>
-        </section>
+  const total = Array.isArray(window.molecules) ? window.molecules.length : 0;
+  const i     = typeof window.currentMoleculeIndex === 'number' ? window.currentMoleculeIndex : 0;
 
-        <section class="analysis-section">
-            <h3>Method Comparison</h3>
-            <div class="input-row">
-                <div class="input-group">
-                    <label for="compare-molecule">Molecule comparation</label>
-                    <select id="compare-molecule" disabled></select>
-                </div>
-                <button id="compare-methods" disabled>Compare Methods</button>
-            </div>
-            <div id="comparison-results"></div>
-        </section>-->
+  // Mostrar la barra si hay al menos una molécula
+  if (ctrls) ctrls.style.display = total > 0 ? 'flex' : 'none';
 
-        <!-- ═══════════════════════════════════════════════════
-        <!-- ═══════════════════════════════════════════════════
-             ABOUT — redesigned landing page
-        ════════════════════════════════════════════════════ -->
-        <section id="about-section" style="display: none;">
+  // Mostrar el deslizador solo si 3D está activo y hay moléculas
+  if (speed) speed.style.display = (is3DEnabled && total > 0) ? 'flex' : 'none';
 
-            <!-- ── HERO ─────────────────────────────────────── -->
-            <div class="lp-hero">
-                <div class="lp-hero-bg"></div>
-                <div class="lp-hero-content">
-                    <h1 class="lp-hero-title">Welcome to <span class="lp-hero-glow">ELAYA SMILES</span></h1>
-                    <p class="lp-hero-sub">Energy-minimized Linear-to-structure Atom Yielding Algorithm</p>
-                    <p class="lp-hero-desc">
-                        A web platform that converts SMILES notation into optimized 
-                        3D molecular geometries — interactively and for free.
-                    </p>
-                    <div class="lp-hero-actions">
-                        <button class="lp-cta-primary" onclick="document.querySelector('a[href=\'#explore\']').click()">
-                            Open the explorer
-                        </button>
-                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" class="lp-cta-ghost">
-                            View on GitHub
-                        </a>
-                    </div>
-                </div>
-                <div class="lp-hero-visual">
-                    <div class="lp-logo-ring">
-                        <img src="pictures/Logo_Elaya.jpg" alt="ELAYA Logo" class="lp-hero-logo"/>
-                        <svg class="lp-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <radialGradient id="rg1" cx="50%" cy="50%" r="50%">
-                                    <stop offset="0%" stop-color="#3cb49a" stop-opacity="0.15"/>
-                                    <stop offset="100%" stop-color="#3cb49a" stop-opacity="0"/>
-                                </radialGradient>
-                            </defs>
-                            <circle cx="110" cy="110" r="105" fill="url(#rg1)"/>
-                            <circle cx="110" cy="110" r="98" fill="none" stroke="#3cb49a" stroke-width="0.8" stroke-dasharray="4,6" opacity="0.5">
-                                <animateTransform attributeName="transform" type="rotate" from="0 110 110" to="360 110 110" dur="20s" repeatCount="indefinite"/>
-                            </circle>
-                            <circle cx="110" cy="110" r="84" fill="none" stroke="#98ebc4" stroke-width="0.5" stroke-dasharray="2,8" opacity="0.3">
-                                <animateTransform attributeName="transform" type="rotate" from="360 110 110" to="0 110 110" dur="14s" repeatCount="indefinite"/>
-                            </circle>
-                            <circle cx="110" cy="12" r="4" fill="#3cb49a" opacity="0.8">
-                                <animateTransform attributeName="transform" type="rotate" from="0 110 110" to="360 110 110" dur="20s" repeatCount="indefinite"/>
-                            </circle>
-                            <circle cx="110" cy="208" r="3" fill="#98ebc4" opacity="0.6">
-                                <animateTransform attributeName="transform" type="rotate" from="180 110 110" to="540 110 110" dur="20s" repeatCount="indefinite"/>
-                            </circle>
-                            <circle cx="110" cy="26" r="3" fill="#3cb49a" opacity="0.5">
-                                <animateTransform attributeName="transform" type="rotate" from="90 110 110" to="450 110 110" dur="14s" repeatCount="indefinite"/>
-                            </circle>
-                        </svg>
-                    </div>
-                </div>
-            </div>
+  if (!prevBtn || !nextBtn) return;
 
-            <!-- ── WHAT IS SMILES ── -->
-            <div class="lp-split lp-split--light scroll-reveal">
-                <div class="lp-split-text">
-                    <span class="lp-section-tag">The notation</span>
-                    <h2>What is a SMILES string?</h2>
-                    <p>
-                        <a href="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System" target="_blank">SMILES</a>
-                        — <em>Simplified Molecular Input Line Entry System</em> — is a compact text-based notation for encoding molecular structure. Each character encodes atoms, bonds, branches, rings, and stereochemistry.
-                    </p>
-                    <p>
-                        It is the standard exchange format in databases such as 
-                        <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank">PubChem</a>, 
-                        <a href="https://www.ebi.ac.uk/chembl/" target="_blank">ChEMBL</a>, and 
-                        <a href="https://zinc.docking.org/" target="_blank">ZINC</a> — 
-                        the starting point for any QM/MM or docking pipeline.
-                    </p>
+  if (total > 1) {
+    prevBtn.style.display = i > 0         ? 'inline-block' : 'none';
+    nextBtn.style.display = i < total - 1 ? 'inline-block' : 'none';
+    prevBtn.disabled = (i <= 0);
+    nextBtn.disabled = (i >= total - 1);
+  } else {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+  }
+}
 
-                    <!-- Molecule examples table -->
-                    <div class="ab-table-wrap">
-                        <table class="ab-table">
-                            <thead><tr><th>Molecule</th><th>SMILES</th><th>Notes</th></tr></thead>
-                            <tbody>
-                                <tr><td>Benzene</td><td><code>c1ccccc1</code></td><td>Aromatic ring</td></tr>
-                                <tr><td>Dopamine</td><td><code>C1=CC(=C(C=C1CCN)O)O</code></td><td>Catecholamine</td></tr>
-                                <tr><td>Serotonin</td><td><code>C1=CC2=C(C=C1O)NC=C2CCN</code></td><td>Indole scaffold</td></tr>
-                                <tr><td>Glucose</td><td><code>OC[C@H]1O[C@@H](O)…</code></td><td>Stereocenters (@)</td></tr>
-                                <tr><td>Oxytocin</td><td><code>CC(C)C[C@H](NC(=O)…</code></td><td>Nonapeptide</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="lp-split-visual lp-split-visual--code">
-                    <!-- Encoding rules panel -->
-                    <div class="ab-rules-panel">
-                        <div class="ab-rules-title">Encoding Rules</div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>C / c</code></div><span>Aliphatic / aromatic carbon</span></div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>= #</code></div><span>Double / triple bond</span></div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>( )</code></div><span>Branch point</span></div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>1…9</code></div><span>Ring closure number</span></div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>@ @@</code></div><span>Tetrahedral stereo (R/S)</span></div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>[NH3+]</code></div><span>Charged atom in brackets</span></div>
-                        <div class="ab-rule"><div class="ab-rule-sym"><code>/ \</code></div><span>Double-bond geometry (E/Z)</span></div>
-                    </div>
-                </div>
-            </div>
+function downloadSingleXYZ(index) {
+  const mol = molecules[index];
+  if (!mol || !mol.xyz) {
+    showError('XYZ no disponible para esta molécula.');
+    return;
+  }
+  try {
+    const formattedXYZ = formatXYZWithAlignment(mol.xyz);
+    const blob = new Blob([formattedXYZ], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeFileName(mol.smiles)}.xyz`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    showError('Error al descargar el archivo XYZ');
+  }
+}
 
-            <!-- ── WHY 3D MATTERS ── -->
-            <div class="lp-split lp-split--dark lp-split--reverse scroll-reveal scroll-reveal--right">
-                <div class="lp-split-text">
-                    <span class="lp-section-tag">The science</span>
-                    <h2>Why does 3D geometry matter?</h2>
-                    <p>
-                        A SMILES string describes how atoms are connected — but chemistry happens in three dimensions.
-                        Biological activity, receptor binding, spectroscopic signatures, and reaction pathways are all 
-                        governed by the precise spatial arrangement of atoms.
-                    </p>
-                    <p>
-                        Generating an accurate 3D structure is often a critical first step before molecular dynamics 
-                        simulations, docking studies, quantum-chemical calculations, or certain machine-learning models 
-                        that rely on structural molecular features.
-                    </p>
-                </div>
-                <div class="lp-split-visual">
-                    <svg viewBox="0 0 240 180" xmlns="http://www.w3.org/2000/svg" class="lp-3d-svg">
-                        <defs>
-                            <filter id="glow2">
-                                <feGaussianBlur stdDeviation="2.5" result="b"/>
-                                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                            </filter>
-                        </defs>
-                        <line x1="20" y1="160" x2="220" y2="160" stroke="#1e3a52" stroke-width="1"/>
-                        <line x1="20" y1="160" x2="60"  y2="120" stroke="#1e3a52" stroke-width="1"/>
-                        <line x1="220" y1="160" x2="220" y2="60" stroke="#1e3a52" stroke-width="1"/>
-                        <text x="215" y="175" fill="#3a5a70" font-size="9" font-family="monospace">x</text>
-                        <text x="55"  y="115" fill="#3a5a70" font-size="9" font-family="monospace">y</text>
-                        <text x="224" y="55"  fill="#3a5a70" font-size="9" font-family="monospace">z</text>
-                        <circle cx="120" cy="80"  r="10" fill="#0f6975" stroke="#3cb49a" stroke-width="1.5" filter="url(#glow2)"/>
-                        <circle cx="155" cy="105" r="8"  fill="#0f6975" stroke="#3cb49a" stroke-width="1.5" filter="url(#glow2)"/>
-                        <circle cx="85"  cy="100" r="8"  fill="#0f6975" stroke="#3cb49a" stroke-width="1.5" filter="url(#glow2)"/>
-                        <circle cx="140" cy="135" r="6"  fill="#0a2a40" stroke="#98ebc4" stroke-width="1.2"/>
-                        <circle cx="100" cy="130" r="6"  fill="#0a2a40" stroke="#98ebc4" stroke-width="1.2"/>
-                        <circle cx="120" cy="50"  r="6"  fill="#0a2a40" stroke="#98ebc4" stroke-width="1.2"/>
-                        <circle cx="168" cy="80"  r="5"  fill="#0a2a40" stroke="#f0b429" stroke-width="1.2"/>
-                        <line x1="120" y1="80"  x2="155" y2="105" stroke="#3cb49a" stroke-width="1.5" opacity="0.7"/>
-                        <line x1="120" y1="80"  x2="85"  y2="100" stroke="#3cb49a" stroke-width="1.5" opacity="0.7"/>
-                        <line x1="155" y1="105" x2="140" y2="135" stroke="#98ebc4" stroke-width="1.2" opacity="0.6"/>
-                        <line x1="85"  y1="100" x2="100" y2="130" stroke="#98ebc4" stroke-width="1.2" opacity="0.6"/>
-                        <line x1="120" y1="80"  x2="120" y2="50"  stroke="#98ebc4" stroke-width="1.2" opacity="0.6"/>
-                        <line x1="155" y1="105" x2="168" y2="80"  stroke="#f0b429" stroke-width="1.2" opacity="0.6"/>
-                        <text x="116" y="83"  fill="#e0eaf5" font-size="7" font-family="monospace">C</text>
-                        <text x="151" y="108" fill="#e0eaf5" font-size="7" font-family="monospace">C</text>
-                        <text x="81"  y="103" fill="#e0eaf5" font-size="7" font-family="monospace">N</text>
-                        <text x="164" y="83"  fill="#f0b429" font-size="7" font-family="monospace">O</text>
-                    </svg>
-                </div>
-            </div>
+async function downloadAllXYZ() {
+  try {
+    // ✅ Verificación robusta de JSZip
+    if (typeof JSZip === 'undefined') {
+      showError('⚠ No se encontró JSZip. Asegúrate de cargar la librería en index.html');
+      return;
+    }
 
-            <!-- ── ALGORITHMS ── -->
-            <div class="lp-split lp-split--light scroll-reveal">
-                <div class="lp-split-text">
-                    <span class="lp-section-tag">Conversion methods</span>
-                    <h2>Three algorithms, one interface</h2>
-                    <p>ELAYA offers three complementary 3D construction methods, each suited to different use cases.</p>
-                    <div class="lp-method-list">
-                        <div class="lp-method-item">
-                            <div class="lp-method-tag">RDKit</div>
-                            <p>Distance-geometry embedding (ETKDGv3) followed by force-field minimization. The most reliable option for standard organic molecules.</p>
-                        </div>
-                        <div class="lp-method-item">
-                            <div class="lp-method-tag">OpenBabel</div>
-                            <p>Template-based coordinate builder. Offers broader chemical coverage than many toolkits, though complex systems such as organometallics may still require specialized methods for accurate geometries.</p>
-                        </div>
-                        <div class="lp-method-item">
-                            <div class="lp-method-tag">NetworkX</div>
-                            <p>Graph-theoretic spring layout. Fast and lightweight, useful for topological exploration.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="lp-split-visual lp-split-visual--methods">
-                    <div class="lp-method-visual">
-                        <div class="lp-method-row">
-                            <div class="lp-method-dot lp-method-dot--rdkit"></div>
-                            <div class="lp-method-bar-wrap">
-                                <div class="lp-method-bar-label">RDKit</div>
-                                <div class="lp-method-bar"><div class="lp-method-fill" style="width:91%"></div></div>
-                                <span class="lp-method-note">Accuracy</span>
-                            </div>
-                        </div>
-                        <div class="lp-method-row">
-                            <div class="lp-method-dot lp-method-dot--ob"></div>
-                            <div class="lp-method-bar-wrap">
-                                <div class="lp-method-bar-label">OpenBabel</div>
-                                <div class="lp-method-bar"><div class="lp-method-fill lp-method-fill--ob" style="width:78%"></div></div>
-                                <span class="lp-method-note">Coverage</span>
-                            </div>
-                        </div>
-                        <div class="lp-method-row">
-                            <div class="lp-method-dot lp-method-dot--nx"></div>
-                            <div class="lp-method-bar-wrap">
-                                <div class="lp-method-bar-label">NetworkX</div>
-                                <div class="lp-method-bar"><div class="lp-method-fill lp-method-fill--nx" style="width:62%"></div></div>
-                                <span class="lp-method-note">Speed</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    if (!molecules || molecules.length === 0) {
+      showError('⚠ No hay moléculas convertidas.');
+      return;
+    }
 
-            <!-- ── RDKit PIPELINE (full-width detail block) ── -->
-            <div class="lp-detail-band lp-detail-band--dark scroll-reveal">
-                <div class="ab-detail-header">
-                    <span class="lp-section-tag">Deep dive</span>
-                    <h3>RDKit — ETKDGv3 pipeline</h3>
-                    <p class="ab-detail-sub">The most precise method implemented in ELAYA</p>
-                </div>
-                <div class="ab-pipeline">
-                    <div class="ab-pipe-step">
-                        <div class="ab-pipe-num">1</div>
-                        <div class="ab-pipe-body">
-                            <strong>SMILES parsing</strong>
-                            <code>Chem.MolFromSmiles(smiles)</code>
-                            <p>Builds the molecular graph: nodes = atoms, edges = bonds. Validates SMILES syntax.</p>
-                        </div>
-                    </div>
-                    <div class="ab-pipe-step">
-                        <div class="ab-pipe-num">2</div>
-                        <div class="ab-pipe-body">
-                            <strong>Explicit hydrogens</strong>
-                            <code>Chem.AddHs(mol)</code>
-                            <p>Adds all hydrogens explicitly — required for correct 3D geometry.</p>
-                        </div>
-                    </div>
-                    <div class="ab-pipe-step">
-                        <div class="ab-pipe-num">3</div>
-                        <div class="ab-pipe-body">
-                            <strong>3D seed (ETKDGv3)</strong>
-                            <code>AllChem.EmbedMolecule(mol, ETKDGv3())</code>
-                            <p>Experimental Torsion Knowledge Distance Geometry v3 (ETKDGv3). Incorporates knowledge-based torsional preferences derived from experimental and computational data to generate realistic 3D conformations. A fixed random seed (665) is used for reproducibility.</p>                        </div>
-                    </div>
-                    <div class="ab-pipe-step">
-                        <div class="ab-pipe-num">4</div>
-                        <div class="ab-pipe-body">
-                            <strong>FF optimization</strong>
-                            <code>UFFOptimizeMolecule / MMFFMinimize</code>
-                            <p>Minimizes energy with UFF or MMFF94 (max 2000 iterations). If MMFF94 fails, falls back to UFF automatically.</p>
-                        </div>
-                    </div>
-                    <div class="ab-pipe-step">
-                        <div class="ab-pipe-num">5</div>
-                        <div class="ab-pipe-body">
-                            <strong>Export</strong>
-                            <code>→ XYZ + MOL block</code>
-                            <p>Generates the XYZ file (N atoms, SMILES comment, coordinates) and a MOL block for the 3Dmol.js viewer.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    const zip = new JSZip();
+    let anyAdded = false;
 
-            <!-- ── FORCE FIELDS ── -->
-            <div class="lp-split lp-split--dark lp-split--reverse scroll-reveal scroll-reveal--right">
-                <div class="lp-split-text">
-                    <span class="lp-section-tag">Energy minimization</span>
-                    <h2>Force field optimization</h2>
-                    <p>
-                        A set of mathematical equations and parameters that model forces between atoms: 
-                        bond stretching, angle bending, dihedral torsion, and non-covalent interactions 
-                        (van der Waals, electrostatics). Minimizing energy with these equations produces 
-                        more realistic 3D geometries than a bare embedding.
-                    </p>
-                    <div class="lp-ff-cards">
-                        <div class="lp-ff-card">
-                            <div class="lp-ff-name"><a href="https://en.wikipedia.org/wiki/Universal_Force_Field" target="_blank">UFF</a></div>
-                            <div class="lp-ff-full">Universal Force Field</div>
-                            <div class="ab-ff-compat"><span class="ab-compat-tag">RDKit</span><span class="ab-compat-tag">OpenBabel</span></div>
-                            <p>General — covers the entire periodic table. Based on atomic hybrid geometries.</p>
-                        </div>
-                        <div class="lp-ff-card">
-                            <div class="lp-ff-name"><a href="https://en.wikipedia.org/wiki/MMFF94" target="_blank">MMFF94</a></div>
-                            <div class="lp-ff-full">Merck Molecular Force Field</div>
-                            <div class="ab-ff-compat"><span class="ab-compat-tag">RDKit</span></div>
-                            <p>Parametrized for drug-like organic molecules. High precision in bond geometry and angles.</p>
-                        </div>
-                    </div>
-                    <div class="ab-ff-note">
-                        <strong>Fallback behavior:</strong> in OpenBabel, if the force field name is not found in the system, optimization is skipped and raw OBBuilder coordinates are used. In RDKit, if MMFF94 fails for a molecule, it automatically falls back to UFF.
-                    </div>
-                </div>
-                <div class="lp-split-visual">
-                    <svg viewBox="0 0 220 180" xmlns="http://www.w3.org/2000/svg" class="lp-energy-svg">
-                        <text x="10" y="15" fill="#5a7a95" font-size="9" font-family="monospace">Energy (kcal/mol)</text>
-                        <line x1="30" y1="20" x2="30"  y2="160" stroke="#1e3a52" stroke-width="1.2"/>
-                        <line x1="30" y1="160" x2="200" y2="160" stroke="#1e3a52" stroke-width="1.2"/>
-                        <path d="M 40,50 Q 70,140 110,125 Q 150,110 190,40" fill="none" stroke="#3cb49a" stroke-width="2.5" opacity="0.85"/>
-                        <line x1="110" y1="125" x2="110" y2="160" stroke="#f0b429" stroke-width="1" stroke-dasharray="3,3"/>
-                        <circle cx="110" cy="125" r="5" fill="#f0b429" opacity="0.9"/>
-                        <text x="98" y="155" fill="#f0b429" font-size="8" font-family="monospace">min</text>
-                        <text x="135" y="95" fill="#3cb49a" font-size="8" font-family="monospace">optimized</text>
-                        <text x="138" y="106" fill="#3cb49a" font-size="8" font-family="monospace">geometry</text>
-                        <line x1="27" y1="50"  x2="33" y2="50"  stroke="#1e3a52" stroke-width="1"/>
-                        <line x1="27" y1="90"  x2="33" y2="90"  stroke="#1e3a52" stroke-width="1"/>
-                        <line x1="27" y1="130" x2="33" y2="130" stroke="#1e3a52" stroke-width="1"/>
-                        <text x="180" y="174" fill="#5a7a95" font-size="9" font-family="monospace">geometry</text>
-                    </svg>
-                </div>
-            </div>
+    molecules.forEach((mol, i) => {
+      if (mol && mol.xyz) {
+        const fname = `${String(i + 1).padStart(2, '0')}_${safeFileName(mol.smiles)}.xyz`;
+        zip.file(fname, formatXYZWithAlignment(mol.xyz));
+        anyAdded = true;
+      }
+    });
 
-            <!-- ── GLOMOS ── -->
-            <div class="lp-split lp-split--light scroll-reveal">
-                <div class="lp-split-text">
-                    <span class="lp-section-tag">Advanced search</span>
-                    <h2>Conformational search with GLOMOS</h2>
-                    <p>
-                        GLOMOS (Genetic-algorithm-based Local Optimization of MOlecular Structures) implements a heuristic genetic algorithm to explore the conformational space of rotatable bonds using ANI-based neural network potentials. It is integrated as a streaming endpoint (<code>/api/convert/stream</code>) with real-time Server-Sent Events (SSE) feedback.
-                    </p>
-                    <p>
-                        Most molecules exist as a family of interconverting 3D shapes — <strong>conformers</strong> — differing in the rotation of single bonds. GLOMOS aims to identify low-energy conformers with accuracy approaching quantum-chemical methods for many organic systems, while avoiding the high computational cost of DFT calculations.
-                    </p>
+    if (!anyAdded) {
+      showError('⚠ No hay archivos XYZ disponibles para empaquetar.');
+      return;
+    }
 
-                    <!-- Full parameter table from image 5 -->
-                    <div class="ab-table-wrap ab-table-wrap--dark" style="margin-top:1.1rem;">
-                        <table class="ab-table ab-table--dark">
-                            <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
-                            <tbody>
-                                <tr><td><code>initpop</code></td><td>4</td><td>Initial population size</td></tr>
-                                <tr><td><code>matings</code></td><td>2</td><td>Crossovers per generation</td></tr>
-                                <tr><td><code>mutants</code></td><td>2</td><td>Random mutations per generation</td></tr>
-                                <tr><td><code>generations</code></td><td>3</td><td>Total number of generations</td></tr>
-                                <tr><td><code>energy_cutoff</code></td><td>4.0</td><td>Energy window (kcal/mol)</td></tr>
-                                <tr><td><code>tol_similarity</code></td><td>0.95</td><td>Similarity tolerance between conformers</td></tr>
-                                <tr><td><code>cutoff_population</code></td><td>8</td><td>Max population size</td></tr>
-                                <tr><td><code>nof_repeats</code></td><td>2</td><td>Repeats before stopping</td></tr>
-                                <tr><td><code>nof_stagnant</code></td><td>3</td><td>Stagnant generations → stop</td></tr>
-                                <tr><td><code>ani_model</code></td><td>ANI1ccx</td><td>Neural potential (ANI1x / ANI1ccx / ANI2x)</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="lp-split-visual lp-split-visual--glomos">
-                    <svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg" class="lp-glomos-svg">
-                        <text x="8" y="30" fill="#5a7a95" font-size="8" font-family="monospace">Gen 0</text>
-                        <text x="8" y="95" fill="#5a7a95" font-size="8" font-family="monospace">Gen 1</text>
-                        <text x="8" y="160" fill="#5a7a95" font-size="8" font-family="monospace">Gen 2</text>
-                        <circle cx="65"  cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="90"  cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="115" cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="140" cy="25" r="9" fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <line x1="65"  y1="34" x2="65"  y2="56" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
-                        <line x1="90"  y1="34" x2="90"  y2="56" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
-                        <line x1="115" y1="34" x2="115" y2="56" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
-                        <line x1="140" y1="34" x2="115" y2="56" stroke="#f0b429" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.7"/>
-                        <text x="118" y="50" fill="#f0b429" font-size="7" font-family="monospace">mating</text>
-                        <circle cx="65"  cy="90" r="9"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="90"  cy="90" r="9"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="115" cy="90" r="10" fill="#0a2a3a" stroke="#f0b429" stroke-width="2"/>
-                        <circle cx="140" cy="90" r="7"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.2" opacity="0.5"/>
-                        <text x="106" y="108" fill="#f0b429" font-size="7" font-family="monospace">best</text>
-                        <line x1="65"  y1="99" x2="65"  y2="121" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
-                        <line x1="90"  y1="99" x2="90"  y2="121" stroke="#2a4a62" stroke-width="1" stroke-dasharray="2,2"/>
-                        <line x1="115" y1="100" x2="115" y2="121" stroke="#f0b429" stroke-width="1.5" stroke-dasharray="2,2"/>
-                        <circle cx="65"  cy="155" r="7"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.2" opacity="0.5"/>
-                        <circle cx="90"  cy="155" r="9"  fill="#0f3a52" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="115" cy="155" r="11" fill="#0a2a3a" stroke="#3cb49a" stroke-width="2.5"/>
-                        <text x="74" y="185" fill="#3cb49a" font-size="8" font-family="monospace">lowest energy conformer</text>
-                        <line x1="115" y1="166" x2="115" y2="177" stroke="#3cb49a" stroke-width="1.5"/>
-                        <circle cx="115" cy="195" r="12" fill="#0a2a3a" stroke="#3cb49a" stroke-width="2"/>
-                        <text x="111" y="198" fill="#3cb49a" font-size="9" font-weight="bold" font-family="monospace">E</text>
-                    </svg>
-                </div>
-            </div>
+    // Generar ZIP y forzar descarga
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = molecules.length > 1
+      ? 'all_xyz.zip'
+      : `${safeFileName(molecules[0].smiles)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-            <!-- ── GLOMOS GA PIPELINE + SSE (full-width) ── -->
-            <div class="lp-detail-band lp-detail-band--teal scroll-reveal">
-                <div class="ab-detail-header">
-                    <span class="lp-section-tag">Implementation</span>
-                    <h3>Genetic algorithm pipeline &amp; real-time streaming</h3>
-                </div>
+    showSuccess('✔ ZIP con XYZ descargado');
+  } catch (err) {
+    console.error('Error en downloadAllXYZ:', err);
+    showError('❌ Ocurrió un error al generar el ZIP de XYZ');
+  }
+}
 
-                <!-- GA Steps -->
-                <div class="ab-ga-steps">
-                    <div class="ab-ga-step">
-                        <div class="ab-ga-label">Initialize</div>
-                        <div class="ab-ga-desc">Seed 3D geometry from SMILES via RDKit</div>
-                    </div>
-                    <div class="ab-ga-arrow">→</div>
-                    <div class="ab-ga-step">
-                        <div class="ab-ga-label">Population</div>
-                        <div class="ab-ga-desc">Random rotamer variants sampled from torsion angles</div>
-                    </div>
-                    <div class="ab-ga-arrow">→</div>
-                    <div class="ab-ga-step">
-                        <div class="ab-ga-label">Selection</div>
-                        <div class="ab-ga-desc">ANI potential evaluates energy of each conformer</div>
-                    </div>
-                    <div class="ab-ga-arrow">→</div>
-                    <div class="ab-ga-step">
-                        <div class="ab-ga-label">Crossover</div>
-                        <div class="ab-ga-desc">Mating and mutation of best rotamer candidates</div>
-                    </div>
-                    <div class="ab-ga-arrow">→</div>
-                    <div class="ab-ga-step ab-ga-step--best">
-                        <div class="ab-ga-label">Convergence</div>
-                        <div class="ab-ga-desc">Best conformer delivered after N generations</div>
-                    </div>
-                </div>
+function populateIndividualDownloads() {
+  // Delegamos al único renderizador de botones para evitar duplicados
+  updateDownloadButtons();
+}
 
-                <!-- SSE events -->
-                <div class="ab-sse-wrap">
-                    <div class="ab-sse-title">Real-time SSE events emitted to the browser</div>
-                    <div class="ab-sse-events">
-                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--start">start</span><span>Emits total number of generations</span></div>
-                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--log">log</span><span>Each stdout line from the subprocess</span></div>
-                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--progress">progress</span><span>Current generation, min energy, conformer name</span></div>
-                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--done">done</span><span>XYZ of the best conformer found</span></div>
-                        <div class="ab-sse-ev"><span class="ab-sse-tag ab-sse-tag--error">error</span><span>Error message if the process fails</span></div>
-                    </div>
-                </div>
-            </div>
+function updateDownloadButtons() {
+  const box = document.getElementById('individual-downloads');
+  if (!box) return;
 
-            <!-- ── WORKFLOW ── -->
-            <div class="lp-workflow-band scroll-reveal">
-                <span class="lp-section-tag lp-section-tag--center">Workflow</span>
-                <h2 class="lp-workflow-title">From string to structure in five steps</h2>
-                <div class="lp-workflow-steps">
-                    <div class="lp-ws"><div class="lp-ws-num">01</div><div class="lp-ws-body"><strong>Input</strong><p>Enter a SMILES string or upload a batch file with one SMILES per line.</p></div></div>
-                    <div class="lp-ws-arrow">→</div>
-                    <div class="lp-ws"><div class="lp-ws-num">02</div><div class="lp-ws-body"><strong>Configure</strong><p>Select an algorithm (RDKit, OpenBabel, or NetworkX) and an optional force field.</p></div></div>
-                    <div class="lp-ws-arrow">→</div>
-                    <div class="lp-ws"><div class="lp-ws-num">03</div><div class="lp-ws-body"><strong>Optimize</strong><p>Optionally run GLOMOS to sample low-energy conformers with ANI potentials.</p></div></div>
-                    <div class="lp-ws-arrow">→</div>
-                    <div class="lp-ws"><div class="lp-ws-num">04</div><div class="lp-ws-body"><strong>Visualize</strong><p>Inspect the interactive 3D structure or switch to a 2D diagram at any time.</p></div></div>
-                    <div class="lp-ws-arrow">→</div>
-                    <div class="lp-ws"><div class="lp-ws-num">05</div><div class="lp-ws-body"><strong>Export</strong><p>Download in XYZ, SDF, MOL, or MOL2 format for use in external software.</p></div></div>
-                </div>
-                <div style="text-align:center;margin-top:2rem;">
-                    <img src="pictures/flowchart_elaya.png" alt="ELAYA workflow diagram" class="flowchart-img">
-                </div>
-            </div>
+  // Layout del contenedor (puedes mover esto a tu CSS)
+  box.style.display = 'flex';
+  box.style.flexDirection = 'column'; // uno debajo del otro
+  box.style.gap = '10px';
+  box.style.marginBottom = '14px';
+  box.style.width = '100%';
 
-            <!-- ── VIDEO (after workflow) ── -->
-            <div class="lp-video-wrap scroll-reveal">
-                <p class="lp-video-label">See it in action</p>
-                <video src="pictures/example.webm" class="lp-video" autoplay loop muted playsinline></video>
-                <p class="lp-video-caption">Live conversion of a SMILES string into a fully optimized 3D structure</p>
-            </div>
+  // Si no hay moléculas: limpiar y (opcional) mostrar botón legacy
+  const hasMolecules = Array.isArray(molecules) && molecules.length > 0;
+  if (!hasMolecules) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    if (legacyDownloadBtn) legacyDownloadBtn.style.display = ''; // visible si NO hay simulación
+    return;
+  }
 
-            <!-- ── TECH & AUTHORSHIP ── -->
-            <div class="lp-bottom-grid">
-                <div class="card fade-in-section lp-bottom-card">
-                    <h3>Technologies</h3>
-                    <table class="lp-tech-table">
-                        <tr><td class="lp-tt-label">Backend</td><td><a href="https://flask.palletsprojects.com/" target="_blank">Flask</a> · <a href="https://www.python.org/" target="_blank">Python 3</a></td></tr>
-                        <tr><td class="lp-tt-label">Cheminformatics</td><td><a href="https://www.rdkit.org/" target="_blank">RDKit</a> · <a href="http://openbabel.org/" target="_blank">OpenBabel</a> · <a href="https://singroup.github.io/dscribe/" target="_blank">DScribe</a></td></tr>
-                        <tr><td class="lp-tt-label">Neural potentials</td><td><a href="https://github.com/isayev/ASE_ANI" target="_blank">ANI-1ccx / ANI-2x</a> via TorchANI</td></tr>
-                        <tr><td class="lp-tt-label">Visualization</td><td><a href="https://3dmol.csb.pitt.edu/" target="_blank">3Dmol.js</a> · <a href="https://www.chartjs.org/" target="_blank">Chart.js</a></td></tr>
-                        <tr><td class="lp-tt-label">Frontend</td><td>HTML5 · CSS3 · Vanilla JavaScript</td></tr>
-                    </table>
-                </div>
-                <div class="card fade-in-section lp-bottom-card">
-                    <h3>Project Authors</h3>
-                    <p>
-                        ELAYA SMILES was designed and developed by
-                        <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" class="author-linkedin-link">Gabriela Vidales</a>,
-                        with scientific guidance from <strong>MSc Luis Ortiz</strong>, <strong>PhD Filiberto Ortiz Chi</strong> and <strong>PhD Gabriel Merino</strong>.
-                    </p>
-                    <p style="margin-top:0.75rem;">
-                        <i>Passion for building tools that bring science closer to people. Fostering open and reproducible science.</i>
-                    </p>
-                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" class="about-github-btn" style="margin-top:1rem;">
-                        View on GitHub ↗
-                    </a>
-                </div>
-            </div>
+  // Hay moléculas -> ocultar botón legacy
+  if (legacyDownloadBtn) legacyDownloadBtn.style.display = 'none';
 
-        </section>
+  // Molécula visible
+  const mol = molecules[currentMoleculeIndex];
+  const label =
+    mol?.alias || mol?.name || mol?.title || mol?.id || mol?.smiles || `mol_${currentMoleculeIndex + 1}`;
 
-        <!-- ═══════════════════════════════════════════════════
-             CONTACT — redesigned
-        ════════════════════════════════════════════════════ -->
-        <section id="contact-section" style="display: none;">
+  // Render: SOLO 1 botón (visible) + 1 "All" si aplica
+  box.innerHTML = '';
 
-            <!-- Animated molecule background -->
-            <div class="contact-mol-bg">
-                <svg class="contact-mol-svg" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <filter id="cglow">
-                            <feGaussianBlur stdDeviation="4" result="b"/>
-                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                        </filter>
-                        <radialGradient id="cgrad" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#3cb49a" stop-opacity="0.08"/>
-                            <stop offset="100%" stop-color="#3cb49a" stop-opacity="0"/>
-                        </radialGradient>
-                    </defs>
-                    <circle cx="250" cy="200" r="180" fill="url(#cgrad)"/>
-                    <g>
-                        <polygon points="250,120 300,148 300,204 250,232 200,204 200,148"
-                                 fill="none" stroke="#3cb49a" stroke-width="1.2" opacity="0.2">
-                            <animateTransform attributeName="transform" type="rotate" from="0 250 176" to="360 250 176" dur="28s" repeatCount="indefinite"/>
-                        </polygon>
-                        <circle cx="250" cy="120" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="300" cy="148" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="300" cy="204" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="250" cy="232" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="200" cy="204" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="200" cy="148" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                    </g>
-                    <!-- Outer slow-pulse ring -->
-                    <circle cx="250" cy="200" r="155" fill="none" stroke="#3cb49a" stroke-width="0.6" opacity="0.1">
-                        <animate attributeName="r" values="148;162;148" dur="6s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" values="0.12;0.03;0.12" dur="6s" repeatCount="indefinite"/>
-                    </circle>
-                    <!-- Second ring -->
-                    <circle cx="250" cy="200" r="110" fill="none" stroke="#98ebc4" stroke-width="0.4" stroke-dasharray="3,7" opacity="0.12">
-                        <animateTransform attributeName="transform" type="rotate" from="0 250 200" to="-360 250 200" dur="18s" repeatCount="indefinite"/>
-                    </circle>
-                </svg>
-            </div>
+  // Botón: SMILES visible (AZUL, full width)
+  const btnCurrent = document.createElement('button');
+  btnCurrent.type = 'button';
+  btnCurrent.className = 'btn btn-primary xyz-download';
+  btnCurrent.textContent = `Download XYZ: ${String(label).slice(0, 32)}`;
+  btnCurrent.style.width = '100%';
+  btnCurrent.style.display = 'block';
+  btnCurrent.addEventListener('click', () => downloadSingleXYZ(currentMoleculeIndex));
+  box.appendChild(btnCurrent);
 
-            <!-- Header -->
-            <div class="contact-hero scroll-reveal">
-                <h2 class="contact-title" >Share your feedback</h2>
-                <p class="contact-subtitle">
-                    Found a bug? Have a suggestion? Something you'd like to see?<br>
-                    Your input helps make ELAYA better.
-                </p>
-            </div>
+  // Botón: ALL (AZUL, full width)
+  if (molecules.length > 1) {
+    const btnAll = document.createElement('button');
+    btnAll.type = 'button';
+    btnAll.className = 'btn btn-primary xyz-download-all';
+    btnAll.textContent = `Download all XYZ (${molecules.length})`;
+    btnAll.style.width = '100%';
+    btnAll.style.display = 'block';
+    btnAll.style.marginLeft = '0'; // sin margen lateral
+    btnAll.addEventListener('click', downloadAllXYZ);
+    box.appendChild(btnAll);
+  }
 
-            <!-- Author card + action cards -->
-            <div class="contact-layout">
+}
 
-                <div class="contact-author-card scroll-reveal">
-                    <img src="pictures/Logo_Elaya.jpg" alt="ELAYA" class="contact-author-logo"/>
-                    <div class="contact-author-info">
-                        <div class="contact-author-name">
-                            <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales</a>
-                        </div>
-                        <div class="contact-author-role">Physics Engineering Student</div>
-                        <p class="contact-author-bio">
-                            Committed to using science, education, and technology to improve people's quality of life.
-                        </p>
-                        <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" class="contact-link-btn" style="margin-top:0.8rem;display:inline-block;">
-                            LinkedIn ↗
-                        </a>
-                        <a href="https://github.com/GabrielaVidales" target="_blank" class="contact-link-btn" style="margin-top:0.8rem;display:inline-block;">
-                            GitHub ↗
-                        </a>
-                    </div>
-                </div>
+// === SMILES overflow UI (ancho completo + indicador + popover) ===
+function initSmilesOverflowUI() {
+  const input = document.getElementById('smiles');
+  if (!input) return;
 
-                <div class="contact-actions">
-                    <div class="contact-action-card scroll-reveal scroll-reveal--right">
-                        <div class="contact-action-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        </div>
-                        <h3>Bug report</h3>
-                        <p>Found something unexpected? Open an issue with your SMILES string and browser details.</p>
-                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues" target="_blank" class="contact-link-btn">Open an issue ↗</a>
-                    </div>
+  // 🛡️ evita doble init (ya envuelto o ya existe el botón)
+  if (input.parentElement && input.parentElement.classList.contains('smiles-wrap')) return;
+  if (document.getElementById('smiles-indicator')) return;
 
-                    <div class="contact-action-card scroll-reveal scroll-reveal--right" style="animation-delay:0.12s">
-                        <div class="contact-action-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </div>
-                        <h3>Suggestion</h3>
-                        <p>Have an idea for a new feature, algorithm, or output format? I'd love to hear it.</p>
-                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues" target="_blank" class="contact-link-btn">Share an idea ↗</a>
-                    </div>
+  // 1) estilos una sola vez
+  if (!document.getElementById('smiles-overflow-styles')) {
+    const style = document.createElement('style');
+    style.id = 'smiles-overflow-styles';
+    style.textContent = `
+      .smiles-wrap{ position:relative; display:flex; align-items:center; width:100%; }
+      .smiles-wrap > input#smiles{
+        flex:1 1 auto; min-width:0; width:100%;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        padding-right:2.2rem;
+      }
+      /* sin sombreado */
+      .smiles-wrap.overflowing::after{
+        content:""; position:absolute; right:2.0rem; top:0; bottom:0; width:2.5rem; pointer-events:none; background:none;
+      }
+      #smiles-indicator{
+        position:absolute; right:6px; top:50%; transform:translateY(-50%);
+        border:none; cursor:pointer; padding:.25rem .45rem; border-radius:8px;
+        background:#2b2b4a; color:#fff; font-weight:700; line-height:1;
+        opacity:0; pointer-events:none; transition:opacity .15s ease;
+        z-index:2; /* ⬅️ que nunca quede debajo del input */
+      }
+      .smiles-wrap.overflowing #smiles-indicator{ opacity:1; pointer-events:auto; }
 
-                    <div class="contact-action-card scroll-reveal scroll-reveal--right" style="animation-delay:0.24s">
-                        <div class="contact-action-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-                        </div>
-                        <h3>Contribute</h3>
-                        <p>Want to contribute code, tests, or documentation? Pull requests are welcome.</p>
-                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" class="contact-link-btn">View repo ↗</a>
-                    </div>
-                </div>
+      #smiles-popover{
+        position:absolute; z-index:2500; display:none;
+        background:#12122B; border:1px solid #243149; border-radius:12px;
+        box-shadow:0 12px 30px rgba(0,0,0,.45); padding:12px;
+      }
+      #smiles-popover.open{ display:block; }
+      #smiles-popover .smiles-pop-content{ display:flex; flex-direction:column; gap:.75rem; }
+      #smiles-popover pre{
+        max-height:40vh; overflow:auto; margin:0; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space:pre-wrap; word-break:break-all; color:#e8e8ff; background:#0e0f25; padding:10px; border-radius:8px;
+      }
+      #smiles-popover .smiles-actions{ display:flex; gap:.5rem; justify-content:flex-end; }
+      #smiles-popover .smiles-actions button{ border:none; padding:.45rem .8rem; border-radius:10px; cursor:pointer; color:#fff; }
+      #smiles-copy{ background:linear-gradient(135deg,#9D4EDD,#3CB49A); }
+      #smiles-close{ background:#612020b0; }
+    `;
+    document.head.appendChild(style);
+  }
 
-            </div>
-        </section>
-    </main>
+  // 2) envolver y botón
+  const wrap = document.createElement('div');
+  wrap.className = 'smiles-wrap';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
 
-    <footer class="site-footer">
-        <div class="footer-content">
-        <p>Elaya SMILES - Molecular Viewer© 2025</p>
-        <p><em>Developed by <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" class="author-linkedin-link">Gabriela Vidales</a>, Luis Gonzalez, Filiberto Ortiz, and Gabriel Merino.</em></p>
-        </div>
-    </footer>
+  const indicator = document.createElement('button');
+  indicator.id = 'smiles-indicator';
+  indicator.type = 'button';
+  indicator.title = 'Ver completo';
+  indicator.setAttribute('aria-label', 'Ver SMILES completo');
+  indicator.textContent = '▸';
+  wrap.appendChild(indicator);
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
-            integrity="sha512-yFa7jvO1/6Q0v0xY7n7aFz1Eo4r1f0cVw0uVx0o9RjQy9V2mH9H6xBqFfV4A4T5k3Qx0Z8xqL3O5Cw8s1i1n6g=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"
-            onerror="(function(){var s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'; document.head.appendChild(s);}())">
-    </script>
+  // 3) popover
+  const pop = document.createElement('div');
+  pop.id = 'smiles-popover';
+  pop.innerHTML = `
+    <div class="smiles-pop-content">
+      <pre id="smiles-full"></pre>
+      <div class="smiles-actions">
+        <button id="smiles-copy">Copiar</button>
+        <button id="smiles-close">Cerrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(pop);
 
-    <script src="/glomos_progress.js" defer></script>
-    <script src="/app.js" defer></script>
-</body>
-</html>
+  const preFull = pop.querySelector('#smiles-full');
+  const btnCopy = pop.querySelector('#smiles-copy');
+  const btnClose = pop.querySelector('#smiles-close');
+
+  // 4) overflow detector
+  const checkOverflow = () => requestAnimationFrame(() => {
+    wrap.classList.toggle('overflowing', input.scrollWidth > input.clientWidth);
+  });
+  input.addEventListener('input', checkOverflow);
+  window.addEventListener('resize', checkOverflow);
+  setTimeout(checkOverflow, 0);
+
+  // 5) abrir popover
+  indicator.addEventListener('click', () => {
+    preFull.textContent = input.value || '';
+    pop.classList.add('open');
+    const r = wrap.getBoundingClientRect();
+    pop.style.top = `${r.bottom + 8 + window.scrollY}px`;
+    pop.style.left = `${r.left + window.scrollX}px`;
+    pop.style.width = `${Math.max(r.width, 320)}px`;
+  });
+
+  // 6) cerrar/copiar
+  btnClose.addEventListener('click', () => pop.classList.remove('open'));
+  btnCopy.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(input.value || ''); showSuccess?.('✔ Copiado al portapapeles'); }
+    catch(e) { console.warn(e); }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') pop.classList.remove('open'); });
+  document.addEventListener('click', (e) => {
+    if (!pop.classList.contains('open')) return;
+    if (!pop.contains(e.target) && !wrap.contains(e.target)) pop.classList.remove('open');
+  });
+}
+
+// Llama a la inicialización cuando el DOM esté listo (si aún no lo haces)
+document.addEventListener('DOMContentLoaded', () => {
+  try { initSmilesOverflowUI(); } catch (e) { console.warn(e); }
+});
+
+
+window.retryVisualization = retryVisualization;
+window.navigateMolecules = navigateMolecules;
+window.toggleRotation = toggleRotation;
+window.changeRotationSpeed = changeRotationSpeed;
