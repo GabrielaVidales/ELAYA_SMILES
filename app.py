@@ -16,24 +16,47 @@ app.url_map.strict_slashes = False  # prevent 301 redirects that turn POST into 
 tool = MolecularTools()
 
 # ── Job store for GLOMOS polling ─────────────────────────────────────────────
-# { job_id: { 'events': [...], 'done': bool, 'created': float } }
-_jobs: dict = {}
+# Los jobs se persisten en disco (/tmp/glomos_jobs/) para sobrevivir reinicios
+# del proceso en Render. Cada job es un archivo JSON independiente.
 _jobs_lock = threading.Lock()
+_JOBS_DIR = '/tmp/glomos_jobs'
+os.makedirs(_JOBS_DIR, exist_ok=True)
+
+def _job_path(job_id: str) -> str:
+    return os.path.join(_JOBS_DIR, f'{job_id}.json')
+
+def _load_job(job_id: str) -> dict | None:
+    path = _job_path(job_id)
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+def _save_job(job_id: str, job: dict):
+    path = _job_path(job_id)
+    with open(path, 'w') as f:
+        json.dump(job, f)
 
 def _cleanup_old_jobs():
-    """Remove jobs older than 30 minutes to avoid memory leaks."""
-    cutoff = time.time() - 1800
-    with _jobs_lock:
-        stale = [jid for jid, j in _jobs.items() if j['created'] < cutoff]
-        for jid in stale:
-            del _jobs[jid]
+    """Remove job files older than 24 hours."""
+    cutoff = time.time() - 86400
+    try:
+        for fname in os.listdir(_JOBS_DIR):
+            fpath = os.path.join(_JOBS_DIR, fname)
+            if os.path.getmtime(fpath) < cutoff:
+                os.remove(fpath)
+    except Exception:
+        pass
 
 def _run_glomos_job(job_id: str, smiles: str, glomos_params: dict):
-    """Worker thread: runs GLOMOS and pushes events into the job store."""
+    """Worker thread: runs GLOMOS and persists events to disk."""
     def push(event: dict):
         with _jobs_lock:
-            if job_id in _jobs:
-                _jobs[job_id]['events'].append(event)
+            job = _load_job(job_id)
+            if job is not None:
+                job['events'].append(event)
+                _save_job(job_id, job)
 
     push({'type': 'loading', 'message': 'Preparando semilla 3D...'})
 
@@ -42,8 +65,10 @@ def _run_glomos_job(job_id: str, smiles: str, glomos_params: dict):
     except Exception as exc:
         push({'type': 'error', 'message': str(exc)})
         with _jobs_lock:
-            if job_id in _jobs:
-                _jobs[job_id]['done'] = True
+            job = _load_job(job_id)
+            if job is not None:
+                job['done'] = True
+                _save_job(job_id, job)
         return
 
     push({'type': 'start', 'generations': params['generations']})
@@ -51,14 +76,16 @@ def _run_glomos_job(job_id: str, smiles: str, glomos_params: dict):
     try:
         for event in tool.run_glomos_streaming(seed_xyz, workdir, **params):
             if event.get('type') == 'loading':
-                continue  # already sent above
+                continue
             push(event)
     except Exception as exc:
         push({'type': 'error', 'message': str(exc)})
 
     with _jobs_lock:
-        if job_id in _jobs:
-            _jobs[job_id]['done'] = True
+        job = _load_job(job_id)
+        if job is not None:
+            job['done'] = True
+            _save_job(job_id, job)
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -145,11 +172,11 @@ def glomos_start():
 
     job_id = str(uuid.uuid4())
     with _jobs_lock:
-        _jobs[job_id] = {
+        _save_job(job_id, {
             'events':  [],
             'done':    False,
             'created': time.time(),
-        }
+        })
 
     t = threading.Thread(
         target=_run_glomos_job,
@@ -171,7 +198,7 @@ def glomos_poll(job_id):
     cursor = int(request.args.get('cursor', 0))
 
     with _jobs_lock:
-        job = _jobs.get(job_id)
+        job = _load_job(job_id)
 
     if job is None:
         return jsonify({"error": "Job not found"}), 404
