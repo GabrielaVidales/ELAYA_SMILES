@@ -4,11 +4,14 @@
 
 <h1 align="center">
 ELAYA SMILES 
-  (Energy-minimized Linear-to-structure Atom Yielding Algorithm)
 </h1>
 
 <p align="center">
-<b>Molecular Conversion and 3D Structural Analysis Platform</b>
+<i><b>Energy-minimized Linear-to-structure Atom Yielding Algorithm</b></i>
+</p>
+
+<p align="center">
+<b>Web Platform for Conformational Exploration and Visualization from SMILES Using Classical Force Fields and Neural Network Potentials</b>
 </p>
 
 <p align="center">
