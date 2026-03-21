@@ -3,7 +3,8 @@
 </p>
 
 <h1 align="center">
-ELAYA SMILESv(Energy-minimized Linear-to-structure Atom Yielding Algorithm)
+ELAYA SMILES 
+  (Energy-minimized Linear-to-structure Atom Yielding Algorithm)
 </h1>
 
 <p align="center">
