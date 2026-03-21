@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">
-ELAYA SMILES
+ELAYA SMILESv(Energy-minimized Linear-to-structure Atom Yielding Algorithm)
 </h1>
 
 <p align="center">
@@ -11,7 +11,9 @@ ELAYA SMILES
 </p>
 
 <p align="center">
-SMILES → 3D Molecular Modeling Framework
+<a href="https://elaya-smiles.onrender.com/">
+🌐 Try the Web App
+</a>
 </p>
 
 <p align="center">
