@@ -7,11 +7,7 @@ ELAYA SMILES
 </h1>
 
 <p align="center">
-<i><b>Energy-minimized Linear-to-structure Atom Yielding Algorithm</b></i>
-</p>
-
-<p align="center">
-<b>Web Platform for Conformational Exploration and Visualization from SMILES Using Classical Force Fields and Neural Network Potentials</b>
+<b>Conformational Exploration and Visualization from SMILES Using Classical Force Fields and Neural Network Potentials</b>
 </p>
 
 <p align="center">
@@ -34,7 +30,7 @@ ELAYA SMILES
 
 ## What is ELAYA SMILES?
 
-**ELAYA SMILES is a web-based platform designed for the conversion of linear molecular representations (SMILES) into optimized three-dimensional structures, enabling visualization and structural analysis within a unified environment.**
+**ELAYA SMILES (Energy-minimized Linear-to-structure Atom Yielding Algorithm) is a web-based platform designed for the conversion of linear molecular representations (SMILES) into optimized three-dimensional structures, enabling visualization and structural analysis within a unified environment.**
 
 ---
 
