@@ -30,21 +30,16 @@ from rdkit.Geometry import Point3D
 # 3D visualization
 import py3Dmol
 
-# Molecular dynamics and descriptors
-from ase.io import read, write
-from dscribe.descriptors import SOAP, ValleOganov
-from dscribe.kernels import AverageKernel
-
-# OpenBabel
+# OpenBabel — se carga al inicio porque se usa en conversiones básicas
 from openbabel import openbabel as ob, pybel
 from openbabel.pybel import readstring
 
-# Auto3D for AI-based optimization
-import Auto3D
-from Auto3D.auto3D import options, main
+# ── IMPORTS PESADOS ELIMINADOS DEL NIVEL GLOBAL ──────────────────────────────
+# ase, dscribe, Auto3D, torchani y glomos se importan de forma lazy
+# (dentro del método que los necesita) para evitar consumir ~800-1000 MB
+# de RAM al arrancar el servidor, incluso cuando nadie los ha usado todavía.
+# -----------------------------------------------------------------------------
 
-# Genetic algorithm for rotamer optimization (bundled as /app/glomos local package)
-from glomos.heuristic_ga_rotamers import conformational
 
 class MolecularTools:
     def __init__(self):
@@ -86,7 +81,7 @@ class MolecularTools:
         else:
             if not file_path:
                 raise ValueError("No file path provided")
-                
+
             self.smiles_list = []
             self.identifiers = []
             with open(file_path, 'r') as f:
@@ -104,7 +99,7 @@ class MolecularTools:
             mol = Chem.MolFromSmiles(smiles)
             if mol is None:
                 raise ValueError(f"RDKit no pudo parsear el SMILES: {smiles}")
-            
+
             mol = Chem.AddHs(mol)
 
             # Generate 3D coordinates
@@ -145,7 +140,7 @@ class MolecularTools:
             output_path = os.path.join(self.dirs['xyz_rdkit'], f"{safe_name}.xyz")
             with open(output_path, 'w') as f:
                 f.write(xyz_content)
-            
+
             mol_block = MolToMolBlock(mol)
 
             print(f"Conversión exitosa para {identifier}")
@@ -155,23 +150,10 @@ class MolecularTools:
             print(f"Error converting {smiles}: {str(e)}")
             raise
 
-
     def openbabel_conversion(self, smiles, identifier, force_field='uff'):
-        """Convert SMILES to 3D using OpenBabel with enhanced bond detection and warm-up"""
+        """Convert SMILES to 3D using OpenBabel with enhanced bond detection"""
         try:
             print(f"Convirtiendo {smiles} con OpenBabel...")
-
-            # --- Warm-up opcional: evita fallos internos en primeras llamadas a make3D ---
-            try:
-                warm_conv = ob.OBConversion()
-                warm_conv.SetInAndOutFormats("smi", "mol")
-                warm_mol = ob.OBMol()
-                warm_conv.ReadString(warm_mol, '[O]')
-                warm_pybel = pybel.readstring("mol", warm_conv.WriteString(warm_mol))
-                warm_pybel.make3D(forcefield=force_field, steps=1)
-                print("Warm-up de OpenBabel completado")
-            except Exception as warm_error:
-                print("Warm-up fallido o innecesario:", warm_error)
 
             # --- Conversión principal ---
             conv = ob.OBConversion()
@@ -242,7 +224,7 @@ class MolecularTools:
             G.add_nodes_from(self.atoms)
             G.add_edges_from(self.bonds)
             coord_xyz = nx.spring_layout(G, dim=3, k=5, iterations=800, scale=3.4, seed=586)
-            
+
             # Generar contenido XYZ
             self.xyz_networkx = []
             xyz_content = f"{len(self.atoms)}\n0  0   {smiles}\n"
@@ -268,6 +250,16 @@ class MolecularTools:
 
     def auto3d_conversion(self, smiles, identifier):
         """Use Auto3D for AI-based 3D structure generation"""
+        # ── Lazy import: Auto3D + torchani solo se cargan cuando se usan ──────
+        try:
+            import Auto3D
+            from Auto3D.auto3D import options, main
+        except ImportError as e:
+            raise ImportError(
+                "Auto3D no está disponible en este entorno. "
+                "Instálalo con: pip install auto3d --no-deps"
+            ) from e
+
         try:
             print(f"Usando Auto3D para {smiles}")
             # Create temporary SMILES file
@@ -339,15 +331,11 @@ class MolecularTools:
         Siempre nof_processes=1: evita crash de multiprocessing.spawn.
         Parámetros ajustados para mayor velocidad en moléculas pequeñas.
         """
-        import shutil
         if os.path.exists(workdir):
             shutil.rmtree(workdir)
         os.makedirs(workdir)
         with open(os.path.join(workdir, "seed.xyz"), "w") as f:
             f.write(seed_xyz)
-        # prec más relajada (1E-02 1E-03) → optimizaciones más rápidas
-        # nof_repeats=1, nof_stagnant=2 → termina antes si converge
-        # cutoff_population=5 → mantiene menos conformeros activos
         input_txt = (
             "rotamer_seed            seed.xyz\n\n"
             "#EVOLUTIVE PARAMETERS:\n"
@@ -380,6 +368,15 @@ class MolecularTools:
 
     def _run_glomos(self, seed_xyz, workdir, initpop=4, matings=2, mutants=2,
                     generations=3, energy_cutoff=4.0, ani_model="ANI1ccx", nproc=2):
+        # ── Lazy import: glomos solo se carga cuando se usa GLOMOS ────────────
+        try:
+            from glomos.heuristic_ga_rotamers import conformational
+        except ImportError as e:
+            raise ImportError(
+                "glomos no está disponible. "
+                "Instálalo con: pip install glomos"
+            ) from e
+
         self._write_glomos_input(workdir, seed_xyz, initpop, matings, mutants,
                                   generations, energy_cutoff, ani_model, nproc)
         cwd = os.getcwd()
@@ -414,8 +411,6 @@ class MolecularTools:
                 "sys.stdout.reconfigure(line_buffering=True)\n"
                 "sys.stderr.reconfigure(line_buffering=True)\n"
                 "from multiprocessing import freeze_support\n"
-                # Inserta /app al inicio del path para que el glomos local
-                # (en /app/glomos/) tenga prioridad sobre el de PyPI
                 "sys.path.insert(0, '/app')\n"
                 "os.chdir(os.path.dirname(os.path.abspath(__file__)))\n"
                 "from glomos.heuristic_ga_rotamers import conformational\n"
@@ -427,8 +422,6 @@ class MolecularTools:
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
-        # ── Emitir inmediatamente — señal de que el proceso arrancó ────────
-        # (app.py ya emitió 'loading' antes de llamar a este generador)
         yield {"type": "log", "line": "Lanzando subprocess GLOMOS…"}
 
         proc = subprocess.Popen(
@@ -438,7 +431,7 @@ class MolecularTools:
             text=True,
             encoding="utf-8",
             errors="replace",
-            bufsize=1,          # line-buffered en modo texto (suficiente en Windows)
+            bufsize=1,
             env=env,
         )
 
@@ -451,7 +444,7 @@ class MolecularTools:
                 for raw in proc.stdout:
                     line_queue.put(raw.rstrip())
             finally:
-                line_queue.put(_SENTINEL)   # señal de fin
+                line_queue.put(_SENTINEL)
 
         t = threading.Thread(target=_reader, daemon=True)
         t.start()
@@ -469,7 +462,6 @@ class MolecularTools:
         re_conf   = re.compile(r"(random|mating|mutant)_\d+_\d+\s+at\s+")
 
         def _process_line(line):
-            """Parsea una línea y devuelve lista de eventos SSE a emitir."""
             nonlocal current_gen, best_energy, gen_start, gen_times
             events = [{"type": "log", "line": line}]
 
@@ -507,13 +499,12 @@ class MolecularTools:
                 try:
                     item = line_queue.get(timeout=HEARTBEAT_S)
                 except queue.Empty:
-                    # Timeout → heartbeat (mantiene SSE vivo en el browser)
                     elapsed = round(time.time() - last_data_t)
                     yield {"type": "heartbeat", "elapsed": elapsed, "message": "Procesando…"}
                     continue
 
                 if item is _SENTINEL:
-                    break   # EOF del proceso
+                    break
 
                 last_data_t = time.time()
                 if item:
@@ -564,19 +555,20 @@ class MolecularTools:
             "nproc":         1,
         }
         return base["xyz"], workdir, params
+
     def visualize_3d(self, xyz_content, width=400, height=400):
         """Visualize molecule from XYZ content"""
         try:
             view = py3Dmol.view(width=width, height=height)
             view.addModel(xyz_content, "xyz")
-            view.addBonds()  # <<<<<< AÑADIDO: intenta inferir enlaces desde posiciones
+            view.addBonds()
             view.setStyle({'sphere': {'scale': 0.3}, 'stick': {'radius': 0.2}})
             view.zoomTo()
             return view
         except Exception as e:
             print(f"Error en visualización: {str(e)}")
             raise
-    
+
     def add_lone_pairs_openbabel(self, mol):
         """Agrega átomos virtuales tipo He para simular pares libres (visualización)"""
         from openbabel import OBAtom
@@ -587,8 +579,7 @@ class MolecularTools:
             symbol = atom.GetType()
             if symbol in ['N', 'O', 'F']:
                 x, y, z = atom.GetX(), atom.GetY(), atom.GetZ()
-                
-                # Crear átomo dummy tipo He como par libre (mejor si no interfiere con enlaces)
+
                 for dx, dy, dz in [(0.3, 0.3, 0.0), (-0.3, -0.3, 0.0)]:
                     dummy = OBAtom()
                     dummy.SetAtomicNum(2)  # Helio (Z=2)
@@ -602,7 +593,7 @@ class MolecularTools:
             def parse_xyz(xyz_file):
                 coords = set()
                 with open(xyz_file, 'r') as f:
-                    lines = f.readlines()[2:]  # Skip first two lines
+                    lines = f.readlines()[2:]
                     for line in lines:
                         parts = line.split()
                         if len(parts) >= 4:
@@ -623,9 +614,19 @@ class MolecularTools:
 
     def soap_similarity(self, xyz_files, species=None, r_cut=5.0):
         """Calculate SOAP similarity matrix for multiple XYZ files"""
+        # ── Lazy import: ase + dscribe solo se cargan cuando se usan ─────────
+        try:
+            from ase.io import read
+            from dscribe.descriptors import SOAP
+            from dscribe.kernels import AverageKernel
+        except ImportError as e:
+            raise ImportError(
+                "ase y/o dscribe no están disponibles. "
+                "Instálalos con: pip install ase dscribe"
+            ) from e
+
         try:
             if not species:
-                # Auto-detect species from first file
                 with open(xyz_files[0], 'r') as f:
                     elements = set()
                     for line in f.readlines()[2:]:
@@ -634,7 +635,6 @@ class MolecularTools:
                             elements.add(parts[0])
                     species = list(elements)
 
-            # Create SOAP descriptor
             soap = SOAP(
                 species=species,
                 r_cut=r_cut,
@@ -643,13 +643,11 @@ class MolecularTools:
                 periodic=False
             )
 
-            # Process all molecules
             features = []
             for xyz_file in xyz_files:
                 mol = read(xyz_file, format='xyz')
                 features.append(soap.create(mol))
 
-            # Calculate similarity matrix
             kernel = AverageKernel(metric="linear")
             return kernel.create(features)
         except Exception as e:
@@ -658,9 +656,18 @@ class MolecularTools:
 
     def valle_oganov_similarity(self, xyz_files, species=None):
         """Calculate Valle-Oganov similarity matrix"""
+        # ── Lazy import: ase + dscribe solo se cargan cuando se usan ─────────
+        try:
+            from ase.io import read
+            from dscribe.descriptors import ValleOganov
+        except ImportError as e:
+            raise ImportError(
+                "ase y/o dscribe no están disponibles. "
+                "Instálalos con: pip install ase dscribe"
+            ) from e
+
         try:
             if not species:
-                # Auto-detect species from first file
                 with open(xyz_files[0], 'r') as f:
                     elements = set()
                     for line in f.readlines()[2:]:
@@ -669,7 +676,6 @@ class MolecularTools:
                             elements.add(parts[0])
                     species = list(elements)
 
-            # Create Valle-Oganov descriptor
             vo = ValleOganov(
                 species=species,
                 function='distance',
@@ -678,13 +684,11 @@ class MolecularTools:
                 r_cut=10
             )
 
-            # Process all molecules
             features = []
             for xyz_file in xyz_files:
                 mol = read(xyz_file, format='xyz')
                 features.append(vo.create(mol))
 
-            # Calculate similarity matrix
             sim_matrix = np.zeros((len(features), len(features)))
             for i in range(len(features)):
                 for j in range(i, len(features)):
@@ -730,7 +734,6 @@ class MolecularTools:
         results = {}
         for smiles, identifier in zip(self.smiles_list, self.identifiers):
             try:
-                # Conversión 3D
                 if method == 'rdkit':
                     result = self.rdkit_conversion(smiles, identifier, force_field)
                 elif method == 'openbabel':
@@ -740,13 +743,8 @@ class MolecularTools:
                 else:
                     raise ValueError("Método no soportado")
 
-                # Imagen 2D
                 img_paths = self.generate_2d_image(smiles, identifier)
-
-                # Exportación de formatos estándar
                 format_paths = self.export_formats(smiles, identifier)
-
-                # Visualización
                 vis = self.visualize_3d(result["xyz"])
 
                 results[identifier] = {
@@ -763,15 +761,12 @@ class MolecularTools:
 
         return results
 
-
     def compare_all_methods(self, identifier):
         """Compare results from all conversion methods for one molecule"""
         try:
-            # Find the SMILES for this identifier
             idx = self.identifiers.index(identifier)
             smi = self.smiles_list[idx]
 
-            # Generate with all methods
             rdkit_xyz = self.rdkit_conversion(smi, f"{identifier}_rdkit")
             obabel_xyz = self.openbabel_conversion(smi, f"{identifier}_obabel")
             networkx_xyz = self.networkx_conversion(smi, f"{identifier}_networkx")
@@ -786,14 +781,13 @@ class MolecularTools:
         except Exception as e:
             print(f"Error comparando métodos: {str(e)}")
             raise
-        
+
     def export_formats(self, smiles, identifier):
-    #Exporta la molécula a formatos comunes y añade metadatos
+        """Exporta la molécula a formatos comunes y añade metadatos"""
         try:
             mol = pybel.readstring("smi", smiles)
             mol.make3D()
 
-            # Agregar metadatos personalizados
             mol.data["ID"] = identifier
             mol.data["SMILES"] = smiles
             mol.data["Source"] = "ELAYA"
@@ -814,7 +808,7 @@ class MolecularTools:
         except Exception as e:
             print(f"Error exportando formatos para {identifier}: {str(e)}")
             return {}
-        
+
     def generate_2d_image(self, smiles, identifier):
         """Genera imagen 2D como PNG y SVG usando RDKit"""
         try:
@@ -847,6 +841,7 @@ class MolecularTools:
         except Exception as e:
             print(f"Error generando imagen 2D: {str(e)}")
             return None
+
 
 if __name__ == "__main__":
     tool = MolecularTools()
