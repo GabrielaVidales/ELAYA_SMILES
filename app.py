@@ -7,13 +7,29 @@ import json
 import uuid
 import threading
 import time
+
+# ── MolecularTools: inicialización lazy ──────────────────────────────────────
+# NO se instancia al arrancar el servidor. Se crea la primera vez que llega
+# una petición real. Esto evita cargar rdkit, openbabel, etc. durante el
+# healthcheck inicial de Render, cuando la RAM todavía está ajustada.
 from elaya_smiles import MolecularTools
 
-app = Flask(__name__, static_folder=None)  # static files served manually below — avoids route conflicts with /api/*
+_tool = None
+_tool_lock = threading.Lock()
+
+def get_tool():
+    """Devuelve la instancia única de MolecularTools, creándola si hace falta."""
+    global _tool
+    if _tool is None:
+        with _tool_lock:
+            if _tool is None:
+                _tool = MolecularTools()
+    return _tool
+# -----------------------------------------------------------------------------
+
+app = Flask(__name__, static_folder=None)  # static files served manually below
 CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}})
 app.url_map.strict_slashes = False  # prevent 301 redirects that turn POST into GET
-
-tool = MolecularTools()
 
 # ── Job store for GLOMOS polling ─────────────────────────────────────────────
 # Los jobs se persisten en disco (/tmp/glomos_jobs/) para sobrevivir reinicios
@@ -61,7 +77,7 @@ def _run_glomos_job(job_id: str, smiles: str, glomos_params: dict):
     push({'type': 'loading', 'message': 'Preparando semilla 3D...'})
 
     try:
-        seed_xyz, workdir, params = tool.prepare_glomos_seed(smiles, glomos_params)
+        seed_xyz, workdir, params = get_tool().prepare_glomos_seed(smiles, glomos_params)
     except Exception as exc:
         push({'type': 'error', 'message': str(exc)})
         with _jobs_lock:
@@ -74,7 +90,7 @@ def _run_glomos_job(job_id: str, smiles: str, glomos_params: dict):
     push({'type': 'start', 'generations': params['generations']})
 
     try:
-        for event in tool.run_glomos_streaming(seed_xyz, workdir, **params):
+        for event in get_tool().run_glomos_streaming(seed_xyz, workdir, **params):
             if event.get('type') == 'loading':
                 continue
             push(event)
@@ -122,6 +138,8 @@ def convert():
 
         print(f"Convirtiendo {smiles} | método={method} | post_opt={post_opt}")
 
+        tool = get_tool()
+
         if post_opt == 'glomos':
             print("→ Ejecutando GLOMOS (ANI Rotamers)")
             result = tool.run_glomos_from_smiles(smiles, glomos_params)
@@ -152,7 +170,7 @@ def convert():
         return jsonify({"error": str(e)}), 500
 
 
-# ── GLOMOS job-based endpoints (replaces SSE /api/convert/stream) ─────────────
+# ── GLOMOS job-based endpoints ────────────────────────────────────────────────
 
 @app.route('/api/glomos/start', methods=['POST'], strict_slashes=False)
 def glomos_start():
@@ -203,7 +221,7 @@ def glomos_poll(job_id):
     if job is None:
         return jsonify({"error": "Job not found"}), 404
 
-    events    = job['events']
+    events     = job['events']
     new_events = events[cursor:]
     new_cursor = cursor + len(new_events)
 
@@ -214,7 +232,7 @@ def glomos_poll(job_id):
     })
 
 
-# Keep /api/convert/stream alive so old JS doesn't crash, just returns a clean error
+# Keep /api/convert/stream alive so old JS doesn't crash
 @app.route('/api/convert/stream', methods=['POST'], strict_slashes=False)
 def convert_stream_legacy():
     return jsonify({
@@ -276,7 +294,6 @@ def draw_2d():
         return jsonify({"error": "Draw2D server failure", "detail": str(e)}), 500
 
 
-
 # ── OPTIONS preflight handler for all /api/* routes ──────────────────────────
 @app.route('/api/<path:subpath>', methods=['OPTIONS'])
 def api_options(subpath):
@@ -288,23 +305,23 @@ def api_options(subpath):
     return response
 
 
-# NOTE: this catch-all is intentionally AFTER all /api routes.
-# Flask matches routes in definition order, so /api/* routes above take priority.
+# NOTE: catch-all AFTER all /api routes.
 @app.route('/<path:path>')
 def static_file(path):
-    # Return a clear JSON 405 for any api path that slips through (should not happen normally)
     if path.startswith('api/'):
         return jsonify({"error": f"Route /{path} not found or method not allowed"}), 405
     base = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(base, path)
 
+
 if __name__ == '__main__':
-    # Render (and most PaaS) injects a PORT env var — fall back to 5000 locally
     port = int(os.environ.get('PORT', 5000))
     try:
         from waitress import serve
         print(f"Servidor iniciado con Waitress en http://0.0.0.0:{port}")
-        serve(app, host='0.0.0.0', port=port, threads=8, channel_timeout=600)
+        # threads=2 es suficiente para uso normal y reduce consumo de RAM
+        # considerablemente frente al valor anterior de 8.
+        serve(app, host='0.0.0.0', port=port, threads=2, channel_timeout=600)
     except ImportError:
         print("AVISO: instala waitress con:  pip install waitress")
         app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
