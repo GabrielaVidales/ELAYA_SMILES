@@ -2,10 +2,10 @@ services:
   - type: web
     name: elaya-smiles
     env: docker
-    # Free plan has 512 MB RAM — upgrade to 'starter' (2 GB) for GLOMOS/TorchANI
+    # 'starter' (512 MB) es suficiente para rdkit + openbabel con lazy imports.
+    # Si usas GLOMOS o Auto3D frecuentemente, cambia a 'standard' (2 GB).
     plan: starter
     dockerfilePath: ./Dockerfile
-    # Render sets PORT env var; app.py reads it via the environment
     envVars:
       - key: PORT
         value: 5000
