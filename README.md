@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="pictures/Logo_Elaya.jpg" width="200"/>
+  <img src="elaya_logo_horizontal" width="200"/>
 </p>
-
-<h1 align="center">ELAYA SMILES</h1>
 
 <p align="center">
   <b>Energy-Minimized Linear-to-Structure Atom Yielding Algorithm</b><br/>
