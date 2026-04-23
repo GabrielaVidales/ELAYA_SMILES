@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/USUARIO/REPO/main/elaya_logo_horizontal.png" width="100%" style="max-width: 1000px;">
+  <img src="./elaya_logo_horizontal.png" width="100%" style="max-width: 1000px;">
 </p>
 
 <p align="center">
