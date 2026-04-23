@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./elaya_logo_horizontal.png" width="65%" style="max-width: 1000px;">
+  <img src="./pictures/elaya_logo_horizontal.png" width="65%" style="max-width: 1000px;">
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 ---
 
 <p align="center">
-  <img src="elaya_explorer.png" alt="ELAYA SMILES Explorer — 3D molecular viewer" width="90%"/>
+  <img src="pictures/elaya_explorer.png" alt="ELAYA SMILES Explorer — 3D molecular viewer" width="90%"/>
   <br/><sub><i>ELAYA SMILES Explorer — Convert any SMILES string into an interactive 3D structure</i></sub>
 </p>
 
@@ -50,11 +50,11 @@ SMILES (Simplified Molecular Input Line Entry System) provides a compact way to 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="elaya_about.png" alt="About page — SMILES reference and encoding rules" width="100%"/>
+      <img src="pictures/elaya_about.png" alt="About page — SMILES reference and encoding rules" width="100%"/>
       <br/><sub><b>SMILES reference guide & encoding rules</b></sub>
     </td>
     <td align="center" width="50%">
-      <img src="elaya_glomos.png" alt="GLOMOS — Conformational search with genetic algorithm" width="100%"/>
+      <img src="pictures/elaya_glomos.png" alt="GLOMOS — Conformational search with genetic algorithm" width="100%"/>
       <br/><sub><b>GLOMOS — Conformational search with genetic algorithm + ANI potentials</b></sub>
     </td>
   </tr>
