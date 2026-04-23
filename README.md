@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./pictures/elaya_logo_horizontal.png" width="65%" style="max-width: 1000px;">
+  <img src="./pictures/elaya_logo_horizontal.png" width="60%" style="max-width: 1000px;">
 </p>
 
 <p align="center">
