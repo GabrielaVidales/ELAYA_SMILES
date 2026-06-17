@@ -20,7 +20,7 @@
 ---
 
 <p align="center">
-  <img src="pictures/elaya_explorer.png" alt="ELAYA SMILES Explorer — 3D molecular viewer" width="90%"/>
+  <img src="pictures/ELAYA.png" alt="ELAYA SMILES Explorer — 3D molecular viewer" width="90%"/>
   <br/><sub><i>ELAYA SMILES Explorer — Convert any SMILES string into an interactive 3D structure</i></sub>
 </p>
 
