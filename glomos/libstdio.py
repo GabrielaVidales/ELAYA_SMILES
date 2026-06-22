@@ -74,4 +74,31 @@ out:
 """
         return get_value_from_file(self.filename, key, str, default)
 
+    def get_floatlist(self, key, default):
+        """Read a space-separated list of floats for a given key from the input file.
+
+in:
+    key (str): parameter name.
+    default (list of float): fallback value if key is not found or the file
+        does not exist.
+out:
+    list of float: parsed values (one or more numbers after the key), or
+        default if the key is missing or any value fails to convert.
+"""
+        if not os.path.isfile(self.filename):
+            return default
+        with open(self.filename, 'r') as f:
+            for line in f:
+                line = line.split('#')[0].strip()
+                if not line:
+                    continue
+                parts = line.split()
+                if len(parts) >= 2 and parts[0].lower() == key.lower():
+                    try:
+                        return [float(v) for v in parts[1:]]
+                    except ValueError:
+                        print(f"Warning: Could not convert '{parts[1:]}' to a list of floats. Returning default.")
+                        return default
+        return default
+
 #------------------------------------------------------------------------------------------
