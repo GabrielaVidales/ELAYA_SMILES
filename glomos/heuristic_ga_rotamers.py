@@ -8,7 +8,6 @@ from glomos.libdisc_usr     import deduplicate_by_usr, filter_against_reference_
 from glomos.libcalc_ani    import ANI
 ndigit1=3
 ndigit2=4
-preclist=[1E-03, 1E-04]
 #-------------------------------------------------------------------------------
 def display_mol_info(moleculein, flagsum=1):
     """Print a ranked energy summary of a rotamer population with optional fitness values.
@@ -56,6 +55,7 @@ def conformational(inputfile='INPUT.txt'):
     nof_stagnant=df.get_int(key='nof_stagnant', default=3)
     calculator=df.get_str(key='calculator', default='ANI1ccx')
     nof_processes=df.get_int(key='nof_processes', default=1)
+    preclist=df.get_floatlist(key='prec', default=[1E-03, 1E-04])
     atoms = read(rotamer_seed, format='xyz') 
     atoms.info['e']=0.0
     atoms.info['i']='Rotamer'
