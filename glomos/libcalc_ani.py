@@ -80,8 +80,16 @@ def ANI_single(atoms, opt='ANI1ccx', preclist=[1E-03, 1E-04, 1E-05]):
     calculator = get_calculator(opt)
     moleculeout.calc = calculator
     for prec in preclist:
+        t0 = time.time()
         dyn = BFGS(moleculeout, logfile=None)
         dyn.run(fmax=prec, steps=200)
+        dt = time.time() - t0
+        # Diagnóstico temporal: cuántos pasos de BFGS tomó cada nivel de
+        # precisión y cuánto tiempo costó. Útil para saber si el cuello de
+        # botella es el número de pasos (BFGS no converge) o el costo por
+        # paso (evaluación ANI lenta en sí). Quitar una vez diagnosticado.
+        print('  [diag] fmax=%.0e -> %d steps, %.2f s (%.3f s/step)' %
+              (prec, dyn.nsteps, dt, dt / max(dyn.nsteps, 1)))
     energy = moleculeout.get_potential_energy()
     moleculeout.info['e'] = energy * eVtokcalpermol
     return moleculeout
