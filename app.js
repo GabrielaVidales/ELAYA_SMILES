@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Autocarga de la molécula de oxitocina
     const smilesInput = document.getElementById('smiles');
     if (smilesInput && !sessionStorage.getItem('oxytocinShown')) {
-        const oxytocinSmiles = "CC(C)C[C@H](NC(=O)[C@H](CC(C)C)NC(=O)CN)C(=O)N";
+        const oxytocinSmiles = "N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O";
         smilesInput.value = oxytocinSmiles;
         molecules = [{ smiles: oxytocinSmiles, id: oxytocinSmiles }];
         updateSmilesHistory(oxytocinSmiles);
@@ -273,9 +273,8 @@ document.addEventListener("DOMContentLoaded", function () {
               document.getElementById('glomos-live-panel')?.remove();
             }
 
-            // ── GLOMOS streaming ─────────────────────────────────────
+            // ── GLOMOS (background job with live progress) ───────────
             if (postOpt === 'glomos' && typeof window.runGlomosWithStream === 'function') {
-              // Limpiar viewer y XYZ para que no confunda con resultado previo
               currentXYZ = '';
               const viewerEl = document.getElementById('viewer-container');
               if (viewerEl) {
@@ -285,42 +284,30 @@ document.addEventListener("DOMContentLoaded", function () {
               if (xyzDisplayEl) { xyzDisplayEl.textContent = ''; xyzDisplayEl.style.display = 'none'; }
               updateDownloadButtons?.();
 
-              const glomosParams = {
-                initpop:       Number(document.getElementById('glomos-initpop')?.value   || 4),
-                matings:       Number(document.getElementById('glomos-matings')?.value   || 2),
-                mutants:       Number(document.getElementById('glomos-mutants')?.value   || 2),
-                generations:   Number(document.getElementById('glomos-generations')?.value || 3),
-                energy_cutoff: Number(document.getElementById('glomos-energy')?.value    || 4.0),
-                ani_model:     document.getElementById('glomos-ani')?.value || 'ANI1ccx',
+              const unlock = () => {
+                if (loader && label) {
+                  loader.style.display = 'none';
+                  label.style.opacity  = '1';
+                  convertBtn.disabled  = false;
+                  loader.innerHTML     = '';
+                }
               };
-
               window.runGlomosWithStream(
                 smiles,
-                glomosParams,
-                (xyzResult) => {
-                  if (loader && label) {
-                    loader.style.display = 'none';
-                    label.style.opacity  = '1';
-                    convertBtn.disabled  = false;
-                    loader.innerHTML     = '';
-                  }
-                  currentXYZ = xyzResult;
-                  window.molecules[0] = { smiles, id: smiles, xyz: xyzResult, molBlock: null };
-                  updateXYZDisplay?.();
-                  updateViewerContainerLayout();
-                  updateDownloadButtons?.();
-                  updateNavigationButtons?.();
-                                  showSuccess?.('<strong>✔ GLOMOS completed</strong><br>Best conformer loaded.');
+                collectGlomosParams(),
+                (xyzResult, result) => {
+                  unlock();
+                  window.glomosResult = result;
+                  showGlomosConformer({ xyz: xyzResult }, smiles);
+                  const n = result?.conformers?.length ?? 1;
+                  const partial = result?.partial ? ' (partial result)' : '';
+                  showSuccess?.(`<strong>✔ GLOMOS finished${partial}</strong><br>${n} conformer(s) found; the lowest-energy one is shown.`);
                 },
                 (errMsg) => {
-                  if (loader && label) {
-                    loader.style.display = 'none';
-                    label.style.opacity  = '1';
-                    convertBtn.disabled  = false;
-                    loader.innerHTML     = '';
-                  }
-                  showError?.('GLOMOS error: ' + errMsg);
-                }
+                  unlock();
+                  showError?.('GLOMOS: ' + errMsg);
+                },
+                (conf) => showGlomosConformer(conf, smiles)
               );
               return;
             }
@@ -363,6 +350,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const postOptFile = document.getElementById('post-optimization')?.value;
             if (postOptFile !== 'glomos') document.getElementById('glomos-live-panel')?.remove();
             await convertMolecules(picked);   // <- importante pasar picked
+            if (postOptFile === 'glomos') await runGlomosBatch(picked);
             } else {
             showError("No molecules selected.");
             }
@@ -577,6 +565,79 @@ if (recordBtn && screenshotBtn) {
     });
 
     screenshotBtn.addEventListener('click', downloadImage);
+}
+
+// ── GLOMOS helpers ──────────────────────────────────────────────────────────
+function collectGlomosParams() {
+  const num = (id, d) => { const v = Number(document.getElementById(id)?.value); return Number.isFinite(v) ? v : d; };
+  return {
+    preset:            document.getElementById('glomos-preset')?.value || 'custom',
+    initpop:           num('glomos-initpop', 6),
+    matings:           num('glomos-matings', 4),
+    mutants:           num('glomos-mutants', 4),
+    generations:       num('glomos-generations', 4),
+    energy_cutoff:     num('glomos-ecut', 6),
+    cutoff_population: num('glomos-keep', 6),
+    ani_model:         document.getElementById('glomos-ani')?.value || 'auto',
+    max_minutes:       num('glomos-minutes', 10),
+    random_seed:       num('glomos-seed', 0),
+  };
+}
+
+const GLOMOS_PRESETS = {
+  fast:     { initpop: 6,  matings: 4,  mutants: 4,  generations: 4,  ecut: 6,  keep: 6 },
+  standard: { initpop: 12, matings: 8,  mutants: 8,  generations: 8,  ecut: 8,  keep: 10 },
+  thorough: { initpop: 30, matings: 16, mutants: 16, generations: 20, ecut: 10, keep: 20 },
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('glomos-preset');
+  if (!sel) return;
+  const map = { initpop: 'glomos-initpop', matings: 'glomos-matings', mutants: 'glomos-mutants',
+                generations: 'glomos-generations', ecut: 'glomos-ecut', keep: 'glomos-keep' };
+  sel.addEventListener('change', () => {
+    const p = GLOMOS_PRESETS[sel.value];
+    if (!p) return;
+    Object.entries(map).forEach(([k, id]) => { const el = document.getElementById(id); if (el) el.value = p[k]; });
+  });
+  // editing any number switches the preset to "custom"
+  Object.values(map).forEach(id => document.getElementById(id)?.addEventListener('input', () => { sel.value = 'custom'; }));
+});
+
+// Show one GLOMOS conformer (xyz text) in the main viewer
+function showGlomosConformer(conf, smiles) {
+  if (!conf || !conf.xyz) return;
+  const idx = (typeof currentMoleculeIndex === 'number') ? currentMoleculeIndex : 0;
+  const sm = smiles || molecules?.[idx]?.smiles || '';
+  currentXYZ = conf.xyz;
+  if (!Array.isArray(molecules) || !molecules[idx]) molecules = [{ smiles: sm, id: sm }];
+  molecules[idx] = { ...molecules[idx], xyz: conf.xyz, molBlock: null };
+  updateXYZDisplay?.();
+  updateViewerContainerLayout();
+  updateDownloadButtons?.();
+  updateNavigationButtons?.();
+}
+
+// Run GLOMOS sequentially for every molecule loaded from a file
+async function runGlomosBatch(picked) {
+  const params = collectGlomosParams();
+  const ok = [], failed = [];
+  for (let i = 0; i < picked.length; i++) {
+    const m = picked[i];
+    const outcome = await new Promise(resolve => {
+      window.runGlomosWithStream(m.smiles, params,
+        (xyz, result) => resolve({ xyz, result }),
+        (msg) => resolve({ error: msg }),
+        (conf) => { if (i === currentMoleculeIndex) showGlomosConformer(conf, m.smiles); });
+    });
+    if (outcome.error) { failed.push(`${m.id || m.smiles}: ${outcome.error}`); continue; }
+    ok.push(m.id || m.smiles);
+    if (molecules[i]) molecules[i] = { ...molecules[i], xyz: outcome.xyz, molBlock: null, glomos: outcome.result };
+  }
+  currentMoleculeIndex = 0;
+  if (molecules[0]) showGlomosConformer({ xyz: molecules[0].xyz }, molecules[0].smiles);
+  if (failed.length) showError?.('GLOMOS failed for:<br>' + failed.join('<br>'));
+  else showSuccess?.(`<strong>✔ GLOMOS finished for ${ok.length} molecule(s)</strong>`);
 }
 
 function extractXYZString(payload) {

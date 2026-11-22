@@ -1,337 +1,359 @@
-// ─────────────────────────────────────────────────────────────
-//  GLOMOS Live Progress Panel  —  polling edition
-//  Compatible con Waitress / cualquier WSGI server (sin SSE).
-//  API: POST /api/glomos/start  → { job_id }
-//       GET  /api/glomos/poll/<job_id>?cursor=N → { events, cursor, done }
-// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  GLOMOS live panel (ELAYA v2)
+//  Backend: POST /api/glomos/start → {job_id}; GET /api/glomos/poll/<id>?cursor=n;
+//           POST /api/glomos/cancel/<id>; GET /api/glomos/result/<id>[?format=xyz]
+//  Events are structured JSON from the server (no text scraping).
+//  runGlomosWithStream(smiles, params, onDone(bestXyz, result), onError(msg), onSelect(conf))
+//  returns { cancel() }.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ── Panel HTML ───────────────────────────────────────────────
-function createGlomosPanel() {
-  document.getElementById('glomos-live-panel')?.remove();
+function _gl(id) { return document.getElementById(id); }
 
-  const panel = document.createElement('div');
-  panel.id = 'glomos-live-panel';
-  panel.innerHTML = `
-    <div class="glomos-panel-inner">
-      <div class="glomos-header">
-        <span class="glomos-title">GLOMOS — Conformational Search</span>
-        <span id="glomos-status-badge" class="glomos-badge running">Running</span>
-      </div>
-
-      <div class="glomos-progress-row">
-        <span id="glomos-gen-label" class="glomos-gen-label">Generation 0</span>
-        <span id="glomos-eta" class="glomos-eta">Estimating time…</span>
-      </div>
-
-      <div class="glomos-bar-track">
-        <div id="glomos-bar-fill" class="glomos-bar-fill" style="width:0%"></div>
-      </div>
-
-      <div class="glomos-stats-row">
-        <div class="glomos-stat">
-          <span class="glomos-stat-label">Elapsed</span>
-          <span id="glomos-elapsed" class="glomos-stat-value">0:00</span>
-        </div>
-        <div class="glomos-stat">
-          <span class="glomos-stat-label">Best energy</span>
-          <span id="glomos-energy" class="glomos-stat-value">—</span>
-        </div>
-        <div class="glomos-stat">
-          <span class="glomos-stat-label">Conformer</span>
-          <span id="glomos-conformer" class="glomos-stat-value">—</span>
-        </div>
-      </div>
-
-      <div class="glomos-log-header">
-        <span>Live log</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button class="glomos-log-toggle" id="glomos-log-copy" onclick="copyGlomosLog()" title="Copy log">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy
-          </button>
-          <button class="glomos-log-toggle" id="glomos-log-toggle" onclick="toggleGlomosLog()">Hide</button>
-        </div>
-      </div>
-      <div id="glomos-log-box" class="glomos-log-box"></div>
-    </div>
-  `;
-
-  if (!document.getElementById('glomos-styles')) {
-    const style = document.createElement('style');
-    style.id = 'glomos-styles';
-    style.textContent = `
-      #glomos-live-panel {
-        margin: 1rem 0;
-        font-family: Inter, system-ui, sans-serif;
-      }
-      .glomos-panel-inner {
-        background: #0d1b2a;
-        border: 1px solid #1e3a52;
-        border-radius: 12px;
-        padding: 1rem 1.2rem;
-        color: #c9d8e8;
-      }
-      .glomos-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 0.75rem;
-      }
-      .glomos-title { font-weight: 600; font-size: 0.95rem; color: #e0eaf5; }
-      .glomos-badge { font-size: 0.72rem; font-weight: 600; padding: 2px 10px; border-radius: 99px; letter-spacing: 0.03em; }
-      .glomos-badge.running  { background: #0f6975; color: #9fe1cb; }
-      .glomos-badge.done     { background: #1a4a1f; color: #6ed87a; }
-      .glomos-badge.error    { background: #4a1515; color: #f08080; }
-      .glomos-progress-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.4rem; color: #8bafc9; }
-      .glomos-gen-label { font-weight: 600; color: #3cb49a; }
-      .glomos-eta { color: #7a9ab5; }
-      .glomos-bar-track { background: #1a2d40; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 0.9rem; }
-      .glomos-bar-fill { height: 100%; background: linear-gradient(90deg, #0f6975, #3cb49a); border-radius: 6px; transition: width 0.6s ease; }
-      .glomos-stats-row { display: flex; gap: 1.5rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
-      .glomos-stat { display: flex; flex-direction: column; gap: 1px; }
-      .glomos-stat-label { font-size: 0.7rem; color: #5a7a95; text-transform: uppercase; letter-spacing: 0.06em; }
-      .glomos-stat-value { font-size: 0.88rem; font-weight: 600; color: #c9d8e8; font-variant-numeric: tabular-nums; }
-      .glomos-log-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #5a7a95; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
-      .glomos-log-toggle { background: none; border: 1px solid #1e3a52; border-radius: 4px; color: #5a7a95; font-size: 0.7rem; padding: 1px 8px; cursor: pointer; }
-      .glomos-log-toggle:hover { color: #8bafc9; border-color: #3cb49a; }
-      .glomos-log-box { background: #060e17; border: 1px solid #132030; border-radius: 8px; height: 160px; overflow-y: auto; padding: 0.5rem 0.75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.72rem; line-height: 1.6; color: #6fa8c8; scroll-behavior: smooth; }
-      .glomos-log-line-gen       { color: #3cb49a; font-weight: 600; }
-      .glomos-log-line-energy    { color: #f0b429; }
-      .glomos-log-line-conformer { color: #a78bfa; }
-      .glomos-log-line-warning   { color: #e8784a; }
-      .glomos-log-line-default   { color: #6fa8c8; }
-    `;
-    document.head.appendChild(style);
-  }
-
-  return panel;
+function _glEsc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// ── Helpers ───────────────────────────────────────────────────
-function classifyLogLine(line) {
-  if (/GENERATION/i.test(line))                   return 'glomos-log-line-gen';
-  if (/#\d+\s+\S+\s+-[\d.]+\s+kcal/.test(line))  return 'glomos-log-line-energy';
-  if (/(random|mating|mutant)_\d+/i.test(line))  return 'glomos-log-line-conformer';
-  if (/warning|error/i.test(line))                return 'glomos-log-line-warning';
-  return 'glomos-log-line-default';
-}
-
-function toggleGlomosLog() {
-  const box = document.getElementById('glomos-log-box');
-  const btn = document.getElementById('glomos-log-toggle');
-  if (!box) return;
-  const hidden = box.style.display === 'none';
-  box.style.display = hidden ? '' : 'none';
-  btn.textContent   = hidden ? 'Hide' : 'Show';
-}
-
-function copyGlomosLog() {
-  const box = document.getElementById('glomos-log-box');
-  const btn = document.getElementById('glomos-log-copy');
-  if (!box || !btn) return;
-  const text = Array.from(box.querySelectorAll('div'))
-    .map(d => d.textContent)
-    .join('\n');
-  navigator.clipboard.writeText(text).then(() => {
-    // Show checkmark
-    btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>Copied`;
-    btn.style.color = '#3cb49a';
-    btn.style.borderColor = '#3cb49a';
-    setTimeout(() => {
-      btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy`;
-      btn.style.color = '';
-      btn.style.borderColor = '';
-    }, 2000);
-  }).catch(() => {});
-}
-
-function fmtTime(secs) {
+function _glFmtTime(secs) {
   if (!isFinite(secs) || secs < 0) return '—';
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60).toString().padStart(2, '0');
   return `${m}:${s}`;
 }
 
-// ── Main function: polling-based ─────────────────────────────
-function runGlomosWithStream(smiles, glomosParams, onDone, onError) {
-  // 1) Insert panel
+function _glInjectStyles() {
+  if (_gl('glomos-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'glomos-styles';
+  style.textContent = `
+    #glomos-live-panel { margin: 1rem 0; font-family: Inter, system-ui, sans-serif; }
+    .glomos-panel-inner { background:#0d1b2a; border:1px solid #1e3a52; border-radius:12px; padding:1rem 1.2rem; color:#c9d8e8; }
+    .glomos-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem; gap:.5rem; }
+    .glomos-header .glomos-title { font-weight:600; font-size:.95rem; color:#e0eaf5; }
+    .glomos-actions { display:flex; gap:.5rem; align-items:center; }
+    .glomos-badge { font-size:.72rem; font-weight:600; padding:2px 10px; border-radius:99px; letter-spacing:.03em; }
+    .glomos-badge.running  { background:#0f6975; color:#9fe1cb; }
+    .glomos-badge.queued   { background:#3a3a1a; color:#e6d97a; }
+    .glomos-badge.done     { background:#1a4a1f; color:#6ed87a; }
+    .glomos-badge.partial  { background:#4a3a15; color:#f0c070; }
+    .glomos-badge.error    { background:#4a1515; color:#f08080; }
+    .glomos-btn { background:none; border:1px solid #1e3a52; border-radius:6px; color:#8bafc9; font-size:.74rem; padding:3px 10px; cursor:pointer; }
+    .glomos-btn:hover { color:#e0eaf5; border-color:#3cb49a; }
+    .glomos-btn.danger:hover { border-color:#f08080; color:#f08080; }
+    .glomos-btn:disabled { opacity:.4; cursor:default; }
+    .glomos-progress-row { display:flex; justify-content:space-between; font-size:.8rem; margin-bottom:.4rem; color:#8bafc9; gap:1rem; }
+    .glomos-gen-label { font-weight:600; color:#3cb49a; }
+    .glomos-bar-track { background:#1a2d40; border-radius:6px; height:8px; overflow:hidden; margin-bottom:.9rem; }
+    .glomos-bar-fill { height:100%; background:linear-gradient(90deg,#0f6975,#3cb49a); border-radius:6px; transition:width .6s ease; }
+    .glomos-stats-row { display:flex; gap:1.5rem; margin-bottom:.9rem; flex-wrap:wrap; }
+    .glomos-stat { display:flex; flex-direction:column; gap:1px; }
+    .glomos-stat-label { font-size:.7rem; color:#5a7a95; text-transform:uppercase; letter-spacing:.06em; }
+    .glomos-stat-value { font-size:.88rem; font-weight:600; color:#c9d8e8; font-variant-numeric:tabular-nums; }
+    .glomos-notes { font-size:.76rem; color:#f0c070; margin-bottom:.7rem; line-height:1.5; }
+    .glomos-notes.info { color:#8bafc9; }
+    .glomos-log-header { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; color:#5a7a95; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; }
+    .glomos-log-box { background:#060e17; border:1px solid #132030; border-radius:8px; height:140px; overflow-y:auto; padding:.5rem .75rem; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.72rem; line-height:1.6; color:#6fa8c8; }
+    .glomos-log-line-gen { color:#3cb49a; font-weight:600; }
+    .glomos-log-line-energy { color:#f0b429; }
+    .glomos-log-line-warning { color:#e8784a; }
+    .glomos-table-wrap { margin:.9rem 0 .5rem; max-height:300px; overflow:auto; border:1px solid #132030; border-radius:8px; }
+    table.glomos-table { width:100%; border-collapse:collapse; font-size:.76rem; font-variant-numeric:tabular-nums; }
+    .glomos-table th { position:sticky; top:0; background:#122234; color:#8bafc9; font-weight:600; text-align:right; padding:5px 8px; }
+    .glomos-table td { text-align:right; padding:4px 8px; border-top:1px solid #132030; }
+    .glomos-table th:nth-child(1), .glomos-table td:nth-child(1), .glomos-table th:nth-child(2), .glomos-table td:nth-child(2) { text-align:left; }
+    .glomos-table tbody tr { cursor:pointer; }
+    .glomos-table tbody tr:hover { background:#16304a; }
+    .glomos-table tbody tr.selected { background:#0f4a55; color:#fff; }
+    .glomos-export { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-top:.4rem; font-size:.76rem; }
+    .glomos-export select { background:#0d1b2a; color:#c9d8e8; border:1px solid #1e3a52; border-radius:6px; padding:3px 6px; }
+  `;
+  document.head.appendChild(style);
+}
+
+function createGlomosPanel() {
+  _glInjectStyles();
+  _gl('glomos-live-panel')?.remove();
+  const panel = document.createElement('div');
+  panel.id = 'glomos-live-panel';
+  panel.innerHTML = `
+    <div class="glomos-panel-inner">
+      <div class="glomos-header">
+        <span class="glomos-title">GLOMOS — Conformational search</span>
+        <span class="glomos-actions">
+          <button class="glomos-btn danger" id="gl-cancel">Cancel</button>
+          <span id="gl-badge" class="glomos-badge queued">Starting</span>
+        </span>
+      </div>
+      <div id="gl-notes"></div>
+      <div class="glomos-progress-row">
+        <span id="gl-gen" class="glomos-gen-label">Preparing…</span>
+        <span id="gl-eta">&nbsp;</span>
+      </div>
+      <div class="glomos-bar-track"><div id="gl-bar" class="glomos-bar-fill" style="width:0%"></div></div>
+      <div class="glomos-stats-row">
+        <div class="glomos-stat"><span class="glomos-stat-label">Elapsed</span><span id="gl-elapsed" class="glomos-stat-value">0:00</span></div>
+        <div class="glomos-stat"><span class="glomos-stat-label">Best energy</span><span id="gl-best" class="glomos-stat-value">—</span></div>
+        <div class="glomos-stat"><span class="glomos-stat-label">Rotors</span><span id="gl-rotors" class="glomos-stat-value">—</span></div>
+        <div class="glomos-stat"><span class="glomos-stat-label">Model</span><span id="gl-model" class="glomos-stat-value">—</span></div>
+        <div class="glomos-stat"><span class="glomos-stat-label">Evaluated</span><span id="gl-evals" class="glomos-stat-value">0</span></div>
+      </div>
+      <div id="gl-results"></div>
+      <div class="glomos-log-header">
+        <span>Log</span>
+        <span><button class="glomos-btn" id="gl-log-toggle">Hide</button>
+              <button class="glomos-btn" id="gl-log-copy">Copy</button></span>
+      </div>
+      <div id="gl-log" class="glomos-log-box"></div>
+    </div>`;
+  return panel;
+}
+
+function classifyLogLine(line) {
+  if (/GENERATION/i.test(line)) return 'glomos-log-line-gen';
+  if (/^#\d+\s/.test(line)) return 'glomos-log-line-energy';
+  if (/warning|error|discard|failed/i.test(line)) return 'glomos-log-line-warning';
+  return '';
+}
+
+function _glDownload(name, text, mime) {
+  const blob = new Blob([text], { type: mime || 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
   const panel = createGlomosPanel();
   const container = document.querySelector('.visualization-controls')
                  || document.querySelector('.conversion-section')
                  || document.body;
   container.prepend(panel);
 
-  // 2) DOM refs
-  const elBadge     = document.getElementById('glomos-status-badge');
-  const elGenLabel  = document.getElementById('glomos-gen-label');
-  const elEta       = document.getElementById('glomos-eta');
-  const elBar       = document.getElementById('glomos-bar-fill');
-  const elElapsed   = document.getElementById('glomos-elapsed');
-  const elEnergy    = document.getElementById('glomos-energy');
-  const elConformer = document.getElementById('glomos-conformer');
-  const elLog       = document.getElementById('glomos-log-box');
+  const el = {
+    badge: _gl('gl-badge'), gen: _gl('gl-gen'), eta: _gl('gl-eta'), bar: _gl('gl-bar'),
+    elapsed: _gl('gl-elapsed'), best: _gl('gl-best'), rotors: _gl('gl-rotors'), model: _gl('gl-model'),
+    evals: _gl('gl-evals'), log: _gl('gl-log'), notes: _gl('gl-notes'), results: _gl('gl-results'),
+    cancel: _gl('gl-cancel'),
+  };
+  const t0 = Date.now();
+  let jobId = null, cursor = 0, stopped = false, timer = null, errors = 0, nEval = 0;
+  let totalGen = glomosParams.generations ?? 3;
+  let genTimes = [];
 
-  const startTime = Date.now();
-  let totalGenerations = glomosParams.generations || 3;
-  let cursor = 0;
-  let pollTimer = null;
-  let stopped = false;
-  let consecutiveErrors = 0;
-  const MAX_ERRORS = 20;
+  const clock = setInterval(() => { el.elapsed.textContent = _glFmtTime((Date.now() - t0) / 1000); }, 1000);
+  const setBadge = (cls, text) => { el.badge.className = 'glomos-badge ' + cls; el.badge.textContent = text; };
+  const addLog = (line) => {
+    const d = document.createElement('div');
+    const c = classifyLogLine(line); if (c) d.className = c;
+    d.textContent = line;
+    el.log.appendChild(d);
+    if (el.log.childElementCount > 600) el.log.firstChild.remove();
+    el.log.scrollTop = el.log.scrollHeight;
+  };
+  const notes = (items, cls) => {
+    if (!items || !items.length) return;
+    const div = document.createElement('div');
+    div.className = 'glomos-notes ' + (cls || '');
+    div.innerHTML = items.map(t => '• ' + _glEsc(t)).join('<br>');
+    el.notes.appendChild(div);
+  };
 
-  // Wall-clock ticker
-  const clockInterval = setInterval(() => {
-    elElapsed.textContent = fmtTime((Date.now() - startTime) / 1000);
-  }, 1000);
+  _gl('gl-log-toggle').onclick = (e) => {
+    const hidden = el.log.style.display === 'none';
+    el.log.style.display = hidden ? '' : 'none';
+    e.target.textContent = hidden ? 'Hide' : 'Show';
+  };
+  _gl('gl-log-copy').onclick = () => {
+    const text = Array.from(el.log.children).map(d => d.textContent).join('\n');
+    navigator.clipboard?.writeText(text).catch(() => {});
+  };
 
-  function stop(isError) {
+  function finishClock() { clearInterval(clock); if (timer) clearTimeout(timer); el.cancel.disabled = true; }
+
+  function fail(msg) {
     if (stopped) return;
-    stopped = true;
-    clearInterval(clockInterval);
-    if (pollTimer) clearTimeout(pollTimer);
-    // Limpiar job guardado al terminar (éxito o error definitivo)
-    if (isError) {
-      elBadge.className = 'glomos-badge error';
-      elBadge.textContent = 'Error';
-    }
+    stopped = true; finishClock();
+    setBadge('error', 'Error');
+    el.eta.textContent = msg;
+    addLog('ERROR: ' + msg);
+    if (onError) onError(msg);
   }
 
-  // 3) Start the job on the backend
+  el.cancel.onclick = () => ctrl.cancel();
+  const ctrl = {
+    cancel() {
+      if (!jobId || stopped) return;
+      el.cancel.disabled = true;
+      el.eta.textContent = 'Cancelling…';
+      fetch(`/api/glomos/cancel/${jobId}`, { method: 'POST' }).catch(() => {});
+    },
+  };
+
+  // 1) start
   fetch('/api/glomos/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ smiles, glomos_params: glomosParams }),
   })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) throw new Error(data.error);
-    schedulePoll(data.job_id);
-  })
-  .catch(err => {
-    stop(true);
-    elEta.textContent = err.message;
-    if (onError) onError(err.message);
-  });
+    .then(async r => {
+      let data = {};
+      try { data = await r.json(); } catch (e) { /* non-JSON error page */ }
+      if (!r.ok || data.error) throw new Error(data.error || `Server error (HTTP ${r.status})`);
+      return data;
+    })
+    .then(data => {
+      jobId = data.job_id;
+      el.model.textContent = data.model || '—';
+      el.rotors.textContent = data.n_rotors ?? '—';
+      totalGen = (data.params && data.params.generations) ?? totalGen;
+      notes(data.notes, 'info');
+      notes(data.warnings);
+      if (data.n_rotors === 0) notes(['No rotatable torsions: only the starting conformers (rings) are explored.'], 'info');
+      schedule(600);
+    })
+    .catch(err => fail(err.message));
 
-  // 4) Polling loop with auto-retry
+  function schedule(ms) { if (!stopped) timer = setTimeout(poll, ms); }
 
-  function schedulePoll(jobId) {
-    if (stopped) return;
-    pollTimer = setTimeout(() => poll(jobId), 800);
-  }
-
-  function poll(jobId) {
+  function poll() {
     if (stopped) return;
     fetch(`/api/glomos/poll/${jobId}?cursor=${cursor}`)
-      .then(r => {
-        if (r.status === 502 || r.status === 503 || r.status === 504) {
-          // Render gateway timeout — el job sigue corriendo en el servidor, reintentar
-          consecutiveErrors++;
-          const retryDelay = Math.min(2000 * consecutiveErrors, 15000);
-          elEta.textContent = `Reconectando… (intento ${consecutiveErrors})`;
-          if (consecutiveErrors < MAX_ERRORS) {
-            pollTimer = setTimeout(() => poll(jobId), retryDelay);
-          } else {
-            stop(true);
-            elEta.textContent = 'No se pudo reconectar tras varios intentos.';
-            if (onError) onError('Poll HTTP ' + r.status);
-          }
-          return null;
-        }
+      .then(async r => {
+        if (r.status === 404) throw Object.assign(new Error('The job no longer exists on the server (it expired or the server restarted).'), { fatal: true });
         if (!r.ok) throw new Error(`Poll HTTP ${r.status}`);
-        consecutiveErrors = 0; // resetear al recibir respuesta válida
         return r.json();
       })
       .then(data => {
-        if (!data) return; // fue un 502/503/504, ya se manejó arriba
-        if (data.error) throw new Error(data.error);
-
-        for (const evt of data.events) {
-          handleEvent(evt);
-          if (stopped) return;
-        }
+        errors = 0;
         cursor = data.cursor;
-        // Actualizar cursor guardado para poder retomar si se recarga
-
-        if (!data.done) {
-          schedulePoll(jobId);
+        for (const e of data.events) handle(e);
+        if (data.status === 'queued') {
+          setBadge('queued', 'Queued');
+          el.gen.textContent = `Waiting in queue (position ${data.queue_position || 1})`;
+        } else if (data.status === 'running') {
+          setBadge('running', 'Running');
         }
+        if (data.done) return conclude(data);
+        schedule(1000);
       })
       .catch(err => {
-        consecutiveErrors++;
-        if (consecutiveErrors < MAX_ERRORS) {
-          const retryDelay = Math.min(2000 * consecutiveErrors, 15000);
-          elEta.textContent = `Reconectando… (intento ${consecutiveErrors})`;
-          pollTimer = setTimeout(() => poll(jobId), retryDelay);
-        } else {
-          stop(true);
-          elEta.textContent = 'Connection error: ' + err.message;
-          if (onError) onError(err.message);
-        }
+        if (err.fatal) return fail(err.message);
+        errors += 1;
+        if (errors > 20) return fail('Lost connection to the server: ' + err.message);
+        el.eta.textContent = `Reconnecting… (${errors})`;
+        schedule(Math.min(2000 * errors, 15000));
       });
   }
 
-  // 5) Event handler (same logic as before)
-  function handleEvent(evt) {
-    if (evt.type === 'start') {
-      totalGenerations = evt.generations || totalGenerations;
-    }
-
-    else if (evt.type === 'log') {
-      const div = document.createElement('div');
-      div.className = classifyLogLine(evt.line);
-      div.textContent = evt.line;
-      elLog.appendChild(div);
-      elLog.scrollTop = elLog.scrollHeight;
-    }
-
-    else if (evt.type === 'progress') {
-      const gen   = evt.gen ?? 0;
-      const total = evt.total || totalGenerations;
-      const pct   = Math.min(100, Math.round((gen / total) * 100));
-
-      elGenLabel.textContent = `Generation ${gen} / ${total}`;
-      elBar.style.width = `${pct}%`;
-
-      if (evt.best_energy != null) {
-        elEnergy.textContent = `${evt.best_energy.toFixed(2)} kcal/mol`;
+  function handle(e) {
+    switch (e.type) {
+      case 'start':
+        totalGen = e.generations ?? totalGen;
+        if (e.n_rotors != null) el.rotors.textContent = e.n_rotors;
+        if (e.model) el.model.textContent = e.model;
+        break;
+      case 'log': addLog(e.line); break;
+      case 'optimized': nEval += 1; el.evals.textContent = nEval; break;
+      case 'progress': {
+        const gen = e.gen ?? 0, of = e.of || 1, done = e.done || 0;
+        const pct = Math.min(99, Math.round(((gen + done / of) / (totalGen + 1)) * 100));
+        el.bar.style.width = pct + '%';
+        el.gen.textContent = gen === 0 ? 'Generation 0 (initial population)' : `Generation ${gen} / ${totalGen}`;
+        if (e.best_energy != null) el.best.textContent = e.best_energy.toFixed(3) + ' kcal/mol';
+        genTimes = e.gen_times || genTimes;
+        if (genTimes.length && gen < totalGen) {
+          const avg = genTimes.reduce((a, b) => a + b, 0) / genTimes.length;
+          el.eta.textContent = `ETA ≤ ~${_glFmtTime(avg * (totalGen - gen))}`;
+        }
+        break;
       }
-      if (evt.conformer) {
-        elConformer.textContent = evt.conformer;
-      }
-      if (evt.gen_times && evt.gen_times.length > 0 && gen < total) {
-        const avg = evt.gen_times.reduce((a, b) => a + b, 0) / evt.gen_times.length;
-        elEta.textContent = `ETA ~${fmtTime(avg * (total - gen))}`;
-      }
-    }
-
-    else if (evt.type === 'done') {
-      stop(false);
-      elBadge.className = 'glomos-badge done';
-      elBadge.textContent = 'Done';
-      elGenLabel.textContent = `Generation ${totalGenerations} / ${totalGenerations}`;
-      elBar.style.width = '100%';
-      elEta.textContent = `Finished in ${fmtTime((Date.now() - startTime) / 1000)}`;
-      elConformer.textContent = 'Best conformer selected';
-      if (onDone) onDone(evt.xyz);
-    }
-
-    else if (evt.type === 'loading') {
-      elBadge.className = 'glomos-badge running';
-      elBadge.textContent = 'Loading';
-      elGenLabel.textContent = evt.message || 'Loading TorchANI…';
-      elEta.textContent = 'Please wait…';
-    }
-
-    else if (evt.type === 'heartbeat') {
-      elEta.textContent = `Processing… (${evt.elapsed}s)`;
-    }
-
-    else if (evt.type === 'error') {
-      stop(true);
-      elEta.textContent = evt.message;
-      if (onError) onError(evt.message);
+      case 'phase':
+        if (e.name === 'polish') el.gen.textContent = 'Final tight re-optimisation…';
+        break;
+      case 'error': addLog('ERROR: ' + (e.message || '')); break;
+      default: break;
     }
   }
+
+  function conclude(data) {
+    if (stopped) return;
+    stopped = true; finishClock();
+    if (data.status === 'error') {
+      setBadge('error', 'Error');
+      el.eta.textContent = data.error || 'GLOMOS failed';
+      if (onError) onError(data.error || 'GLOMOS failed');
+      return;
+    }
+    fetch(`/api/glomos/result/${jobId}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.error) throw new Error(res.error);
+        el.bar.style.width = '100%';
+        const partial = data.status !== 'done';
+        setBadge(partial ? 'partial' : 'done', data.status === 'cancelled' ? 'Cancelled (partial)' : data.status === 'timeout' ? 'Time limit (partial)' : 'Done');
+        const m = res.meta || {};
+        el.eta.textContent = `Finished in ${_glFmtTime((Date.now() - t0) / 1000)}` +
+          (m.stop_reason === 'stagnation' ? ' (converged: lowest structures stopped changing)' : '');
+        el.gen.textContent = `${res.conformers.length} conformer(s) · ${m.n_evaluated ?? nEval} ANI relaxations · seed ${m.random_seed ?? '?'}`;
+        renderResults(res);
+        const best = res.conformers[0];
+        if (onDone) onDone(best.xyz, res);
+      })
+      .catch(err => { setBadge('error', 'Error'); el.eta.textContent = err.message; if (onError) onError(err.message); });
+  }
+
+  function renderResults(res) {
+    const c = res.conformers;
+    const rows = c.map((x, i) => {
+      const rc = x.rotational_constants || {};
+      const g = v => (v == null ? '—' : v.toFixed(3));
+      return `<tr data-i="${i}" class="${i === 0 ? 'selected' : ''}">
+        <td>${i + 1}</td><td>${_glEsc(x.name)}</td><td>${x.rel_kcal.toFixed(3)}</td>
+        <td>${(100 * x.boltzmann_298).toFixed(1)}</td><td>${g(rc.A_GHz)}</td><td>${g(rc.B_GHz)}</td><td>${g(rc.C_GHz)}</td></tr>`;
+    }).join('');
+    el.results.innerHTML = `
+      <div class="glomos-table-wrap"><table class="glomos-table">
+        <thead><tr><th>#</th><th>Name</th><th>ΔE (kcal/mol)</th><th>Pop. 298 K (%)</th><th>A (GHz)</th><th>B (GHz)</th><th>C (GHz)</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+      <div class="glomos-notes info">Relative ANI electronic energies (no ZPE/thermal corrections): populations are indicative.
+        Click a row to show it in the viewer.</div>
+      <div class="glomos-export">
+        <button class="glomos-btn" id="gl-dl-all">Download all (multi-XYZ)</button>
+        <button class="glomos-btn" id="gl-dl-json">Download results (JSON)</button>
+        <span>Selected as:</span>
+        <select id="gl-fmt"><option>xyz</option><option>mol</option><option>sdf</option><option>pdb</option><option>mol2</option><option>cml</option></select>
+        <button class="glomos-btn" id="gl-dl-one">Download</button>
+      </div>`;
+    let sel = 0;
+    el.results.querySelectorAll('tbody tr').forEach(tr => tr.addEventListener('click', () => {
+      sel = Number(tr.dataset.i);
+      el.results.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      tr.classList.add('selected');
+      if (onSelect) onSelect(c[sel], sel, res);
+    }));
+    _gl('gl-dl-all').onclick = () => _glDownload('elaya_conformers.xyz', c.map(x => x.xyz).join(''), 'chemical/x-xyz');
+    _gl('gl-dl-json').onclick = () => _glDownload('elaya_glomos_result.json', JSON.stringify(res, null, 2), 'application/json');
+    _gl('gl-dl-one').onclick = async () => {
+      const fmt = _gl('gl-fmt').value, x = c[sel];
+      if (fmt === 'xyz') return _glDownload(`${x.name}.xyz`, x.xyz, 'chemical/x-xyz');
+      try {
+        const r = await fetch('/api/export', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ smiles, xyz: x.xyz, format: fmt, name: x.name,
+            properties: { Energy_kcal_mol: x.energy_kcal.toFixed(4), Rel_energy_kcal_mol: x.rel_kcal.toFixed(4) } }),
+        });
+        if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
+        _glDownload(`${x.name}.${fmt}`, await r.text());
+      } catch (err) { alert('Export failed: ' + err.message); }
+    };
+  }
+
+  return ctrl;
 }
+
+// kept for backward compatibility with older markup
+function toggleGlomosLog() { _gl('gl-log-toggle')?.click(); }
+function copyGlomosLog() { _gl('gl-log-copy')?.click(); }
 
 window.runGlomosWithStream = runGlomosWithStream;

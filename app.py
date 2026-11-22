@@ -1,327 +1,335 @@
-from flask import Flask, Response, request, jsonify, send_from_directory, stream_with_context
-from flask_cors import CORS
-from rdkit import Chem
-from rdkit.Chem.Draw import rdMolDraw2D
+# -*- coding: utf-8 -*-
+"""
+ELAYA SMILES — Flask backend.
+
+Endpoints
+    GET  /api                    index of endpoints
+    GET  /api/health[?deep=1]    which libraries import, job queue; deep=1 runs a tiny ANI calculation
+    GET  /api/version
+    POST /api/analyze            {smiles}                      -> descriptors, stereo, warnings
+    POST /api/convert            {smiles, method, force_field} -> xyz, mol, rotational constants, QA
+    POST /api/export             {smiles, xyz, format}         -> file download (xyz/mol/sdf/pdb/mol2/cml)
+    POST /api/draw2d             {smiles}                      -> SVG
+    POST /api/glomos/start       {smiles, glomos_params}       -> {job_id}
+    GET  /api/glomos/poll/<id>?cursor=n
+    POST /api/glomos/cancel/<id>
+    GET  /api/glomos/result/<id>[?format=json|xyz]
+
+Heavy libraries (RDKit, torch, ASE) are imported lazily; the GA runs in a subprocess.
+"""
+import importlib.util
 import os
-import json
-import uuid
-import threading
+import sys
 import time
 
-# ── MolecularTools: inicialización lazy ──────────────────────────────────────
-# NO se instancia al arrancar el servidor. Se crea la primera vez que llega
-# una petición real. Esto evita cargar rdkit, openbabel, etc. durante el
-# healthcheck inicial de Render, cuando la RAM todavía está ajustada.
-from elaya_smiles import MolecularTools
+from flask import Flask, Response, jsonify, request, send_from_directory
+
+VERSION = "2.0.0"
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+app = Flask(__name__, static_folder=None)
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+
+
+@app.after_request
+def add_cors(resp):
+    """Minimal CORS for /api/* (replaces flask-cors, one dependency less)."""
+    if request.path == "/api" or request.path.startswith("/api/"):
+        resp.headers["Access-Control-Allow-Origin"] = os.environ.get("ELAYA_CORS_ORIGINS", "*")
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return resp
+
+
+@app.route("/api/<path:subpath>", methods=["OPTIONS"])
+def api_options(subpath):
+    return Response("", 204)
+
+app.url_map.strict_slashes = False
+
+STATIC_FILES = {"index.html", "app.js", "glomos_progress.js", "styles.css"}
+STATIC_DIRS = {"pictures"}
 
 _tool = None
-_tool_lock = threading.Lock()
+_jobs = None
 
-def get_tool():
-    """Devuelve la instancia única de MolecularTools, creándola si hace falta."""
+
+def tool():
     global _tool
     if _tool is None:
-        with _tool_lock:
-            if _tool is None:
-                _tool = MolecularTools()
+        from elaya_smiles import MolecularTools
+        _tool = MolecularTools()
     return _tool
-# -----------------------------------------------------------------------------
 
-app = Flask(__name__, static_folder=None)  # static files served manually below
-CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}})
-app.url_map.strict_slashes = False  # prevent 301 redirects that turn POST into GET
 
-# ── Job store for GLOMOS polling ─────────────────────────────────────────────
-# Los jobs se persisten en disco (/tmp/glomos_jobs/) para sobrevivir reinicios
-# del proceso en Render. Cada job es un archivo JSON independiente.
-_jobs_lock = threading.Lock()
-_JOBS_DIR = '/tmp/glomos_jobs'
-os.makedirs(_JOBS_DIR, exist_ok=True)
+def jobs():
+    global _jobs
+    if _jobs is None:
+        from elaya_jobs import JobManager
+        _jobs = JobManager()
+    return _jobs
 
-def _job_path(job_id: str) -> str:
-    return os.path.join(_JOBS_DIR, f'{job_id}.json')
 
-def _load_job(job_id: str) -> dict | None:
-    path = _job_path(job_id)
-    try:
-        with open(path, 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return None
+def err(message, code=400, **extra):
+    out = {"error": message}
+    out.update(extra)
+    return jsonify(out), code
 
-def _save_job(job_id: str, job: dict):
-    path = _job_path(job_id)
-    with open(path, 'w') as f:
-        json.dump(job, f)
 
-def _cleanup_old_jobs():
-    """Remove job files older than 24 hours."""
-    cutoff = time.time() - 86400
-    try:
-        for fname in os.listdir(_JOBS_DIR):
-            fpath = os.path.join(_JOBS_DIR, fname)
-            if os.path.getmtime(fpath) < cutoff:
-                os.remove(fpath)
-    except Exception:
-        pass
+def body():
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
 
-def _run_glomos_job(job_id: str, smiles: str, glomos_params: dict):
-    """Worker thread: runs GLOMOS and persists events to disk."""
-    def push(event: dict):
-        with _jobs_lock:
-            job = _load_job(job_id)
-            if job is not None:
-                job['events'].append(event)
-                _save_job(job_id, job)
 
-    push({'type': 'loading', 'message': 'Preparando semilla 3D...'})
+def smiles_from(data):
+    s = (data.get("smiles") or "").strip()
+    if not s:
+        raise ValueError("Missing 'smiles'")
+    return s
 
-    try:
-        seed_xyz, workdir, params = get_tool().prepare_glomos_seed(smiles, glomos_params)
-    except Exception as exc:
-        push({'type': 'error', 'message': str(exc)})
-        with _jobs_lock:
-            job = _load_job(job_id)
-            if job is not None:
-                job['done'] = True
-                _save_job(job_id, job)
-        return
 
-    push({'type': 'start', 'generations': params['generations']})
+@app.errorhandler(413)
+def too_big(_):
+    return err("Request too large", 413)
 
-    try:
-        for event in get_tool().run_glomos_streaming(seed_xyz, workdir, **params):
-            if event.get('type') == 'loading':
-                continue
-            push(event)
-    except Exception as exc:
-        push({'type': 'error', 'message': str(exc)})
 
-    with _jobs_lock:
-        job = _load_job(job_id)
-        if job is not None:
-            job['done'] = True
-            _save_job(job_id, job)
-
-# ── Routes ────────────────────────────────────────────────────────────────────
-
-@app.route('/')
+# ------------------------------------------------------------------------------------------
+# Static
+# ------------------------------------------------------------------------------------------
+@app.route("/")
 def index():
-    base = os.path.dirname(os.path.abspath(__file__))
-    return send_from_directory(base, 'index.html')
+    return send_from_directory(HERE, "index.html")
 
-@app.route('/api', strict_slashes=False)
-def api_base():
-    return jsonify({
-        "status": "API ready",
-        "endpoints": {
-            "convert":      "/api/convert [POST]",
-            "glomos_start": "/api/glomos/start [POST]",
-            "glomos_poll":  "/api/glomos/poll/<job_id> [GET]",
-            "draw2d":       "/api/draw2d [POST]"
-        }
-    })
 
-@app.route('/api/convert', methods=['POST'], strict_slashes=False)
-def convert():
+@app.route("/<path:path>")
+def static_file(path):
+    if path.startswith("api/"):
+        return err("Route /%s not found or method not allowed" % path, 404)
+    top = path.split("/")[0]
+    if path in STATIC_FILES or top in STATIC_DIRS:
+        return send_from_directory(HERE, path)
+    return err("Not found", 404)
+
+
+# ------------------------------------------------------------------------------------------
+# Meta
+# ------------------------------------------------------------------------------------------
+def _have(mod):
     try:
-        data = request.json
-        print("Datos recibidos:", data)
-
-        smiles = data['smiles']
-        identifier = data.get('identifier', 'mol1')
-        method = data.get('method', 'rdkit')
-        force_field = data.get('force_field', 'uff')
-
-        post_opt = data.get('post_opt')
-        glomos_params = data.get('glomos_params', {})
-
-        print(f"Convirtiendo {smiles} | método={method} | post_opt={post_opt}")
-
-        tool = get_tool()
-
-        if post_opt == 'glomos':
-            print("→ Ejecutando GLOMOS (ANI Rotamers)")
-            result = tool.run_glomos_from_smiles(smiles, glomos_params)
-        else:
-            if method == 'rdkit':
-                result = tool.rdkit_conversion(
-                    smiles,
-                    identifier,
-                    force_field=force_field
-                )
-            elif method == 'openbabel':
-                ob_res = tool.openbabel_conversion(
-                    smiles,
-                    identifier,
-                    force_field=force_field
-                )
-                result = {"xyz": ob_res["xyz"], "mol": ob_res["mol"]}
-            elif method == 'networkx':
-                xyz = tool.networkx_conversion(smiles, identifier)
-                result = {"xyz": xyz}
-            else:
-                return jsonify({"error": "Método no soportado"}), 400
-
-        return jsonify(result)
-
-    except Exception as e:
-        print("Error en la conversión:", str(e))
-        return jsonify({"error": str(e)}), 500
+        return importlib.util.find_spec(mod) is not None
+    except Exception:                                           # noqa: BLE001
+        return False
 
 
-# ── GLOMOS job-based endpoints ────────────────────────────────────────────────
-
-@app.route('/api/glomos/start', methods=['POST'], strict_slashes=False)
-def glomos_start():
-    """
-    Inicia un job GLOMOS en un thread separado.
-    Body: { "smiles": "...", "glomos_params": {...} }
-    Returns: { "job_id": "..." }
-    """
-    data = request.get_json(force=True) or {}
-    smiles = data.get('smiles', '').strip()
-    glomos_params = data.get('glomos_params', {})
-
-    if not smiles:
-        return jsonify({"error": "Missing smiles"}), 400
-
-    _cleanup_old_jobs()
-
-    job_id = str(uuid.uuid4())
-    with _jobs_lock:
-        _save_job(job_id, {
-            'events':  [],
-            'done':    False,
-            'created': time.time(),
-        })
-
-    t = threading.Thread(
-        target=_run_glomos_job,
-        args=(job_id, smiles, glomos_params),
-        daemon=True
-    )
-    t.start()
-
-    return jsonify({"job_id": job_id})
+@app.route("/api")
+def api_base():
+    return jsonify({"status": "API ready", "version": VERSION, "endpoints": {
+        "health": "GET /api/health[?deep=1]", "analyze": "POST /api/analyze",
+        "convert": "POST /api/convert", "export": "POST /api/export",
+        "draw2d": "POST /api/draw2d", "glomos_start": "POST /api/glomos/start",
+        "glomos_poll": "GET /api/glomos/poll/<job_id>?cursor=n",
+        "glomos_cancel": "POST /api/glomos/cancel/<job_id>",
+        "glomos_result": "GET /api/glomos/result/<job_id>[?format=xyz]"}})
 
 
-@app.route('/api/glomos/poll/<job_id>', methods=['GET'], strict_slashes=False)
-def glomos_poll(job_id):
-    """
-    Devuelve los eventos nuevos desde el cursor indicado.
-    Query param: ?cursor=<int>  (default 0)
-    Returns: { "events": [...], "cursor": <int>, "done": bool }
-    """
-    cursor = int(request.args.get('cursor', 0))
-
-    with _jobs_lock:
-        job = _load_job(job_id)
-
-    if job is None:
-        return jsonify({"error": "Job not found"}), 404
-
-    events     = job['events']
-    new_events = events[cursor:]
-    new_cursor = cursor + len(new_events)
-
-    return jsonify({
-        "events": new_events,
-        "cursor": new_cursor,
-        "done":   job['done'],
-    })
+@app.route("/api/version")
+def version():
+    return jsonify({"version": VERSION, "python": sys.version.split()[0]})
 
 
-# Keep /api/convert/stream alive so old JS doesn't crash
-@app.route('/api/convert/stream', methods=['POST'], strict_slashes=False)
-def convert_stream_legacy():
-    return jsonify({
-        "error": "SSE not supported on Waitress. Use /api/glomos/start + /api/glomos/poll."
-    }), 410
+def selftest_ani():
+    """Real ANI calculation on water (a few seconds). Used by /api/health?deep=1."""
+    t0 = time.time()
+    from ase import Atoms
+    from glomos.libcalc_ani import ANI_single, torchani_versions
+    water = Atoms("OHH", positions=[[0, 0, 0], [0.96, 0, 0], [-0.24, 0.93, 0]])
+    res = ANI_single(water, "ANI1ccx")
+    return {"ok": True, "energy_kcal": res.info["e"], "converged": res.info["converged"],
+            "seconds": round(time.time() - t0, 1), "versions": torchani_versions()}
 
 
-@app.route('/api/draw2d', methods=['POST'], strict_slashes=False)
+@app.route("/api/health")
+def health():
+    libs = {m: _have(m) for m in ("rdkit", "openbabel", "networkx", "torch", "torchani", "ase", "scipy")}
+    from importlib import metadata
+    versions = {}
+    for dist in ("rdkit", "openbabel-wheel", "networkx", "torch", "torchani", "ase", "scipy", "numpy", "flask"):
+        try:
+            versions[dist] = metadata.version(dist)
+        except Exception:                                       # noqa: BLE001
+            versions[dist] = None
+    out = {"status": "ok", "version": VERSION, "python": sys.version.split()[0], "versions": versions,
+           "libraries": libs,
+           "glomos_ready": all(libs[m] for m in ("rdkit", "torch", "torchani", "ase", "scipy")),
+           "max_minutes": float(os.environ.get("ELAYA_MAX_MINUTES", "20")),
+           "max_concurrent_jobs": int(os.environ.get("ELAYA_MAX_JOBS", "1"))}
+    if not out["glomos_ready"]:
+        out["missing_for_glomos"] = [m for m in ("rdkit", "torch", "torchani", "ase", "scipy") if not libs[m]]
+    if request.args.get("deep") and out["glomos_ready"]:
+        try:
+            out["ani_selftest"] = selftest_ani()
+        except Exception as exc:                                # noqa: BLE001
+            out["status"] = "degraded"
+            out["ani_selftest"] = {"ok": False, "error": "%s: %s" % (type(exc).__name__, exc)}
+    return jsonify(out)
+
+
+# ------------------------------------------------------------------------------------------
+# Chemistry
+# ------------------------------------------------------------------------------------------
+@app.route("/api/analyze", methods=["POST"])
+def analyze():
+    try:
+        import elaya_chem as ec
+        return jsonify(ec.mol_report(smiles_from(body())))
+    except ValueError as exc:                                   # includes ChemError
+        return err(str(exc))
+    except Exception as exc:                                    # noqa: BLE001
+        return err("Analysis failed: %s" % exc, 500)
+
+
+@app.route("/api/convert", methods=["POST"])
+def convert():
+    data = body()
+    try:
+        smiles = smiles_from(data)
+        if data.get("post_opt") == "glomos":
+            return err("GLOMOS runs as a background job: use POST /api/glomos/start.", 400)
+        res = tool().convert(smiles, data.get("method", "rdkit"),
+                             data.get("force_field", "mmff"), str(data.get("identifier", "mol1"))[:60])
+        return jsonify(res)
+    except ValueError as exc:
+        return err(str(exc))
+    except Exception as exc:                                    # noqa: BLE001
+        return err("Conversion failed: %s" % exc, 500)
+
+
+MIME = {"xyz": "chemical/x-xyz", "mol": "chemical/x-mdl-molfile", "sdf": "chemical/x-mdl-sdfile",
+        "pdb": "chemical/x-pdb", "mol2": "chemical/x-mol2", "cml": "chemical/x-cml"}
+
+
+@app.route("/api/export", methods=["POST"])
+def export():
+    data = body()
+    try:
+        fmt = (data.get("format") or "xyz").lower()
+        if fmt not in MIME:
+            return err("Unsupported format")
+        name = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(data.get("name", "elaya")))[:50] or "elaya"
+        text = tool().export(smiles_from(data), data.get("xyz", ""), fmt, name, data.get("properties"))
+        return Response(text, mimetype=MIME[fmt], headers={
+            "Content-Disposition": 'attachment; filename="%s.%s"' % (name, fmt)})
+    except ValueError as exc:
+        return err(str(exc))
+    except Exception as exc:                                    # noqa: BLE001
+        return err("Export failed: %s" % exc, 500)
+
+
+@app.route("/api/draw2d", methods=["POST"])
 def draw_2d():
     try:
-        data = request.get_json(force=True) or {}
-        smiles = (data.get('smiles') or '').strip()
-
-        if not smiles:
-            return jsonify({"error": "Missing 'smiles'"}), 400
-
-        mol = Chem.MolFromSmiles(smiles)
-        if mol is None:
-            return jsonify({"error": "Invalid SMILES"}), 400
-
+        from rdkit import Chem
         from rdkit.Chem import rdDepictor
         from rdkit.Chem.Draw import rdMolDraw2D
-
-        try:
-            Chem.SanitizeMol(mol)
-            rdDepictor.Compute2DCoords(mol)
-            rdMolDraw2D.PrepareMolForDrawing(mol, kekulize=True)
-        except Exception:
-            try:
-                rdDepictor.Compute2DCoords(mol)
-                rdMolDraw2D.PrepareMolForDrawing(mol, kekulize=False)
-            except Exception as e2:
-                print("[/api/draw2d] PrepareMolForDrawing fallback error:", repr(e2))
-                return jsonify({"error": "Failed to prepare molecule for drawing", "detail": str(e2)}), 500
-
-        width, height = 320, 320
-        drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
-        try:
-            drawer.drawOptions().useSvgStyles = False
-        except Exception:
-            pass
-
-        try:
-            rdMolDraw2D.PrepareAndDrawMolecule(drawer, mol)
-        except Exception:
-            from rdkit.Chem import AllChem
-            rdDepictor.Compute2DCoords(mol)
-            drawer.DrawMolecule(mol)
-
+        import elaya_chem as ec
+        mol = ec.parse_smiles(smiles_from(body()))
+        rdDepictor.SetPreferCoordGen(True)
+        rdDepictor.Compute2DCoords(mol)
+        drawer = rdMolDraw2D.MolDraw2DSVG(340, 340)
+        drawer.drawOptions().addStereoAnnotation = True
+        rdMolDraw2D.PrepareAndDrawMolecule(drawer, mol)
         drawer.FinishDrawing()
-        svg = drawer.GetDrawingText()
-
-        return Response(svg, mimetype='image/svg+xml')
-
-    except Exception as e:
-        import traceback
-        print("[/api/draw2d] ERROR:", repr(e))
-        traceback.print_exc()
-        return jsonify({"error": "Draw2D server failure", "detail": str(e)}), 500
+        return Response(drawer.GetDrawingText(), mimetype="image/svg+xml")
+    except ValueError as exc:
+        return err(str(exc))
+    except Exception as exc:                                    # noqa: BLE001
+        return err("Draw2D failed: %s" % exc, 500)
 
 
-# ── OPTIONS preflight handler for all /api/* routes ──────────────────────────
-@app.route('/api/<path:subpath>', methods=['OPTIONS'])
-def api_options(subpath):
-    """Respond to CORS preflight requests for any /api/* path."""
-    response = app.make_default_options_response()
-    response.headers['Access-Control-Allow-Origin']  = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return response
+# ------------------------------------------------------------------------------------------
+# GLOMOS
+# ------------------------------------------------------------------------------------------
+def _finalize(result):
+    """Add rotational constants and metadata to each conformer (pure numpy)."""
+    import elaya_chem as ec
+    for c in result["conformers"]:
+        syms, pos = ec.parse_xyz(c["xyz"])
+        c["rotational_constants"] = ec.rotational_constants(syms, pos)
+    return result
 
 
-# NOTE: catch-all AFTER all /api routes.
-@app.route('/<path:path>')
-def static_file(path):
-    if path.startswith('api/'):
-        return jsonify({"error": f"Route /{path} not found or method not allowed"}), 405
-    base = os.path.dirname(os.path.abspath(__file__))
-    return send_from_directory(base, path)
+@app.route("/api/glomos/start", methods=["POST"])
+def glomos_start():
+    data = body()
+    try:
+        smiles = smiles_from(data)
+        from elaya_jobs import clamp_params
+        from glomos.ani_domain import resolve_model, DomainError
+        import elaya_chem as ec
+        params = clamp_params(data.get("glomos_params"))
+        molh, seed_xyz, problem, info = ec.glomos_seed_pool(smiles, params["n_seeds"], 665)
+        syms = [a.GetSymbol() for a in molh.GetAtoms()]
+        try:
+            dom = resolve_model(syms, params["ani_model"], problem["charge"])
+        except DomainError as exc:
+            return err(str(exc), 422, kind="ani_domain")
+        meta = {"smiles": smiles, "n_rotors": len(problem["rotors"]), "n_atoms": len(syms),
+                "seed_info": info, "ani_notes": dom["notes"], "ani_warnings": dom["warnings"],
+                "formula": ec.mol_report(smiles)["formula"]}
+        job_id = jobs().submit(seed_xyz, problem, params, dom["model"], meta, finalize=_finalize)
+        return jsonify({"job_id": job_id, "model": dom["model"], "notes": dom["notes"],
+                        "warnings": dom["warnings"], "n_rotors": meta["n_rotors"], "params": params})
+    except ValueError as exc:
+        return err(str(exc))
+    except Exception as exc:                                    # noqa: BLE001
+        return err("Could not start GLOMOS: %s" % exc, 500)
 
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+@app.route("/api/glomos/poll/<job_id>")
+def glomos_poll(job_id):
+    try:
+        cursor = int(request.args.get("cursor", 0))
+    except ValueError:
+        cursor = 0
+    out = jobs().poll(job_id, cursor)
+    if out is None:
+        return err("Job not found (it expired or the server restarted)", 404)
+    return jsonify(out)
+
+
+@app.route("/api/glomos/cancel/<job_id>", methods=["POST"])
+def glomos_cancel(job_id):
+    if not jobs().cancel(job_id):
+        return err("Job not found", 404)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/glomos/result/<job_id>")
+def glomos_result(job_id):
+    job = jobs().get(job_id)
+    if job is None:
+        return err("Job not found", 404)
+    if not job.done:
+        return err("Job is still running", 409, status=job.status)
+    if not job.result:
+        return err(job.error or "No result", 404)
+    if request.args.get("format") == "xyz":
+        text = "".join(c["xyz"] for c in job.result["conformers"])
+        return Response(text, mimetype="chemical/x-xyz", headers={
+            "Content-Disposition": 'attachment; filename="elaya_conformers.xyz"'})
+    out = dict(job.result)
+    out["status"] = job.status
+    out["job"] = job.meta
+    return jsonify(out)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     try:
         from waitress import serve
-        print(f"Servidor iniciado con Waitress en http://0.0.0.0:{port}")
-        # threads=2 es suficiente para uso normal y reduce consumo de RAM
-        # considerablemente frente al valor anterior de 8.
-        serve(app, host='0.0.0.0', port=port, threads=2, channel_timeout=600)
+        print("ELAYA %s on http://0.0.0.0:%d" % (VERSION, port))
+        serve(app, host="0.0.0.0", port=port, threads=int(os.environ.get("ELAYA_THREADS", "4")),
+              channel_timeout=600)
     except ImportError:
-        print("AVISO: instala waitress con:  pip install waitress")
-        app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=False)
+        app.run(host="0.0.0.0", port=port, debug=False, threaded=True, use_reloader=False)

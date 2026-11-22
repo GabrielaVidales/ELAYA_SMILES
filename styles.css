@@ -3363,3 +3363,4 @@ h1, h2, h3, .lp-hero-title, .lp-section-tag, .navbar a {
   z-index: 999999 !important;
   pointer-events: all !important;
 }
+.glomos-hint{font-size:.78rem;color:#8a9ab0;margin:.2rem 0 .8rem;line-height:1.45}

@@ -2,13 +2,17 @@ services:
   - type: web
     name: elaya-smiles
     env: docker
-    # 'starter' (512 MB) es suficiente para rdkit + openbabel con lazy imports.
-    # Si usas GLOMOS o Auto3D frecuentemente, cambia a 'standard' (2 GB).
-    plan: starter
+    # GLOMOS (torch + ASE + ANI) needs ~1.2-1.8 GB while a job runs: use at least 'standard' (2 GB).
+    # 'starter' (512 MB) only supports plain conversion; GLOMOS jobs would be killed (OOM).
+    plan: standard
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 5000
-      - key: PYTHONUNBUFFERED
+      - key: ELAYA_MAX_JOBS
         value: "1"
-    healthCheckPath: /api
+      - key: ELAYA_MAX_MINUTES
+        value: "20"
+      - key: ELAYA_TORCH_THREADS
+        value: "2"
