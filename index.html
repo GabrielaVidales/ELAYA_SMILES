@@ -260,9 +260,17 @@
                     <input type="number" id="glomos-minutes" value="10" min="1" max="60">
                     </div>
 
-                    <div class="glomos-item">
-                    <span>Random seed (0 = new)</span>
+                    <div class="glomos-item" title="0 = a new random seed each run; any other value reproduces a run">
+                    <span>Random seed</span>
                     <input type="number" id="glomos-seed" value="0" min="0">
+                    </div>
+
+                    <div class="glomos-item" title="Screening with one of the ANI networks is ~3x faster; the final ranking is always re-optimised with the full ensemble.">
+                    <span>Screening</span>
+                    <select id="glomos-screening">
+                        <option value="ensemble" selected>Full ensemble (reference)</option>
+                        <option value="single">1 network, faster (final: ensemble)</option>
+                    </select>
                     </div>
                 </div>
             </div>

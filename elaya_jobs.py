@@ -72,6 +72,10 @@ def clamp_params(raw):
     if model not in ANI_CHOICES:
         raise ValueError("ani_model must be one of %s" % ", ".join(ANI_CHOICES))
     p["ani_model"] = model
+    screening = raw.get("screening", "ensemble")
+    if screening not in ("ensemble", "single"):
+        raise ValueError("screening must be 'ensemble' or 'single'")
+    p["screening"] = screening
     try:
         mm = float(raw.get("max_minutes", max_minutes_limit()))
     except (TypeError, ValueError):
@@ -104,7 +108,8 @@ def write_input_txt(workdir, p, model):
         "prec                2E-02 5E-03\n"
         "polish_prec         1E-03\n"
         "random_seed         %(random_seed)d\n"
-    ) % dict(p, model=model)
+        "screening           %(screening)s\n"
+    ) % dict(p, model=model, screening=p.get("screening", "ensemble"))
     with open(os.path.join(workdir, "INPUT.txt"), "w") as fh:
         fh.write(txt)
 

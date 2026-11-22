@@ -28,12 +28,11 @@ COPY . .
 
 # Fail the build (not the first user request) if the GLOMOS package is incomplete or shadowed.
 RUN pip uninstall -y glomos aegon >/dev/null 2>&1; \
-    python -c "import elaya_glomos, elaya_glomos.libreport, elaya_glomos.libcalc_ani, elaya_glomos.ani_domain, elaya_jobs; print('ELAYA GLOMOS package OK:', elaya_glomos.__file__)"
+    python -c "import elaya_glomos, elaya_glomos.libreport, elaya_glomos.libcalc_ani, elaya_glomos.libbatch, elaya_glomos.ani_domain, elaya_jobs; print('ELAYA GLOMOS package OK:', elaya_glomos.__file__)"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    OMP_NUM_THREADS=2 \
-    ELAYA_TORCH_THREADS=2 \
+    ELAYA_TORCH_THREADS=auto \
     ELAYA_MAX_JOBS=1 \
     ELAYA_MAX_MINUTES=20
 

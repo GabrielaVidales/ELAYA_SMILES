@@ -3364,3 +3364,141 @@ h1, h2, h3, .lp-hero-title, .lp-section-tag, .navbar a {
   pointer-events: all !important;
 }
 .glomos-hint{font-size:.78rem;color:#8a9ab0;margin:.2rem 0 .8rem;line-height:1.45}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v2.1 — responsive and readability fixes (same look, fewer layout bugs)
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* The "▸ show full SMILES" button floats inside the input at every width.
+   On mobile another rule turned it into a static block that took half of the row. */
+.smiles-wrap > #smiles-indicator {
+    position: absolute !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    flex: none !important;
+}
+
+/* Notifications: one stack at the bottom-right, compact, never covering the title */
+#toast-stack {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: flex-end;
+    pointer-events: none;
+}
+#toast-stack .alert {
+    position: static;
+    pointer-events: auto;
+    cursor: pointer;
+    max-width: min(420px, calc(100vw - 2.5rem));
+    font-size: 0.9rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    max-height: 30vh;
+    overflow-y: auto;
+}
+
+/* Long SMILES in the download button: one line with an ellipsis */
+.xyz-download {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Long first/second lines of the XYZ text scroll instead of stretching the panel */
+#xyz-display { max-width: 100%; }
+
+@media (max-width: 768px) {
+    /* Order: inputs → GLOMOS options → Convert → viewer (was: viewer before Convert
+       whenever the GLOMOS panel was hidden, because of fixed grid rows) */
+    .method-controls .input-group { order: 1; }
+    #glomos-panel                 { order: 2; grid-row: auto !important; }
+    #convert-molecules            { order: 3; grid-row: auto !important; }
+    .conversion-row               { order: 4; }
+    #molecule-list                { order: 5; }
+
+    /* Navbar: icon-only "View code" so it fits on phones */
+    .code-links { position: static; margin-left: auto; }
+    .navbar .view-code-icon { font-size: 0 !important; gap: 0; padding: 2px; }
+    .view-code-icon svg { width: 28px; height: 28px; }
+
+    #toast-stack { left: 0.75rem; right: 0.75rem; bottom: 0.75rem; align-items: stretch; }
+    #toast-stack .alert { max-width: none; }
+
+    #xyz-display { height: 220px; font-size: 0.75rem; }
+}
+
+@media (max-width: 420px) {
+    .navbar a { font-size: 13px; padding: 5px; }
+    .navbar-logo { width: 32px; height: 32px; }
+}
+
+/* Respect users who ask the OS for less motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+                             transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Keyboard focus visible on the main controls */
+#convert-molecules:focus-visible,
+.glomos-item select:focus-visible,
+.glomos-item input:focus-visible,
+#smiles:focus-visible,
+select:focus-visible {
+    outline: 2px solid #98ebc4;
+    outline-offset: 2px;
+}
+
+/* Structure quality line (stereo / bonds checks, rotational constants) */
+#structure-qa {
+    display: none;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+.qa-chip {
+    font-size: 0.78rem;
+    line-height: 1.2;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(152, 235, 196, 0.3);
+    background: rgba(152, 235, 196, 0.08);
+    color: #d8f5ea;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.qa-chip.ok   { border-color: rgba(60, 180, 154, 0.55); color: #98ebc4; }
+.qa-chip.warn { border-color: rgba(255, 191, 0, 0.5);   color: #ffd76a; background: rgba(255, 191, 0, 0.08); }
+.qa-chip.bad  { border-color: rgba(255, 107, 107, 0.6); color: #ff9c9c; background: rgba(255, 107, 107, 0.08); }
+.qa-chip.info { border-color: rgba(157, 78, 221, 0.45); color: #d9c2f5; background: rgba(157, 78, 221, 0.08); font-variant-numeric: tabular-nums; }
+
+/* GLOMOS parameters: cells wide enough for label + field (fields used to spill into the next cell) */
+.glomos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)) !important;
+}
+.glomos-item { min-width: 0; }
+.glomos-item input,
+.glomos-item select { min-width: 0 !important; }
+@media (max-width: 768px) {
+    #glomos-panel .glomos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    #glomos-panel .glomos-item {
+        grid-template-columns: 1fr !important;          /* label above its field */
+        row-gap: 4px !important;
+        white-space: normal;
+    }
+}
+
+/* Mobile: long lines (SMILES in the XYZ comment, GLOMOS hint) must scroll/wrap inside their box,
+   not widen the single grid column (a 1fr track grows to its content's min-content width) */
+@media (max-width: 768px) {
+    .conversion-section { grid-template-columns: minmax(0, 1fr) !important; }
+    .conversion-section > *, .conversion-row, .visualization-container, .visualization-controls { min-width: 0; max-width: 100%; }
+    .glomos-hint { white-space: normal; }
+}

@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.0.3"
+VERSION = "2.1.0"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -219,6 +219,12 @@ def health():
         except Exception as exc:                                # noqa: BLE001
             out["ani_weights"] = {"error": "%s: %s" % (type(exc).__name__, exc)}
     out["memory_limit_mb"] = memory_limit_mb()
+    try:
+        from elaya_glomos.libcalc_ani import cpu_quota, torch_threads
+        out["cpus"] = round(cpu_quota(), 2)
+        out["torch_threads"] = torch_threads()
+    except Exception:                                           # noqa: BLE001
+        pass
     if out["memory_limit_mb"] and out["memory_limit_mb"] < 1000:
         out["memory_warning"] = ("Container memory limit is %d MB: GLOMOS (torch + ANI) needs ~1 GB; "
                                  "jobs may be killed." % out["memory_limit_mb"])
@@ -308,12 +314,18 @@ def draw_2d():
 # ------------------------------------------------------------------------------------------
 # GLOMOS
 # ------------------------------------------------------------------------------------------
-def _finalize(result):
-    """Add rotational constants and metadata to each conformer (pure numpy)."""
+def _finalize(result, smiles=None):
+    """Add rotational constants and a MOL block (bond orders, for the 3D viewer) to each conformer."""
     import elaya_chem as ec
     for c in result["conformers"]:
         syms, pos = ec.parse_xyz(c["xyz"])
         c["rotational_constants"] = ec.rotational_constants(syms, pos)
+        if smiles:
+            try:
+                from rdkit import Chem
+                c["mol"] = Chem.MolToMolBlock(ec.mol_with_coords(smiles, c["xyz"]))
+            except Exception:                                   # noqa: BLE001
+                c["mol"] = None
     return result
 
 
@@ -335,7 +347,8 @@ def glomos_start():
         meta = {"smiles": smiles, "n_rotors": len(problem["rotors"]), "n_atoms": len(syms),
                 "seed_info": info, "ani_notes": dom["notes"], "ani_warnings": dom["warnings"],
                 "formula": ec.mol_report(smiles)["formula"]}
-        job_id = jobs().submit(seed_xyz, problem, params, dom["model"], meta, finalize=_finalize)
+        job_id = jobs().submit(seed_xyz, problem, params, dom["model"], meta,
+                               finalize=lambda res: _finalize(res, smiles))
         return jsonify({"job_id": job_id, "model": dom["model"], "notes": dom["notes"],
                         "warnings": dom["warnings"], "n_rotors": meta["n_rotors"], "params": params})
     except ValueError as exc:

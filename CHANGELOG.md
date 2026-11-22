@@ -1,5 +1,41 @@
 # Changelog
 
+## 2.1.0
+
+### GLOMOS speed (same results)
+* **Batched relaxation** (`elaya_glomos/libbatch.py`): every candidate of a generation is relaxed together, with one batched
+  ANI forward/backward pass per step instead of one call per structure. The optimiser is an exact re-implementation of
+  `ase.optimize.LBFGS` (memory 100, alpha 70, maxstep 0.15, staged fmax), run independently per structure: steps, positions
+  and energies are identical to the sequential ASE run (tests compare them bit for bit with MMFF; the batched torch
+  evaluator matches torchani's ASE calculator to 1e-15 eV). Measured on an ANI-1ccx-sized ensemble with the step counts of a
+  real dopamine run: 2.7x less relaxation time (about 20 min -> 7 min on the 0.1-CPU Render instance).
+* **Optional single-network screening** (`screening: "single"`, "Screening" selector in the GLOMOS panel): candidates are
+  relaxed with the first network of the ANI ensemble and the final polish/ranking uses the full ensemble (8.4x with batching
+  on the same run). Default stays `ensemble`; the choice is recorded in the result metadata.
+* `ELAYA_TORCH_THREADS=auto` (new default): torch threads = whole CPUs of the container (cgroup quota), 1..4. Two threads on
+  a 0.1-CPU instance only added contention. `/api/health` reports `cpus` and `torch_threads`.
+* A cancellation/time limit in the middle of a batch keeps the structures already relaxed (`sink`).
+
+### 3D generation and viewer
+* **Double/aromatic bonds are drawn**: the viewer now prefers the MOL block (bond orders) over XYZ. GLOMOS conformers carry
+  a MOL block too (`conformers[i].mol` in `/api/glomos/result`).
+* **NetworkX method rewritten**: Kamada-Kawai stress layout (still NetworkX) with target distances for every atom pair from
+  the molecular graph (RDKit topological distance bounds; through-bond path length for distant pairs), least-squares scaling
+  to angstrom, then inversion of wrongly oriented stereocentres / double bonds and re-layout. Bond-length RMSE vs MMFF went
+  from 0.20-0.44 A to 0.04-0.15 A; bonds and stereo now match the SMILES for typical drug-size molecules (fused polycycles and
+  macrocycles remain approximate and are flagged). It now returns a MOL block and a stereo report.
+* OpenBabel results now include the stereo check (`stereo_qa`).
+* Under the viewer: chips with the stereo check, bond check, "approximate layout" warning and rotational constants.
+
+### Responsive layout and details
+* Mobile: Convert button right after the selectors (it was below the viewer whenever the GLOMOS panel was hidden); SMILES
+  field full width (the hidden "show full SMILES" button took half the row); "View code" shows the icon only; long SMILES
+  no longer widen the page; GLOMOS parameters with the label above the field, two per row.
+* Desktop: GLOMOS parameter fields no longer overlap the next label.
+* Notifications stack at the bottom-right (click to dismiss, at most 3) instead of covering the title; long SMILES are
+  shortened in messages and in the download button.
+* `prefers-reduced-motion` respected; visible keyboard focus on the main controls.
+
 ## 2.0.3
 
 * **GA duplicate handling kept the wrong copy.** When an offspring was a duplicate (same USR shape,

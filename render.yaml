@@ -15,4 +15,4 @@ services:
       - key: ELAYA_MAX_MINUTES
         value: "20"
       - key: ELAYA_TORCH_THREADS
-        value: "2"
+        value: "auto"

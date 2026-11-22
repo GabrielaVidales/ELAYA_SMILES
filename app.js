@@ -298,7 +298,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 (xyzResult, result) => {
                   unlock();
                   window.glomosResult = result;
-                  showGlomosConformer({ xyz: xyzResult }, smiles);
+                  showGlomosConformer(result?.conformers?.[0] || { xyz: xyzResult }, smiles);
                   const n = result?.conformers?.length ?? 1;
                   const partial = result?.partial ? ' (partial result)' : '';
                   showSuccess?.(`<strong>✔ GLOMOS finished${partial}</strong><br>${n} conformer(s) found; the lowest-energy one is shown.`);
@@ -581,6 +581,7 @@ function collectGlomosParams() {
     ani_model:         document.getElementById('glomos-ani')?.value || 'auto',
     max_minutes:       num('glomos-minutes', 10),
     random_seed:       num('glomos-seed', 0),
+    screening:         document.getElementById('glomos-screening')?.value || 'ensemble',
   };
 }
 
@@ -611,7 +612,7 @@ function showGlomosConformer(conf, smiles) {
   const sm = smiles || molecules?.[idx]?.smiles || '';
   currentXYZ = conf.xyz;
   if (!Array.isArray(molecules) || !molecules[idx]) molecules = [{ smiles: sm, id: sm }];
-  molecules[idx] = { ...molecules[idx], xyz: conf.xyz, molBlock: null };
+  molecules[idx] = { ...molecules[idx], xyz: conf.xyz, molBlock: conf.mol || null };
   updateXYZDisplay?.();
   updateViewerContainerLayout();
   updateDownloadButtons?.();
@@ -632,10 +633,10 @@ async function runGlomosBatch(picked) {
     });
     if (outcome.error) { failed.push(`${m.id || m.smiles}: ${outcome.error}`); continue; }
     ok.push(m.id || m.smiles);
-    if (molecules[i]) molecules[i] = { ...molecules[i], xyz: outcome.xyz, molBlock: null, glomos: outcome.result };
+    if (molecules[i]) molecules[i] = { ...molecules[i], xyz: outcome.xyz, molBlock: outcome.result?.conformers?.[0]?.mol || null, glomos: outcome.result };
   }
   currentMoleculeIndex = 0;
-  if (molecules[0]) showGlomosConformer({ xyz: molecules[0].xyz }, molecules[0].smiles);
+  if (molecules[0]) showGlomosConformer({ xyz: molecules[0].xyz, mol: molecules[0].molBlock }, molecules[0].smiles);
   if (failed.length) showError?.('GLOMOS failed for:<br>' + failed.join('<br>'));
   else showSuccess?.(`<strong>✔ GLOMOS finished for ${ok.length} molecule(s)</strong>`);
 }
@@ -1125,10 +1126,18 @@ async function convertMolecules(pickedList = null) {
       convertedMolecules.push({
         ...mol,
         xyz: (xyzText || '').trim(),
-        molBlock: molBlock || null
+        molBlock: molBlock || null,
+        qa: {
+          method: data.info?.method || method,
+          approximate: !!data.approximate,
+          stereo: data.stereo_qa || null,
+          bonds: data.connectivity_check || null,
+          rot: data.rotational_constants || null,
+        }
       });
 
-      showSuccess(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${mol.smiles}`);
+      const _smi = String(mol.smiles || '');
+      showSuccess(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${_smi.length > 70 ? _smi.slice(0, 67) + '…' : _smi}`);
     }
 
     // Estado final + render/XYZ
@@ -1143,8 +1152,9 @@ async function convertMolecules(pickedList = null) {
 
     const hasXYZ = !!currentMol.xyz;
     const hasMol = !!currentMol.molBlock;
-    const format    = hasXYZ ? 'xyz' : (hasMol ? 'sdf' : 'xyz');
-    const modelData = hasXYZ ? currentMol.xyz : (hasMol ? currentMol.molBlock : '');
+    // MOL/SDF carries bond orders (double/aromatic bonds are drawn); XYZ only has positions
+    const format    = hasMol ? 'sdf' : 'xyz';
+    const modelData = hasMol ? currentMol.molBlock : (hasXYZ ? currentMol.xyz : '');
 
     updateViewerContainerLayout();
     updateXYZDisplay();
@@ -1258,7 +1268,14 @@ async function convertSingleMolecule() {
     molecules[currentMoleculeIndex] = {
       ...molecules[currentMoleculeIndex],
       xyz: xyzWithHeader,
-      molBlock: molText || null
+      molBlock: molText || null,
+      qa: {
+        method: data.info?.method || method,
+        approximate: !!data.approximate,
+        stereo: data.stereo_qa || null,
+        bonds: data.connectivity_check || null,
+        rot: data.rotational_constants || null,
+      }
     };
 
     updateXYZDisplay?.();
@@ -1290,9 +1307,53 @@ async function convertSingleMolecule() {
   }
 }
 
+// Compact quality line under the viewer: stereo / bonds checks from the backend, rotational constants
+function renderStructureQA() {
+    const xyzDisplay = document.getElementById('xyz-display');
+    if (!xyzDisplay) return;
+    let box = document.getElementById('structure-qa');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'structure-qa';
+        xyzDisplay.parentNode.insertBefore(box, xyzDisplay);
+    }
+    // results live either in `molecules` or in window.molecules (two different bindings in this file):
+    // use the entry whose XYZ is the one on screen, so a GLOMOS conformer never shows stale checks
+    const shown = String((typeof currentXYZ === 'string' && currentXYZ) || window.currentXYZ || '').trim();
+    const cands = [];
+    for (const [list, i] of [[molecules, currentMoleculeIndex], [window.molecules, window.currentMoleculeIndex]]) {
+        if (Array.isArray(list) && list[Number.isInteger(i) ? i : 0]) cands.push(list[Number.isInteger(i) ? i : 0]);
+    }
+    const cur = cands.find(m => m.qa && !m.glomos && String(m.xyz || '').trim() === shown);
+    const qa = cur ? cur.qa : null;
+    if (!qa) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const chips = [];
+    if (qa.approximate) chips.push(`<span class="qa-chip warn" title="NetworkX builds a graph layout, not a force-field geometry">Approximate layout</span>`);
+    if (qa.stereo) {
+        if (qa.stereo.ok) {
+            if (qa.stereo.n_checked) chips.push(`<span class="qa-chip ok" title="Stereocentres and E/Z bonds of the 3D structure match the SMILES">Stereo ✓ (${qa.stereo.n_checked})</span>`);
+        } else {
+            chips.push(`<span class="qa-chip bad" title="${esc((qa.stereo.problems || []).join('\n'))}">Stereo ✗ ${esc((qa.stereo.problems || [])[0] || '')}</span>`);
+        }
+    }
+    if (qa.bonds && qa.bonds.ok !== undefined && qa.bonds.ok !== null) {
+        chips.push(qa.bonds.ok
+            ? `<span class="qa-chip ok" title="Bonds perceived from the 3D distances match the SMILES">Bonds ✓</span>`
+            : `<span class="qa-chip warn" title="${esc(qa.bonds.detail || '')}">Bonds: some distances off</span>`);
+    }
+    if (qa.rot && qa.rot.A_GHz != null) {
+        const g = v => (v == null ? '—' : Number(v).toFixed(3));
+        chips.push(`<span class="qa-chip info" title="Rotational constants of this geometry">A ${g(qa.rot.A_GHz)} · B ${g(qa.rot.B_GHz)} · C ${g(qa.rot.C_GHz)} GHz</span>`);
+    }
+    box.innerHTML = chips.join('');
+    box.style.display = chips.length ? 'flex' : 'none';
+}
+
 function updateXYZDisplay() {
     const xyzDisplay = document.getElementById('xyz-display');
     if (!xyzDisplay) return;
+    try { renderStructureQA(); } catch (e) { /* never block the XYZ panel */ }
 
     const raw = (currentXYZ || '').trim();
     if (!raw) { xyzDisplay.style.display = 'none'; return; }
@@ -1415,7 +1476,8 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
             } else {
                 if (wasHidden) {
                     wasHidden = false;
-                    try { viewer.resize(); } catch (e) { /* ignore */ }
+                    // zoom computed while the canvas was 0×0 is meaningless: redo it now
+                    try { viewer.resize(); viewer.zoomTo(); viewer.zoom(1); } catch (e) { /* ignore */ }
                 }
                 if (!isRotationPaused) {
                     viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
@@ -1432,7 +1494,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         if (placeholder) placeholder.style.display = 'none';
 
         setTimeout(() => {
-            try { if (isVisible()) { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); } else { viewer.zoomTo(1.2); } }
+            try { if (isVisible()) { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); } }
             catch (err) { console.warn("⚠ Error al redibujar viewer:", err); }
         }, 150);
     }
@@ -1846,15 +1908,34 @@ function formatXYZWithAlignment(xyzText) {
 }
 
 // Funciones de ayuda
+// Notifications live in one stack (bottom-right) so they never overlap each other or the title
+function _toastStack() {
+    let stack = document.getElementById('toast-stack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toast-stack';
+        stack.setAttribute('role', 'status');
+        stack.setAttribute('aria-live', 'polite');
+        document.body.appendChild(stack);
+    }
+    return stack;
+}
+
+function _toast(div, ms) {
+    div.title = 'Click to dismiss';
+    div.addEventListener('click', () => div.remove());
+    const stack = _toastStack();
+    stack.appendChild(div);
+    while (stack.children.length > 3) stack.firstElementChild.remove();
+    setTimeout(() => div.remove(), ms);
+}
+
 function showSuccess(message) {
     console.log("Mostrando mensaje de éxito:", message);
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert success';
     alertDiv.innerHTML = message;
-    document.body.appendChild(alertDiv);
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 3000);
+    _toast(alertDiv, 3500);
 }
 
 function showError(message) {
@@ -1867,10 +1948,8 @@ function showError(message) {
         : `⚠ ${message}`;
 
     alertDiv.innerHTML = formattedMessage;
-    document.body.appendChild(alertDiv);
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    alertDiv.setAttribute('role', 'alert');
+    _toast(alertDiv, 8000);
 }
 
 // Antes: async function showMoleculeSelectionModal() {

@@ -176,6 +176,9 @@ def conformational(inputfile="INPUT.txt", reporter=None, problem=None, seeds=Non
     max_steps = df.get_int("max_steps", 400)
     random_seed = df.get_int("random_seed", 0)
     max_minutes = df.get_float("max_minutes", 0.0)
+    screening = df.get_str("screening", "ensemble").lower()
+    if screening not in ("ensemble", "single"):
+        raise ValueError("screening must be 'ensemble' or 'single'")
 
     if reporter is None:
         reporter = console_reporter(
@@ -221,7 +224,7 @@ def conformational(inputfile="INPUT.txt", reporter=None, problem=None, seeds=Non
         "nof_generations": nof_generations, "cutoff_energy": cutoff_energy,
         "cutoff_population": cutoff_population, "tol_similarity": tol_similarity,
         "tol_energy": tol_energy, "prec": list(preclist), "polish_prec": list(polish_prec),
-        "random_seed": random_seed, "n_seeds": len(seeds), "units": "kcal/mol",
+        "random_seed": random_seed, "n_seeds": len(seeds), "units": "kcal/mol", "screening": screening,
     }
 
     reporter.log("----------------- Genetic Algorithm for Rotamers -----------------")
@@ -247,9 +250,9 @@ def conformational(inputfile="INPUT.txt", reporter=None, problem=None, seeds=Non
     gen_times = []
 
     def relax_batch(batch, collected):
-        for m in batch:
-            collected.extend(ANI([m], opt=calculator, preclist=preclist, problem=problem,
-                                 reporter=reporter, max_steps=max_steps))
+        # all candidates of a generation are relaxed together (one batched ANI call per step)
+        ANI(batch, opt=calculator, preclist=preclist, problem=problem, reporter=reporter,
+            max_steps=max_steps, sink=collected, screening=screening)
 
     def merge_into(pop, new):
         return merge_population(pop, new, tol_similarity, tol_energy, cutoff_energy, cutoff_population)
@@ -335,20 +338,29 @@ def conformational(inputfile="INPUT.txt", reporter=None, problem=None, seeds=Non
         reporter.event("phase", name="polish")
         reporter.log("Final tight re-optimisation of %d structure(s) (fmax = %s eV/A)"
                      % (len(population), ", ".join("%g" % p for p in polish_prec)))
+        if screening == "single":
+            reporter.log("Screening used one ANI network; the final ranking uses the full %s ensemble."
+                         % calculator)
+        done = {m.info["i"]: m for m in ANI(population, opt=calculator, preclist=polish_prec,
+                                            problem=problem, reporter=reporter,
+                                            max_steps=max(max_steps, 600), keep_unconverged=True)}
         polished = []
         for m in population:
-            try:
-                res = ANI([m], opt=calculator, preclist=polish_prec, problem=problem,
-                          reporter=reporter, max_steps=max(max_steps, 600), keep_unconverged=True)
-            except Stopped:
-                raise
-            polished.append(res[0] if res else m)
-        for p, old in zip(polished, population):
-            p.info["i"] = old.info["i"]
+            if m.info["i"] in done:
+                polished.append(done[m.info["i"]])
+            elif screening == "single":
+                # its energy is a single-network one: not comparable with the polished ones
+                reporter.log("%s: dropped (final ensemble re-optimisation failed)" % m.info["i"])
+            else:
+                polished.append(m)
         population = merge_into([], polished)
+        meta["polished"] = True
 
     except Stopped as stop:
         stop_reason = stop.reason
+        if screening == "single" and population and "polished" not in meta:
+            meta["note"] = ("stopped before the final ensemble re-optimisation: energies come from a "
+                            "single ANI network")
         reporter.log("Run stopped (%s); returning the best structures found so far." % stop.reason)
 
     meta.update({

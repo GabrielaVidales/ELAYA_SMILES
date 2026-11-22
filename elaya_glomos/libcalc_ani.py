@@ -95,17 +95,48 @@ def suppress_stdout():
             sys.stdout = old
 
 
+def cpu_quota():
+    """CPUs available to this container (cgroup quota; e.g. 0.1 on a Render free instance)."""
+    try:
+        with open("/sys/fs/cgroup/cpu.max") as fh:                       # cgroup v2: "quota period"
+            quota, period = fh.read().split()[:2]
+        if quota != "max":
+            return float(quota) / float(period)
+    except (OSError, ValueError):
+        pass
+    try:                                                                  # cgroup v1
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as fq, open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as fp:
+            q, per = int(fq.read()), int(fp.read())
+        if q > 0:
+            return q / per
+    except (OSError, ValueError):
+        pass
+    try:
+        return float(len(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        return float(os.cpu_count() or 1)
+
+
+def torch_threads():
+    """ELAYA_TORCH_THREADS (int or 'auto'). auto = whole CPUs of the container, 1..4.
+
+    More threads than CPUs only adds contention: on a 0.1-CPU instance torch must use 1."""
+    env = os.environ.get("ELAYA_TORCH_THREADS", "auto").strip().lower()
+    if env and env != "auto":
+        try:
+            return max(1, int(env))
+        except ValueError:
+            pass
+    return max(1, min(4, int(cpu_quota())))
+
+
 def _prepare_torch():
     """Import torch once and apply thread / compatibility settings."""
     global _TORCH_READY
     import torch
     if not _TORCH_READY:
-        env_threads = os.environ.get("ELAYA_TORCH_THREADS")
         try:
-            if env_threads:
-                torch.set_num_threads(max(1, int(env_threads)))
-            else:
-                torch.set_num_threads(max(1, min(os.cpu_count() or 1, 4)))
+            torch.set_num_threads(torch_threads())
         except Exception:
             pass
         # torchani >= 2.7 calls torch.compiler.is_compiling(); absent in torch < 2.3
@@ -194,38 +225,40 @@ def ANI_single(atoms, opt="ANI1ccx", preclist=(2e-2, 5e-3), max_steps=400, repor
 
 
 def ANI(moleculelist, n_jobs=1, opt="ANI1ccx", preclist=(2e-2, 5e-3), problem=None,
-        reporter=None, max_steps=400, keep_unconverged=False):
-    """Relax a list of structures sequentially.
+        reporter=None, max_steps=400, keep_unconverged=False, sink=None, screening="ensemble"):
+    """Relax a list of conformers of one molecule (batched, see libbatch.relax_many).
 
     in:
-        n_jobs  accepted for backward compatibility; evaluations are parallelised
-                internally by torch instead of by forking processes
-        problem optional glomos.librotamers.Problem for post-relaxation validation
-        keep_unconverged  if False, structures that did not reach the first force
-                threshold are discarded
+        n_jobs  accepted for backward compatibility (unused)
+        problem optional Problem for post-relaxation validation
+        keep_unconverged  if False, structures that did not reach the force threshold are discarded
+        sink    optional list: each valid structure is appended as soon as it finishes, so a
+                cancellation/timeout in the middle of a batch keeps what was already relaxed
+        screening  "ensemble" (all networks) or "single" (first network only; faster, used to
+                screen candidates; the final polish always uses the ensemble)
     out:
-        list of relaxed ase.Atoms (info: e, i, converged, steps, seconds)
+        list of relaxed ase.Atoms in input order (info: e, i, converged, steps, seconds)
     """
-    out = []
-    total = len(moleculelist)
-    for k, mol in enumerate(moleculelist):
-        if reporter is not None:
-            reporter.check()
-        name = mol.info.get("i", "mol%d" % k)
-        try:
-            res = ANI_single(mol, opt, preclist, max_steps, reporter)
-        except (Stopped, ModelLoadError):
-            raise                                      # a missing model is not a per-structure problem
-        except Exception as exc:                       # isolate failures per structure
-            msg = "%s: optimisation failed (%s: %s)" % (name, type(exc).__name__, exc)
-            if reporter is not None:
-                reporter.log(msg)
-            else:
-                print(msg)
-            continue
-        reason = problem.why_invalid(res, check_clash=False) if problem is not None else None
-        if reason is None and not keep_unconverged and not res.info["converged"]:
-            reason = "not converged in %d steps" % res.info["steps"]
+    from elaya_glomos.libbatch import make_evaluator, relax_many
+    mols = list(moleculelist)
+    if not mols:
+        return []
+    calculator = get_calculator(opt)
+    total = len(mols)
+    accepted = {}
+    finished = set()
+
+    def on_done(k, mol, info):
+        finished.add(k)
+        name = mols[k].info.get("i", "mol%d" % k)
+        mol.info["e"] = info["energy_eV"] * eVtokcalpermol
+        mol.info["converged"] = info["converged"]
+        mol.info["steps"] = info["steps"]
+        mol.info["seconds"] = info["seconds"]
+        mol.calc = None
+        reason = problem.why_invalid(mol, check_clash=False) if problem is not None else None
+        if reason is None and not keep_unconverged and not info["converged"]:
+            reason = "not converged in %d steps" % info["steps"]
         if reason is not None:
             msg = "%s: discarded after ANI relaxation (%s)" % (name, reason)
             if reporter is not None:
@@ -233,14 +266,43 @@ def ANI(moleculelist, n_jobs=1, opt="ANI1ccx", preclist=(2e-2, 5e-3), problem=No
                 reporter.event("discard", name=name, reason=reason)
             else:
                 print(msg)
-            continue
-        out.append(res)
+            return
+        accepted[k] = mol
+        if sink is not None:
+            sink.append(mol)
         if reporter is not None:
-            reporter.event("optimized", name=name, index=k + 1, total=total,
-                           energy=res.info["e"], steps=res.info["steps"],
-                           seconds=round(res.info["seconds"], 2))
+            reporter.event("optimized", name=name, index=len(accepted), total=total,
+                           energy=mol.info["e"], steps=info["steps"], seconds=round(info["seconds"], 2))
             reporter.log("%s  E = %.4f kcal/mol  (%d steps, %.1f s)"
-                         % (name, res.info["e"], res.info["steps"], res.info["seconds"]))
+                         % (name, mol.info["e"], info["steps"], info["seconds"]))
         else:
-            print("%s  E = %.4f kcal/mol  (%d steps)" % (name, res.info["e"], res.info["steps"]))
-    return out
+            print("%s  E = %.4f kcal/mol  (%d steps)" % (name, mol.info["e"], info["steps"]))
+
+    check = reporter.check if reporter is not None else None
+    try:
+        evaluator = make_evaluator(calculator, mols[0], screening)
+        relax_many(mols, evaluator, preclist, max_steps, check=check, on_done=on_done)
+    except (Stopped, ModelLoadError):
+        raise
+    except Exception as exc:                           # noqa: BLE001
+        # isolate the failing structure(s): retry one by one with whatever did not finish
+        msg = "batch relaxation failed (%s: %s); retrying one by one" % (type(exc).__name__, exc)
+        if reporter is not None:
+            reporter.log(msg)
+        else:
+            print(msg)
+        for k in [k for k in range(total) if k not in finished]:
+            name = mols[k].info.get("i", "mol%d" % k)
+            try:
+                ev = make_evaluator(calculator, mols[k], screening)
+                relax_many([mols[k]], ev, preclist, max_steps, check=check,
+                           on_done=lambda _i, mol, info, k=k: on_done(k, mol, info))
+            except (Stopped, ModelLoadError):
+                raise
+            except Exception as exc2:                  # noqa: BLE001
+                msg = "%s: optimisation failed (%s: %s)" % (name, type(exc2).__name__, exc2)
+                if reporter is not None:
+                    reporter.log(msg)
+                else:
+                    print(msg)
+    return [accepted[k] for k in sorted(accepted)]

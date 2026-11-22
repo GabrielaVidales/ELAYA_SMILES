@@ -36,8 +36,8 @@ SMILES (Simplified Molecular Input Line Entry System) provides a compact way to 
 
 ## Features
 
-- **Multi-method SMILES → 3D conversion** — RDKit (ETKDGv3), OpenBabel, and NetworkX topological approximation
-- **Interactive 3D molecular viewer** — Rotate, zoom, and inspect structures in the browser
+- **Multi-method SMILES → 3D conversion** — RDKit (ETKDGv3), OpenBabel, and NetworkX (Kamada-Kawai layout with topological distance targets and stereo correction; approximate)
+- **Interactive 3D molecular viewer** — Rotate, zoom, and inspect structures in the browser; double and aromatic (Kekulé) bonds drawn from the MOL block; stereo / bond checks and rotational constants shown under the viewer
 - **Force field optimization** — Geometry refinement via UFF and MMFF94
 - **Conformational search with GLOMOS** — genetic algorithm in torsion space with ANI-1ccx / ANI-2x potentials; live progress, cancel, presets, reproducible seeds
 - **Ensemble results** — relative energies, Boltzmann populations (298 K), rotational constants A/B/C, click-to-view conformers
@@ -128,6 +128,13 @@ The app will be available at `http://localhost:5000`.
    stereocentre and E/Z checks (before *and after* ANI relaxation). Stops on max generations, stagnation, time limit or cancel.
 5. **Final polish** at fmax = 1e-3 eV/Å, ensemble with relative energies, populations and rotational constants.
 
+**Performance.** All candidates of a generation are relaxed together: one batched ANI evaluation per optimisation step
+(`elaya_glomos/libbatch.py`, an exact re-implementation of `ase.optimize.LBFGS` run independently for every structure, so the
+trajectories are identical to relaxing them one by one; checked in `tests/test_batch_relax.py`). On CPU this is ~2.5–3x faster.
+Optional **screening with one ANI network** (`screening: "single"`, "Screening" in the GLOMOS panel) is ~3x faster again; the final
+re-optimisation and ranking always use the full ensemble. Use the default (`"ensemble"`) for reference/published results.
+`ELAYA_TORCH_THREADS=auto` uses as many torch threads as whole CPUs in the container (1 on fractional-CPU instances).
+
 ANI model *Auto* picks ANI-1ccx for H,C,N,O and ANI-2x when F, S or Cl is present. Open-shell molecules and elements outside
 ANI are rejected with an explanation; charged species trigger a warning (ANI is trained on neutral molecules).
 
@@ -147,7 +154,7 @@ Command-line use (same code as the web job): see `validation/run_validation.py` 
 | `GET /api/glomos/result/<id>[?format=xyz]` | final ensemble |
 
 Environment: `ELAYA_MAX_JOBS` (concurrent GLOMOS jobs, default 1), `ELAYA_MAX_MINUTES` (per-job limit, default 20),
-`ELAYA_TORCH_THREADS`, `ELAYA_ANI_DTYPE` (`float64` default), `ELAYA_JOB_TTL_MIN`, `ELAYA_CORS_ORIGINS`.
+`ELAYA_TORCH_THREADS` (`auto` = whole CPUs of the container), `ELAYA_ANI_DTYPE` (`float64` default), `ELAYA_JOB_TTL_MIN`, `ELAYA_CORS_ORIGINS`.
 
 ## Tests and validation
 

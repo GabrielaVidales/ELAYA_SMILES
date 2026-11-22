@@ -171,7 +171,7 @@ def test_merge_keeps_lower_energy_duplicate(hexane_skeleton):
     atoms, _, _ = hexane_skeleton
     old = atoms.copy(); old.info.update(e=-100.00, i="old")
     twin = atoms.copy(); twin.info.update(e=-100.08, i="new")       # same geometry, 0.08 lower
-    other = atoms.copy(); other.positions[0] += [3.0, 0.0, 0.0]; other.info.update(e=-99.0, i="other")
+    other = atoms.copy(); pos = other.get_positions(); pos[0] += [3.0, 0.0, 0.0]; other.set_positions(pos); other.info.update(e=-99.0, i="other")
     out = merge_population([old, other], [twin], 0.95, 0.1, 10.0, 10)
     names = [a.info["i"] for a in out]
     assert "new" in names and "old" not in names and "other" in names

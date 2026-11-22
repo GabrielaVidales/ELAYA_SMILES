@@ -62,27 +62,89 @@ class MolecularTools:
         syms = [ec.Z_TO_SYMBOL.get(a.atomicnum) or _symbol(a.atomicnum) for a in mol.atoms]
         pos = np.array([a.coords for a in mol.atoms])
         xyz = ec.format_xyz(syms, pos, "%s | %s" % (identifier, smiles))
+        qa = None
+        try:                                                  # same atom order as RDKit for ELAYA's SMILES
+            qa = ec.stereo_qa(ec.mol_with_coords(smiles, xyz), smiles, 0)
+        except Exception:                                     # noqa: BLE001
+            pass
         return {"xyz": xyz, "mol": mol.write("sdf"),
                 "info": {"method": "openbabel", "force_field": used, "embedding": "OBBuilder"},
-                "stereo_qa": None, "atom_order": "openbabel"}
+                "stereo_qa": qa, "atom_order": "openbabel"}
 
     # ---------------------------------------------------------------------------------
     def networkx_conversion(self, smiles, identifier="mol1"):
-        """Graph layout in 3D (NOT a molecular geometry): only useful as a rough sketch."""
+        """3D graph layout with NetworkX (Kamada-Kawai stress majorisation).
+
+        Target distances for every atom pair come from the molecular graph (RDKit topological
+        distance bounds: bond lengths, 1-3 distances from ideal angles, ring and 1-4 limits), so
+        the layout has chemically sensible bond lengths and angles. Distances cannot tell
+        enantiomers apart: wrongly oriented stereocentres / double bonds are inverted afterwards
+        and the layout is relaxed again. Still an approximate sketch: no force field.
+        """
         import networkx as nx
         from rdkit import Chem
+        from rdkit.Chem import rdDistGeom
         mol = Chem.AddHs(ec.parse_smiles(smiles))
+        n = mol.GetNumAtoms()
         G = nx.Graph()
-        G.add_nodes_from(range(mol.GetNumAtoms()))
+        G.add_nodes_from(range(n))
         G.add_edges_from((b.GetBeginAtomIdx(), b.GetEndAtomIdx()) for b in mol.GetBonds())
-        pos = nx.spring_layout(G, dim=3, k=5, iterations=800, scale=3.4, seed=586)
-        coords = np.array([pos[i] for i in range(mol.GetNumAtoms())])
+        B = rdDistGeom.GetMoleculeBoundsMatrix(mol)       # upper triangle: upper bounds; lower: lower
+        # through-bond path length (A) for pairs without a finite upper bound: using only the
+        # lower bound (~van der Waals contact) as target would pull distant atoms together
+        bl = {(b.GetBeginAtomIdx(), b.GetEndAtomIdx()): 0.5 * (B[b.GetEndAtomIdx(), b.GetBeginAtomIdx()]
+                                                              + B[b.GetBeginAtomIdx(), b.GetEndAtomIdx()])
+              if b.GetBeginAtomIdx() < b.GetEndAtomIdx() else
+              0.5 * (B[b.GetBeginAtomIdx(), b.GetEndAtomIdx()] + B[b.GetEndAtomIdx(), b.GetBeginAtomIdx()])
+              for b in mol.GetBonds()}
+        Gw = nx.Graph()
+        Gw.add_weighted_edges_from((i, j, w_) for (i, j), w_ in bl.items())
+        path = dict(nx.all_pairs_dijkstra_path_length(Gw))
+        T = np.zeros((n, n))
+        for i in range(n):
+            for j in range(i + 1, n):
+                lo, hi = B[j, i], B[i, j]
+                if hi < 50.0:
+                    t = 0.5 * (lo + hi)
+                else:
+                    t = max(lo, 0.8 * path.get(i, {}).get(j, lo))
+                T[i, j] = T[j, i] = t
+        dist = {i: {j: float(T[i, j]) for j in range(n)} for i in range(n)}
+        iu = np.triu_indices(n, 1)
+        w = 1.0 / T[iu] ** 2
+
+        def layout(start):
+            pos = nx.kamada_kawai_layout(G, dist=dist, pos={i: start[i] for i in range(n)}, dim=3, scale=1.0)
+            P = np.array([pos[i] for i in range(n)])
+            d = np.linalg.norm(P[:, None] - P[None], axis=-1)[iu]
+            P *= (w * d * T[iu]).sum() / (w * d * d).sum()  # least-squares scale back to angstrom
+            return P - P.mean(axis=0)
+
+        rng = np.random.default_rng(586)
+        P = layout(rng.normal(size=(n, 3)))
         syms = [a.GetSymbol() for a in mol.GetAtoms()]
-        xyz = ec.format_xyz(syms, coords, "%s | %s | APPROXIMATE graph layout" % (identifier, smiles))
-        return {"xyz": xyz, "mol": None,
+        fixed = 0
+        for _ in range(6):
+            wrong = _wrong_stereo(mol, smiles, P)
+            if not wrong:
+                break
+            for kind, idx in wrong:
+                P = _invert_stereo(mol, P, kind, idx)
+                fixed += 1
+            P = layout(P)
+        xyz = ec.format_xyz(syms, P, "%s | %s | NetworkX graph layout (approximate)" % (identifier, smiles))
+        molblock = None
+        try:
+            m3 = ec.mol_with_coords(smiles, xyz)
+            molblock = Chem.MolToMolBlock(m3)
+            qa = ec.stereo_qa(m3, smiles, 0)
+        except Exception:                                    # noqa: BLE001
+            qa = None
+        return {"xyz": xyz, "mol": molblock,
                 "info": {"method": "networkx", "force_field": "none",
-                         "embedding": "spring layout (not a real geometry)"},
-                "stereo_qa": None, "atom_order": "rdkit", "approximate": True}
+                         "embedding": "Kamada-Kawai layout with topological distance targets (approximate)",
+                         "stereo_inversions": fixed},
+                "stereo_qa": qa, "atom_order": "rdkit", "approximate": True}
 
     # ---------------------------------------------------------------------------------
     def convert(self, smiles, method="rdkit", force_field="mmff", identifier="mol1", seed=665):
@@ -163,3 +225,76 @@ def _symbol(z):
         return Chem.GetPeriodicTable().GetElementSymbol(int(z))
     except Exception:                                             # noqa: BLE001
         raise ChemError("Unknown atomic number %s" % z)
+
+
+def _wrong_stereo(mol, smiles, P):
+    """[(kind, index)] of stereocentres ('atom') / double bonds ('bond') that P gets wrong."""
+    from rdkit import Chem
+    ref = ec.parse_smiles(smiles)
+    want_c = dict(Chem.FindMolChiralCenters(ref, includeUnassigned=False, useLegacyImplementation=False))
+    want_b = {b.GetIdx(): b.GetStereo() for b in ref.GetBonds()
+              if b.GetStereo() in (Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ,
+                                   Chem.BondStereo.STEREOCIS, Chem.BondStereo.STEREOTRANS)}
+    if not want_c and not want_b:
+        return []
+    m3 = Chem.Mol(mol)
+    m3.RemoveAllConformers()
+    conf = Chem.Conformer(m3.GetNumAtoms())
+    for i, p in enumerate(P):
+        conf.SetAtomPosition(i, [float(v) for v in p])
+    m3.AddConformer(conf, assignId=True)
+    Chem.AssignStereochemistryFrom3D(m3, confId=0, replaceExistingTags=True)
+    got_c = dict(Chem.FindMolChiralCenters(m3, includeUnassigned=False, useLegacyImplementation=False))
+    out = [("atom", i) for i, c in want_c.items() if got_c.get(i) != c]
+    for bi, st in want_b.items():
+        if str(m3.GetBondWithIdx(bi).GetStereo()) != str(st):
+            out.append(("bond", bi))
+    return out
+
+
+def _branch(mol, root, blocked):
+    """Atoms reachable from ``root`` without crossing ``blocked`` (None if that loops back)."""
+    seen, stack = {root}, [root]
+    while stack:
+        a = stack.pop()
+        for nb in mol.GetAtomWithIdx(a).GetNeighbors():
+            j = nb.GetIdx()
+            if j == blocked and a != root:
+                return None                                # ring: the branch is not separable
+            if j != blocked and j not in seen:
+                seen.add(j)
+                stack.append(j)
+    return seen
+
+
+def _invert_stereo(mol, P, kind, idx):
+    """Invert one stereocentre (reflect its smallest branch through the plane of the other
+    three neighbours) or one double bond (rotate one side by 180 degrees)."""
+    P = P.copy()
+    if kind == "atom":
+        nbrs = [nb.GetIdx() for nb in mol.GetAtomWithIdx(idx).GetNeighbors()]
+        branches = [(len(b), k, b) for k, b in ((k, _branch(mol, k, idx)) for k in nbrs) if b]
+        if not branches or len(nbrs) < 3:
+            return P
+        _, k, branch = min(branches)
+        others = [j for j in nbrs if j != k][:3]
+        if len(others) == 3:
+            a, b, c = (P[j] for j in others)
+            nrm = np.cross(b - a, c - a)
+        else:                                              # 3-coordinate centre: plane of centre + 2 neighbours
+            a, b, c = P[idx], P[others[0]], P[others[1]]
+            nrm = np.cross(b - a, c - a)
+        nrm /= np.linalg.norm(nrm) or 1.0
+        for j in branch:
+            P[j] -= 2.0 * np.dot(P[j] - a, nrm) * nrm
+    else:
+        bond = mol.GetBondWithIdx(idx)
+        i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+        side = _branch(mol, j, i)
+        if side:
+            axis = P[j] - P[i]
+            axis /= np.linalg.norm(axis) or 1.0
+            for k in side:                                  # 180 degree rotation about the bond axis
+                v = P[k] - P[j]
+                P[k] = P[j] + 2.0 * np.dot(v, axis) * axis - v
+    return P
