@@ -18,13 +18,14 @@ Endpoints
 Heavy libraries (RDKit, torch, ASE) are imported lazily; the GA runs in a subprocess.
 """
 import importlib.util
+import json
 import os
 import sys
 import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.0.2"
+VERSION = "2.0.3"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -138,15 +139,37 @@ def version():
     return jsonify({"version": VERSION, "python": sys.version.split()[0]})
 
 
-def selftest_ani():
-    """Real ANI calculation on water (a few seconds). Used by /api/health?deep=1."""
-    t0 = time.time()
-    from ase import Atoms
-    from elaya_glomos.libcalc_ani import ANI_single, torchani_versions
-    water = Atoms("OHH", positions=[[0, 0, 0], [0.96, 0, 0], [-0.24, 0.93, 0]])
-    res = ANI_single(water, "ANI1ccx")
-    return {"ok": True, "energy_kcal": res.info["e"], "converged": res.info["converged"],
-            "seconds": round(time.time() - t0, 1), "versions": torchani_versions()}
+_SELFTEST_CODE = r"""
+import json, sys, time
+sys.path.insert(0, sys.argv[1])
+t0 = time.time()
+from ase import Atoms
+from elaya_glomos.libcalc_ani import ANI_single, torchani_versions
+water = Atoms("OHH", positions=[[0, 0, 0], [0.96, 0, 0], [-0.24, 0.93, 0]])
+res = ANI_single(water, "ANI1ccx")
+print("@@SELFTEST@@" + json.dumps({"ok": True, "energy_kcal": res.info["e"], "converged": res.info["converged"],
+      "seconds": round(time.time() - t0, 1), "versions": torchani_versions()}))
+"""
+
+
+def selftest_ani(timeout=300):
+    """Real ANI calculation on water. Used by /api/health?deep=1.
+
+    Runs in a separate process: importing torch inside the web server would keep ~250 MB
+    resident for the life of the process (and can get the whole service OOM-killed on 512 MB)."""
+    import subprocess
+    try:
+        proc = subprocess.run([sys.executable, "-W", "ignore", "-c", _SELFTEST_CODE, HERE],
+                              capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "ANI self-test did not finish in %d s (server too slow?)" % timeout}
+    for line in proc.stdout.splitlines():
+        if line.startswith("@@SELFTEST@@"):
+            return json.loads(line[len("@@SELFTEST@@"):])
+    if proc.returncode is not None and proc.returncode < 0:
+        return {"ok": False, "error": "self-test killed by signal %d (out of memory?)" % -proc.returncode}
+    tail = (proc.stderr or proc.stdout).strip().splitlines()[-3:]
+    return {"ok": False, "error": " | ".join(tail) or "exit code %s" % proc.returncode}
 
 
 def memory_limit_mb():
@@ -202,6 +225,8 @@ def health():
     if request.args.get("deep") and out["glomos_ready"]:
         try:
             out["ani_selftest"] = selftest_ani()
+            if not out["ani_selftest"].get("ok"):
+                out["status"] = "degraded"
         except Exception as exc:                                # noqa: BLE001
             out["status"] = "degraded"
             out["ani_selftest"] = {"ok": False, "error": "%s: %s" % (type(exc).__name__, exc)}

@@ -1391,12 +1391,14 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
             return;
         }
 
+        const isVisible = () => !document.hidden && targetContainer.offsetWidth > 0 && targetContainer.offsetHeight > 0;
+
         try {
             viewer.addModel(modelData, format, { keepH: true, noComputeSecondaryStructure: true });
             viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.25 } });
             viewer.zoomTo();
             viewer.zoom(1);
-            viewer.render();
+            if (isVisible()) viewer.render();      // a hidden (0×0) canvas would raise WebGL errors
         } catch (e) {
             console.error("❌ Error al renderizar modelo:", e);
             targetContainer.innerHTML = '<div class="placeholder error">Error al renderizar molécula</div>';
@@ -1406,10 +1408,9 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         // Skip frames while the viewer is hidden (another section shown, panel collapsed, tab in
         // background): rendering into a 0×0 canvas floods the console with
         // GL_INVALID_FRAMEBUFFER_OPERATION. Resize once when it becomes visible again.
-        let wasHidden = false;
+        let wasHidden = !isVisible();
         const animate = () => {
-            const hidden = document.hidden || targetContainer.offsetWidth === 0 || targetContainer.offsetHeight === 0;
-            if (hidden) {
+            if (!isVisible()) {
                 wasHidden = true;
             } else {
                 if (wasHidden) {
@@ -1431,7 +1432,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         if (placeholder) placeholder.style.display = 'none';
 
         setTimeout(() => {
-            try { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); }
+            try { if (isVisible()) { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); } else { viewer.zoomTo(1.2); } }
             catch (err) { console.warn("⚠ Error al redibujar viewer:", err); }
         }, 150);
     }

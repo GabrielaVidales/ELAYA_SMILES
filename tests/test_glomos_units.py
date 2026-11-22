@@ -162,3 +162,17 @@ def test_explain_model_error_messages():
     import zipfile
     assert "setuptools<81" in _explain_model_error("ANI1ccx", ModuleNotFoundError("No module named 'pkg_resources'"))
     assert "Docker" in _explain_model_error("ANI2x", zipfile.BadZipFile("File is not a zip file"))
+
+
+def test_merge_keeps_lower_energy_duplicate(hexane_skeleton):
+    """A newcomer that duplicates a population member but is lower in energy must replace it
+    (seen in a real dopamine run: mutant at -0.08 kcal/mol below its twin was dropped)."""
+    from elaya_glomos.heuristic_ga_rotamers import merge_population
+    atoms, _, _ = hexane_skeleton
+    old = atoms.copy(); old.info.update(e=-100.00, i="old")
+    twin = atoms.copy(); twin.info.update(e=-100.08, i="new")       # same geometry, 0.08 lower
+    other = atoms.copy(); other.positions[0] += [3.0, 0.0, 0.0]; other.info.update(e=-99.0, i="other")
+    out = merge_population([old, other], [twin], 0.95, 0.1, 10.0, 10)
+    names = [a.info["i"] for a in out]
+    assert "new" in names and "old" not in names and "other" in names
+    assert [a.info["e"] for a in out] == sorted(a.info["e"] for a in out)

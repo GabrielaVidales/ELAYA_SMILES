@@ -42,7 +42,7 @@ from elaya_glomos.libstdio import read_main_input
 from elaya_glomos.librotamers import (Problem, build_rotors, make_random_rotamers,
                                 make_crossover_rotamers, make_mutant_rotamers)
 from elaya_glomos.libsel_roulette import get_fitness, get_roulette_wheel_selection
-from elaya_glomos.libdisc_usr import deduplicate_by_usr, filter_against_reference_usr
+from elaya_glomos.libdisc_usr import deduplicate_by_usr
 from elaya_glomos.libcalc_ani import ANI, get_calculator
 from elaya_glomos.libreport import Reporter, Stopped, console_reporter
 
@@ -132,6 +132,21 @@ def _write_result(path, pop, meta, partial):
 
 
 # ------------------------------------------------------------------------------
+
+def merge_population(pop, new, tol_similarity, tol_energy, cutoff_energy, cutoff_population):
+    """Merge ``new`` into ``pop``, remove duplicates, apply the energy window, truncate.
+
+    Duplicates are resolved over the union, so the LOWER-energy member of each pair survives
+    even when it is the newcomer (2.0.2 filtered ``new`` against ``pop`` and therefore kept the
+    older, higher-energy copy of the same basin)."""
+    merged = sort_by_energy(list(pop) + list(new or []), 1)
+    if merged:
+        merged = deduplicate_by_usr(merged, tol_similarity, tol_energy, flag=0)
+        e0 = float(merged[0].info["e"])
+        merged = [a for a in merged if float(a.info["e"]) - e0 <= cutoff_energy]
+    return merged[:cutoff_population]
+
+
 def conformational(inputfile="INPUT.txt", reporter=None, problem=None, seeds=None):
     """Run the GLOMOS rotamer GA.
 
@@ -237,17 +252,7 @@ def conformational(inputfile="INPUT.txt", reporter=None, problem=None, seeds=Non
                                  reporter=reporter, max_steps=max_steps))
 
     def merge_into(pop, new):
-        """Dedupe ``new`` (inside and against ``pop``), merge, window, truncate."""
-        if new:
-            new = sort_by_energy(new, 1)
-            new = deduplicate_by_usr(new, tol_similarity, tol_energy, flag=0)
-            if pop:
-                new = filter_against_reference_usr(new, pop, tol_similarity, tol_energy, flag=0)
-        merged = sort_by_energy(pop + new, 1)
-        if merged:
-            e0 = float(merged[0].info["e"])
-            merged = [a for a in merged if float(a.info["e"]) - e0 <= cutoff_energy]
-        return merged[:cutoff_population]
+        return merge_population(pop, new, tol_similarity, tol_energy, cutoff_energy, cutoff_population)
 
     try:
         # ---- generation 0 -------------------------------------------------------

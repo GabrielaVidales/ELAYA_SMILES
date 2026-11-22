@@ -114,3 +114,19 @@ def test_health_reports_ani_weights_and_memory(client):
     assert "memory_limit_mb" in r
     if r["libraries"]["torchani"]:
         assert set(r["ani_weights"]) == {"ANI1x", "ANI1ccx", "ANI2x"}
+
+
+def test_deep_selftest_runs_out_of_process(client, monkeypatch):
+    """deep=1 must not import torch into the web process."""
+    import subprocess
+    calls = []
+
+    class R:
+        returncode, stderr = 0, ""
+        stdout = '@@SELFTEST@@{"ok": true, "energy_kcal": -47931.4, "converged": true, "seconds": 1.0, "versions": {}}\n'
+
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: calls.append(cmd) or R())
+    monkeypatch.setattr(appmod, "_have", lambda m: True)
+    r = client.get("/api/health?deep=1").get_json()
+    if r.get("glomos_ready"):
+        assert calls and r["ani_selftest"]["ok"] is True

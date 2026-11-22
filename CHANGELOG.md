@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.3
+
+* **GA duplicate handling kept the wrong copy.** When an offspring was a duplicate (same USR shape,
+  |dE| <= tol_energy) of a structure already in the population, the offspring was always dropped, even
+  when it was lower in energy. Seen on the production server with dopamine: `mutant_002_0002`
+  (-323869.198 kcal/mol) was discarded in favour of `random_000_0001` (-323869.119). Duplicates are now
+  resolved over the union of population and offspring (`merge_population`), so the lower-energy
+  member always survives. Regression test added.
+* `/api/health?deep=1` runs the ANI self-test in a separate process (with a timeout). Before, it imported
+  torch into the web server, which then kept ~250 MB for the life of the process (half of a 512 MB instance).
+* Frontend: no `viewer.render()` while the 3D viewer is hidden (removes the last
+  `GL_INVALID_FRAMEBUFFER_OPERATION` lines).
+
 ## 2.0.2
 
 * **The local GLOMOS package is now `elaya_glomos/` (was `glomos/`).** PyPI has an unrelated `glomos` package
