@@ -16,6 +16,12 @@ RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir -r requirements.txt
 
+# torchani 2.2.4 ships EMPTY placeholder parameter files and downloads the real ones from GitHub
+# the first time a model is built. Doing that inside the first GLOMOS job (and again after every
+# container restart) costs time and memory and fails if GitHub is unreachable. Download them now;
+# the build fails here, loudly, if they cannot be obtained.
+RUN python -W ignore -c "import torchani; [getattr(torchani.models, m)() for m in ('ANI1x', 'ANI1ccx', 'ANI2x')]; print('ANI parameters installed')"
+
 COPY . .
 
 ENV PYTHONUNBUFFERED=1 \

@@ -1,5 +1,44 @@
 # Changelog
 
+## 2.0.1
+
+### Why GLOMOS still failed in 2.0.0 (found by running the real pipeline: RDKit + ASE + torch + torchani)
+v2.0.0 was written and tested only with stand-ins for RDKit/ASE (see `tests/conftest.py`), so these were never exercised:
+
+1. **`Bond.IsInRingOfSize` does not exist in RDKit** (the method is `IsInRingSize`). It is only evaluated for double
+   bonds, so butane or glucose worked, but *every molecule with C=O or C=C* (peptides, aspirin, dopamine, the
+   examples...) made `/api/analyze` and `/api/glomos/start` fail with HTTP 500.
+2. **`torchani 2.2.4` imports `pkg_resources`**, removed in setuptools >= 81. On a fresh install every ANI
+   optimisation failed; because errors were caught per structure, the only visible message was
+   "All starting structures were discarded after ANI relaxation". `setuptools<81` is now pinned.
+3. **torchani 2.2.4 ships empty parameter files** and downloads the ANI weights from GitHub the first time a model
+   is built, i.e. inside the first GLOMOS job and again after every container restart (time, memory, network).
+   The Dockerfile now downloads them at build time and the build fails if it cannot.
+
+### Fixed / improved
+* The ANI model is built once, before generation 0; a load failure stops the job with one actionable message
+  (`ModelLoadError`) instead of one "optimisation failed" per structure.
+* torchani deprecation warnings no longer appear in the job log.
+* Worker killed by a signal (e.g. out of memory) is reported as such; an error reported by the worker is no longer
+  duplicated in the event stream.
+* `/api/glomos/poll` never returns an opaque 500: errors come back as JSON with the cause (and a traceback in the
+  server log). The web client shows that message, recognises 502/503/504 as "server restarting" and, if the job is
+  then gone, says the server most likely ran out of memory.
+* `/api/health` reports `ani_weights` (which ANI parameter sets are installed) and the container memory limit
+  (`memory_limit_mb`, with a warning below 1 GB).
+* `/api/convert` no longer fails for elements without a tabulated mass (e.g. Na): the structure is returned with
+  `rotational_constants: null`.
+* Frontend: JSZip was loaded twice and the second tag had an invalid SRI hash (the browser blocked it); the 3Dmol
+  rotation loop no longer renders into a hidden 0x0 canvas (`GL_INVALID_FRAMEBUFFER_OPERATION` flood).
+* `validation/run_validation.py` exits with a clear message when the ANI parameters are missing.
+
+### Tests (34 -> 56)
+* `ToyCalculator` is a real ASE calculator when ASE is installed (the GA tests failed with the real ASE).
+* `tests/test_chem_rdkit.py` (real RDKit: stereo summary, report, seed pool) and `tests/test_pipeline_real.py`
+  (full GA with real RDKit + ASE on butane, glucose and Gly-Leu-Leu-NH2, using MMFF94 as a stand-in potential
+  so no download is needed; checks stereo and bond graph of every conformer).
+* Regression tests for model-load failure, OOM-killed worker, non-duplicated errors and poll errors.
+
 ## 2.0.0
 
 ### Why GLOMOS did not run in v1 (root causes found by reading the code)

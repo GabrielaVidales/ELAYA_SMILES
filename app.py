@@ -24,7 +24,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -149,6 +149,21 @@ def selftest_ani():
             "seconds": round(time.time() - t0, 1), "versions": torchani_versions()}
 
 
+def memory_limit_mb():
+    """cgroup memory limit of the container in MB (None if unlimited / unknown)."""
+    for path in ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            with open(path) as fh:
+                raw = fh.read().strip()
+            if raw and raw != "max":
+                v = int(raw)
+                if v < (1 << 50):                               # v1 reports a huge number when unlimited
+                    return v // (1024 * 1024)
+        except (OSError, ValueError):
+            continue
+    return None
+
+
 @app.route("/api/health")
 def health():
     libs = {m: _have(m) for m in ("rdkit", "openbabel", "networkx", "torch", "torchani", "ase", "scipy")}
@@ -166,6 +181,16 @@ def health():
            "max_concurrent_jobs": int(os.environ.get("ELAYA_MAX_JOBS", "1"))}
     if not out["glomos_ready"]:
         out["missing_for_glomos"] = [m for m in ("rdkit", "torch", "torchani", "ase", "scipy") if not libs[m]]
+    if libs["torchani"]:
+        try:
+            from glomos.libcalc_ani import ani_weights_status
+            out["ani_weights"] = ani_weights_status()
+        except Exception:                                       # noqa: BLE001
+            out["ani_weights"] = None
+    out["memory_limit_mb"] = memory_limit_mb()
+    if out["memory_limit_mb"] and out["memory_limit_mb"] < 1000:
+        out["memory_warning"] = ("Container memory limit is %d MB: GLOMOS (torch + ANI) needs ~1 GB; "
+                                 "jobs may be killed." % out["memory_limit_mb"])
     if request.args.get("deep") and out["glomos_ready"]:
         try:
             out["ani_selftest"] = selftest_ani()
@@ -292,10 +317,15 @@ def glomos_poll(job_id):
         cursor = int(request.args.get("cursor", 0))
     except ValueError:
         cursor = 0
-    out = jobs().poll(job_id, cursor)
-    if out is None:
-        return err("Job not found (it expired or the server restarted)", 404)
-    return jsonify(out)
+    try:
+        out = jobs().poll(job_id, cursor)
+        if out is None:
+            return err("Job not found (it expired or the server restarted)", 404)
+        return jsonify(out)
+    except Exception as exc:                                    # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        return err("Poll failed: %s: %s" % (type(exc).__name__, exc), 500)
 
 
 @app.route("/api/glomos/cancel/<job_id>", methods=["POST"])

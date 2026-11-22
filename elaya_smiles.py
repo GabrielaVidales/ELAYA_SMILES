@@ -96,7 +96,10 @@ class MolecularTools:
         else:
             raise ChemError("Unsupported method: %s" % method)
         syms, pos = ec.parse_xyz(res["xyz"])
-        res["rotational_constants"] = ec.rotational_constants(syms, pos)
+        try:
+            res["rotational_constants"] = ec.rotational_constants(syms, pos)
+        except ChemError:                       # element without a tabulated mass: still return the structure
+            res["rotational_constants"] = None
         res["connectivity_check"] = self.check_bonds(smiles, syms, pos)
         return res
 

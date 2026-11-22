@@ -166,9 +166,10 @@ def _stereo_info(mol):
     specified = [(i, c) for i, c in centers if c in ("R", "S")]
     unspecified = [i for i, c in centers if c not in ("R", "S")]
     dbl = {"E": 0, "Z": 0, "undefined": 0}
+    ranks = None
     for b in mol.GetBonds():
-        if b.GetBondType() != Chem.BondType.DOUBLE or b.IsInRingOfSize(3) or b.IsInRingOfSize(4) \
-                or b.IsInRingOfSize(5) or b.IsInRingOfSize(6) or b.IsInRingOfSize(7):
+        # double bonds in rings of 3-7 atoms cannot be E/Z-isomeric (RDKit API: IsInRingSize)
+        if b.GetBondType() != Chem.BondType.DOUBLE or any(b.IsInRingSize(n) for n in range(3, 8)):
             continue
         st = b.GetStereo()
         if st in (Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOTRANS):
@@ -181,8 +182,10 @@ def _stereo_info(mol):
             if a1.GetDegree() >= 2 and a2.GetDegree() >= 2:
                 nb1 = {n.GetIdx() for n in a1.GetNeighbors()} - {a2.GetIdx()}
                 nb2 = {n.GetIdx() for n in a2.GetNeighbors()} - {a1.GetIdx()}
-                r1 = {Chem.CanonicalRankAtoms(mol, breakTies=False)[i] for i in nb1}
-                r2 = {Chem.CanonicalRankAtoms(mol, breakTies=False)[i] for i in nb2}
+                if ranks is None:
+                    ranks = list(Chem.CanonicalRankAtoms(mol, breakTies=False))
+                r1 = {ranks[i] for i in nb1}
+                r2 = {ranks[i] for i in nb2}
                 if len(r1) == len(nb1) and len(r2) == len(nb2):
                     dbl["undefined"] += 1
     return specified, unspecified, dbl

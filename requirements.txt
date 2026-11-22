@@ -19,3 +19,8 @@ networkx>=3.2
 # GLOMOS (ANI potentials)
 ase>=3.22
 torchani==2.2.4
+# torchani 2.2.4 does `from pkg_resources import ...`; pkg_resources was removed in setuptools 81.
+# Without this pin every ANI optimisation fails with "No module named 'pkg_resources'".
+setuptools<81
+# torchani downloads its parameters with requests (done once at image build time, see Dockerfile)
+requests>=2.31

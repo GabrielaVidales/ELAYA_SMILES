@@ -313,10 +313,15 @@ class JobManager:
         else:
             job.status = "error"
             if err_evt:
-                job.error = err_evt.get("message")
+                job.error = err_evt.get("message")       # already in the event stream: do not repeat it
             else:
-                job.error = ("GLOMOS worker exited with code %s. %s" % (returncode, " | ".join(tail[-3:]))).strip()
-            job.push({"type": "error", "message": job.error})
+                if returncode is not None and returncode < 0:
+                    why = ("the worker was killed by signal %d (out of memory? GLOMOS needs ~1 GB of RAM)"
+                           % -returncode)
+                else:
+                    why = "GLOMOS worker exited with code %s." % returncode
+                job.error = ("%s %s" % (why, " | ".join(tail[-3:]))).strip()
+                job.push({"type": "error", "message": job.error})
         job.result = result
         job.finished = time.time()
         job.push({"type": "end", "status": job.status})

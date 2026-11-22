@@ -1403,10 +1403,23 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
             return;
         }
 
+        // Skip frames while the viewer is hidden (another section shown, panel collapsed, tab in
+        // background): rendering into a 0×0 canvas floods the console with
+        // GL_INVALID_FRAMEBUFFER_OPERATION. Resize once when it becomes visible again.
+        let wasHidden = false;
         const animate = () => {
-            if (!isRotationPaused) {
-                viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
-                viewer.render();
+            const hidden = document.hidden || targetContainer.offsetWidth === 0 || targetContainer.offsetHeight === 0;
+            if (hidden) {
+                wasHidden = true;
+            } else {
+                if (wasHidden) {
+                    wasHidden = false;
+                    try { viewer.resize(); } catch (e) { /* ignore */ }
+                }
+                if (!isRotationPaused) {
+                    viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
+                    viewer.render();
+                }
             }
             rotationAnimationId = requestAnimationFrame(animate);
         };

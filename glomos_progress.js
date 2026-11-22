@@ -138,7 +138,7 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
     cancel: _gl('gl-cancel'),
   };
   const t0 = Date.now();
-  let jobId = null, cursor = 0, stopped = false, timer = null, errors = 0, nEval = 0;
+  let jobId = null, cursor = 0, stopped = false, timer = null, errors = 0, nEval = 0, gatewayErrors = 0;
   let totalGen = glomosParams.generations ?? 3;
   let genTimes = [];
 
@@ -220,8 +220,21 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
     if (stopped) return;
     fetch(`/api/glomos/poll/${jobId}?cursor=${cursor}`)
       .then(async r => {
-        if (r.status === 404) throw Object.assign(new Error('The job no longer exists on the server (it expired or the server restarted).'), { fatal: true });
-        if (!r.ok) throw new Error(`Poll HTTP ${r.status}`);
+        if (r.status === 404) {
+          const msg = gatewayErrors
+            ? 'The server restarted while the job was running (most likely it ran out of memory: GLOMOS needs ~1 GB of RAM). Try again, or use the "fast" preset.'
+            : 'The job no longer exists on the server (it expired or the server restarted).';
+          throw Object.assign(new Error(msg), { fatal: true });
+        }
+        if (!r.ok) {
+          let detail = '';
+          try { const j = await r.json(); detail = j && j.error ? `: ${j.error}` : ''; } catch (e) { /* HTML from a proxy */ }
+          if (r.status === 502 || r.status === 503 || r.status === 504) {
+            gatewayErrors += 1;
+            throw new Error(`server not responding (HTTP ${r.status}, it may be restarting)`);
+          }
+          throw new Error(`Poll HTTP ${r.status}${detail}`);
+        }
         return r.json();
       })
       .then(data => {
@@ -240,7 +253,8 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
       .catch(err => {
         if (err.fatal) return fail(err.message);
         errors += 1;
-        if (errors > 20) return fail('Lost connection to the server: ' + err.message);
+        if (errors > 20) return fail('Lost connection to the server: ' + err.message +
+          (gatewayErrors ? ' — the server kept failing while the job ran; it most likely ran out of memory (GLOMOS needs ~1 GB of RAM).' : ''));
         el.eta.textContent = `Reconnecting… (${errors})`;
         schedule(Math.min(2000 * errors, 15000));
       });
