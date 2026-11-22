@@ -24,7 +24,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.0.1"
+VERSION = "2.0.2"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -142,7 +142,7 @@ def selftest_ani():
     """Real ANI calculation on water (a few seconds). Used by /api/health?deep=1."""
     t0 = time.time()
     from ase import Atoms
-    from glomos.libcalc_ani import ANI_single, torchani_versions
+    from elaya_glomos.libcalc_ani import ANI_single, torchani_versions
     water = Atoms("OHH", positions=[[0, 0, 0], [0.96, 0, 0], [-0.24, 0.93, 0]])
     res = ANI_single(water, "ANI1ccx")
     return {"ok": True, "energy_kcal": res.info["e"], "converged": res.info["converged"],
@@ -181,12 +181,20 @@ def health():
            "max_concurrent_jobs": int(os.environ.get("ELAYA_MAX_JOBS", "1"))}
     if not out["glomos_ready"]:
         out["missing_for_glomos"] = [m for m in ("rdkit", "torch", "torchani", "ase", "scipy") if not libs[m]]
+    try:
+        import elaya_glomos
+        import elaya_glomos.libreport                           # noqa: F401
+        out["glomos_package"] = {"ok": True, "path": os.path.dirname(elaya_glomos.__file__)}
+    except Exception as exc:                                    # noqa: BLE001
+        out["glomos_package"] = {"ok": False, "error": "%s: %s" % (type(exc).__name__, exc)}
+        out["glomos_ready"] = False
+        out["status"] = "degraded"
     if libs["torchani"]:
         try:
-            from glomos.libcalc_ani import ani_weights_status
+            from elaya_glomos.libcalc_ani import ani_weights_status
             out["ani_weights"] = ani_weights_status()
-        except Exception:                                       # noqa: BLE001
-            out["ani_weights"] = None
+        except Exception as exc:                                # noqa: BLE001
+            out["ani_weights"] = {"error": "%s: %s" % (type(exc).__name__, exc)}
     out["memory_limit_mb"] = memory_limit_mb()
     if out["memory_limit_mb"] and out["memory_limit_mb"] < 1000:
         out["memory_warning"] = ("Container memory limit is %d MB: GLOMOS (torch + ANI) needs ~1 GB; "
@@ -290,7 +298,7 @@ def glomos_start():
     try:
         smiles = smiles_from(data)
         from elaya_jobs import clamp_params
-        from glomos.ani_domain import resolve_model, DomainError
+        from elaya_glomos.ani_domain import resolve_model, DomainError
         import elaya_chem as ec
         params = clamp_params(data.get("glomos_params"))
         molh, seed_xyz, problem, info = ec.glomos_seed_pool(smiles, params["n_seeds"], 665)

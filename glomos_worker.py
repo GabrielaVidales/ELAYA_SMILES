@@ -4,7 +4,7 @@ glomos_worker.py — runs one GLOMOS job in its own process.
     python glomos_worker.py <workdir> [--deadline-minutes M]
 
 <workdir> must contain INPUT.txt (+ rotamer.xyz and problem.json).
-Progress is emitted on stdout as ``@@ELAYA@@ {json}`` lines (see glomos.libreport);
+Progress is emitted on stdout as ``@@ELAYA@@ {json}`` lines (see elaya_glomos.libreport);
 cancellation is requested by creating <workdir>/CANCEL.
 Exit codes: 0 ok (or partial result), 2 error.
 """
@@ -26,10 +26,10 @@ def main(argv):
     sys.path.insert(0, here)
     os.chdir(workdir)
 
-    from glomos.libreport import Reporter
+    from elaya_glomos.libreport import Reporter
     rep = Reporter(deadline=deadline, cancel_file=os.path.join(workdir, "CANCEL"), echo=True)
     try:
-        from glomos.heuristic_ga_rotamers import conformational
+        from elaya_glomos.heuristic_ga_rotamers import conformational
         result = conformational("INPUT.txt", reporter=rep)
         rep.event("done", n_conformers=len(result["conformers"]),
                   stop_reason=result["meta"].get("stop_reason"))

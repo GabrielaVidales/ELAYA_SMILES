@@ -1,7 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #  ELAYA SMILES v2 — production image (CPU only)
 #  Removed with respect to v1: dscribe/numba (unused), Auto3D (unused), aegon/glomos from PyPI
-#  (GLOMOS now ships in ./glomos and is self-contained), flask-cors (replaced by 15 lines).
+#  (GLOMOS now ships in ./elaya_glomos and is self-contained), flask-cors (replaced by 15 lines).
+#  The local package is called elaya_glomos (not glomos) so that the unrelated `glomos` package on PyPI,
+#  which v1 installed and which has no libreport.py, can never shadow it.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.10-slim
 
@@ -23,6 +25,10 @@ RUN pip install --no-cache-dir --upgrade pip \
 RUN python -W ignore -c "import torchani; [getattr(torchani.models, m)() for m in ('ANI1x', 'ANI1ccx', 'ANI2x')]; print('ANI parameters installed')"
 
 COPY . .
+
+# Fail the build (not the first user request) if the GLOMOS package is incomplete or shadowed.
+RUN pip uninstall -y glomos aegon >/dev/null 2>&1; \
+    python -c "import elaya_glomos, elaya_glomos.libreport, elaya_glomos.libcalc_ani, elaya_glomos.ani_domain, elaya_jobs; print('ELAYA GLOMOS package OK:', elaya_glomos.__file__)"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.2
+
+* **The local GLOMOS package is now `elaya_glomos/` (was `glomos/`).** PyPI has an unrelated `glomos` package
+  (0.3.x, installed by ELAYA v1 with `pip install glomos`) that has no `libreport.py`. When it is present in the
+  deployment it can be imported instead of the local folder, giving
+  `Could not start GLOMOS: No module named 'glomos.libreport'` and `ani_weights: null` in `/api/health`.
+  A unique name makes that impossible.
+* Dockerfile: removes a stale PyPI `glomos`/`aegon` and checks at build time that `elaya_glomos` imports
+  (the build fails instead of the first GLOMOS request).
+* `/api/health`: `glomos_package` (path or import error); `ani_weights` shows the error instead of `null`.
+
 ## 2.0.1
 
 ### Why GLOMOS still failed in 2.0.0 (found by running the real pipeline: RDKit + ASE + torch + torchani)

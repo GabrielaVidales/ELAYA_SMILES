@@ -22,7 +22,7 @@ import threading
 import time
 import uuid
 
-from glomos.libreport import EVENT_PREFIX
+from elaya_glomos.libreport import EVENT_PREFIX
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -81,7 +81,7 @@ def clamp_params(raw):
 
 
 def write_input_txt(workdir, p, model):
-    """INPUT.txt for glomos.heuristic_ga_rotamers."""
+    """INPUT.txt for elaya_glomos.heuristic_ga_rotamers."""
     txt = (
         "rotamer_seed        seed.xyz\n"
         "problem_file        problem.json\n\n"
