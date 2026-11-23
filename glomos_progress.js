@@ -198,6 +198,11 @@ function _glDownload(name, text, mime) {
 
 function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
   window.ELAYA_CONFORMERS = null;          // a new job: the previous conformer set no longer applies
+  const setRunning = (on) => {             // the structure card stays hidden until conformers exist
+    window.ELAYA_GLOMOS_RUNNING = on;
+    window.dispatchEvent(new CustomEvent('elaya:glomos-state', { detail: { running: on } }));
+  };
+  setRunning(true);
   const panel = createGlomosPanel();
   const container = document.querySelector('.visualization-controls')
                  || document.querySelector('.conversion-section')
@@ -246,6 +251,7 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
   };
 
   function finishClock() {
+    setRunning(false);
     clearInterval(clock); if (timer) clearTimeout(timer); el.cancel.disabled = true;
     lab.stop(); const p = _gl('gl-lab'); if (p) p.style.display = 'none';      // the scene only lives while it runs
   }

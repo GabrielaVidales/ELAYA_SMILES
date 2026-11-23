@@ -296,7 +296,8 @@
     const box = $('individual-downloads');
     if (!box) return;
     const cur = current();
-    if (!cur.xyz) return;
+    if (window.ELAYA_GLOMOS_RUNNING || !cur.xyz) { box.innerHTML = ''; box.style.display = 'none'; return; }
+    const legacy = $('download-xyz'); if (legacy) legacy.style.display = 'none';
     const { kind, items } = allItems();
     const F = fmt.toUpperCase();
     box.innerHTML = '';
@@ -321,10 +322,21 @@
   }
 
   // ------------------------------------------------------------------ refresh everything
+  function hideAll(head, bar) {
+    if (head) head.style.display = 'none';
+    if (bar) bar.style.display = 'none';
+    ['xyz-display', 'structure-qa', 'individual-downloads', 'download-xyz'].forEach(id => {
+      const e = $(id); if (e) e.style.display = 'none';
+    });
+  }
+
   function refresh() {
     const cur = current();
     const head = ensureCard();
     const bar = ensureBar();
+    if (window.ELAYA_GLOMOS_RUNNING) { hideAll(head, bar); return; }   // conformers are not there yet
+    const disp = $('xyz-display');
+    if (disp && cur.xyz) disp.style.display = 'block';
     if (!cur.xyz) {
       if (head) head.style.display = 'none';
       if (bar) bar.style.display = 'none';
@@ -421,6 +433,8 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+
+  window.addEventListener('elaya:glomos-state', () => refresh());
 
   window.ElayaPanel = { refresh, setFormat, current, downloadAll, downloadCurrent, fitViewers };
 })();

@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.2.1"
+VERSION = "2.3.0"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -49,7 +49,7 @@ def api_options(subpath):
 
 app.url_map.strict_slashes = False
 
-STATIC_FILES = {"index.html", "app.js", "glomos_progress.js", "structure_panel.js", "ux_extras.js", "styles.css"}
+STATIC_FILES = {"index.html", "app.js", "glomos_progress.js", "structure_panel.js", "ux_extras.js", "learn.js", "styles.css"}
 STATIC_DIRS = {"pictures"}
 
 _tool = None
@@ -251,6 +251,31 @@ def analyze():
         return err(str(exc))
     except Exception as exc:                                    # noqa: BLE001
         return err("Analysis failed: %s" % exc, 500)
+
+
+@app.route("/api/validate", methods=["POST"])
+def validate():
+    """Quick check of many SMILES at once (file preview): {smiles: [..]} -> {results: [{ok, formula|error}]}."""
+    items = body().get("smiles")
+    if not isinstance(items, list):
+        return err("Expected {'smiles': [list of strings]}")
+    if len(items) > 2000:
+        return err("At most 2000 SMILES per request")
+    try:
+        import elaya_chem as ec
+        from rdkit.Chem.rdMolDescriptors import CalcMolFormula
+    except Exception as exc:                                    # noqa: BLE001
+        return err("Validation unavailable: %s" % exc, 503)
+    out = []
+    for s in items:
+        s = str(s or "").strip()
+        try:
+            if not s:
+                raise ValueError("empty")
+            out.append({"ok": True, "formula": CalcMolFormula(ec.parse_smiles(s))})
+        except Exception as exc:                                # noqa: BLE001
+            out.append({"ok": False, "error": str(exc)[:160]})
+    return jsonify({"results": out})
 
 
 @app.route("/api/convert", methods=["POST"])

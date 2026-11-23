@@ -130,3 +130,12 @@ def test_deep_selftest_runs_out_of_process(client, monkeypatch):
     r = client.get("/api/health?deep=1").get_json()
     if r.get("glomos_ready"):
         assert calls and r["ani_selftest"]["ok"] is True
+
+
+def test_validate_many_smiles(client):
+    pytest.importorskip("rdkit")
+    r = client.post("/api/validate", json={"smiles": ["CCO", "C1CC", "", "c1ccccc1"]})
+    res = r.get_json()["results"]
+    assert [x["ok"] for x in res] == [True, False, False, True]
+    assert res[0]["formula"] == "C2H6O" and res[1]["error"]
+    assert client.post("/api/validate", json={"smiles": "CCO"}).status_code == 400

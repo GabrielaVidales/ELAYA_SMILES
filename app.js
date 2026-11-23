@@ -385,19 +385,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const text = await file.text();
 
-        const parsed = [];
-        text.split('\n').forEach((line) => {
-            const trimmed = line.trim();
-            if (!trimmed) return;
-            if (/^#|^\/\//.test(trimmed)) return;
+        // .smi / .txt (SMILES [name]) and .csv / .tsv (smiles column) — see ux_extras.js
+        const parsed = window.ElayaFiles ? window.ElayaFiles.parse(text, file.name) : (() => {
+            const out = [];
+            text.split('\n').forEach((line) => {
+                const trimmed = line.trim();
+                if (!trimmed || /^#|^\/\//.test(trimmed)) return;
+                const parts = trimmed.split(/\s+/);
+                out.push({ smiles: parts[0], id: (parts[1] || `mol_${out.length + 1}`) });
+            });
+            return out;
+        })();
 
-            const parts  = trimmed.split(/\s+/);
-            const smiles = parts[0]?.trim();
-            const id     = (parts.length >= 2 ? parts[1] : `mol_${parsed.length + 1}`)?.trim();
-            if (smiles) parsed.push({ smiles, id });
-        });
-
-        if (parsed.length === 0) throw new Error("Archivo vacío o inválido");
+        if (parsed.length === 0) throw new Error("No SMILES found in the file (see the format help below)");
 
         // Reset de estado global
         window.allMolecules = parsed.slice();
@@ -405,8 +405,10 @@ document.addEventListener("DOMContentLoaded", function () {
         window.currentMoleculeIndex = 0;
         window.selected?.clear?.();
 
+        window.dispatchEvent(new CustomEvent('elaya:file-loaded', { detail: { name: file.name, molecules: parsed } }));
+
         const loadConfirmation = document.getElementById('load-confirmation');
-        if (loadConfirmation && window.showConfirmation) {
+        if (false && loadConfirmation && window.showConfirmation) {
             const moleculeInfo = window.molecules
             .map(mol => `<div><strong>SMILES:</strong> ${mol.smiles}</div>`)
             .join('<hr>');
@@ -424,7 +426,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         } catch (error) {
         console.error("❌ Error al cargar archivo:", error);
-        showError(`Error al cargar SMILES: ${error.message}`);
+        showError(`Could not read the file: ${error.message}`);
         }
     });
     }
@@ -1380,7 +1382,7 @@ function renderStructureQA() {
     }
     const cur = cands.find(m => m.qa && !m.glomos && String(m.xyz || '').trim() === shown);
     const qa = cur ? cur.qa : null;
-    if (!qa) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    if (!qa || window.ELAYA_GLOMOS_RUNNING) { box.style.display = 'none'; box.innerHTML = ''; return; }
     const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const chips = [];
     if (qa.approximate) chips.push(`<span class="qa-chip warn" title="NetworkX builds a graph layout, not a force-field geometry">Approximate layout</span>`);

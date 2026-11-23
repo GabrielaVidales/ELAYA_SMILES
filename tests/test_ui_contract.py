@@ -185,3 +185,26 @@ def test_every_script_of_the_page_is_served():
 def test_info_icon_of_post_optimisation_points_to_conformer_reading():
     m = re.search(r'data-tooltip-id="tooltip-postopt"\s*data-url="([^"]+)"', HTML)
     assert m and "github.com" not in m.group(1) and "onformation" in m.group(1)
+
+
+def test_course_and_contact_elements_exist():
+    """Every element learn.js looks up by id is in the page (or created by learn.js itself)."""
+    js = _read("learn.js")
+    created = {"qz-score", "qz-retry", "bt-cursor", "bt-dot"}
+    ids = set(re.findall(r"\$\('([a-z0-9-]+)'\)", js))
+    page_ids = set(re.findall(r'id="([^"]+)"', HTML))
+    missing = sorted(i for i in ids - created if i not in page_ids)
+    assert not missing, missing
+
+
+def test_course_contents_point_at_lessons():
+    toc = re.findall(r'<a href="#(c-[a-z0-9]+)" data-ch="\1"', HTML)
+    lessons = re.findall(r'<article id="(c-[a-z0-9]+)" class="lesson"', HTML)
+    assert toc == lessons and len(lessons) >= 8
+    for nxt in re.findall(r'class="lesson-next" data-next="([^"]+)"', HTML):
+        assert nxt in lessons
+
+
+def test_external_links_open_safely():
+    for tag in re.findall(r'<a [^>]*target="_blank"[^>]*>', HTML):
+        assert 'rel="noopener"' in tag, tag

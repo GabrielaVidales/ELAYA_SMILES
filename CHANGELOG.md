@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.3.0
+
+### About → interactive mini-course (for people with no chemistry background)
+* Eight short lessons with a sticky table of contents (scroll-spy, ✓ for lessons read, remembered in the browser),
+  reading-progress bar and "next lesson" buttons; on phones the contents become a scrollable chip bar.
+* **SMILES playground**: type or pick an example; every character is explained on hover/tap (atoms, bonds, branches,
+  ring closures colour-paired, stereo), unclosed rings/branches are flagged, and the server draws the molecule and
+  gives formula, mass, rings, rotatable bonds and stereocentres. "Build it in 3D" sends it to the explorer.
+* **Butane conformer explorer**: Newman projection with a dihedral slider (and auto-rotate), energy curve, and
+  Boltzmann populations with a temperature slider.
+* **GLOMOS step by step**: 7-step stepper with ASCII diagrams, each mapped to the parameters of the GLOMOS panel.
+* Lessons on 3D methods and quality checks, force fields vs ANI, reading results (ΔE, populations, rotational
+  constants, file formats), a 5-question quiz, curated tutorials/videos/papers and a glossary.
+* Technologies table updated (Waitress, OpenBabel, NetworkX, TorchANI, ASE, 3Dmol.js); outdated entries removed.
+
+### Contact
+* Guided problem report: fills in version, browser, screen and the current settings (incl. all GLOMOS parameters),
+  prefills the SMILES from the explorer, previews the report, opens a GitHub issue or copies it.
+* "Suggest a feature" opens an issue labelled enhancement; compact 3-card layout.
+* Citation card with BibTeX (version filled in from the server) and copy button.
+* FAQ: cost, data retention (GLOMOS job files deleted ~2 h after the job), supported molecules, run time, ANI model
+  choice, reproducibility, running locally with Docker.
+
+### Explorer
+* The structure card (formats, downloads, QA chips) stays hidden while GLOMOS runs and appears with the conformers.
+* File upload: drag-and-drop zone, .smi/.txt/.csv/.tsv with names, a downloadable example file, and a checked
+  summary table (`POST /api/validate`) with "Remove invalid".
+* All links that open a new tab use `rel="noopener"`.
+
 ## 2.2.1
 
 * Fullscreen: leaving it restored an inline `position: relative`, so the viewer lost its sticky layout and the
