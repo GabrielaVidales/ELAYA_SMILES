@@ -3617,14 +3617,20 @@ select:focus-visible {
     .sp-tab, .sp-copy { padding: 0.35rem 0.55rem; }
 }
 
-/* GLOMOS parameters: two columns, label column aligned */
+/* GLOMOS parameters: two compact rows (label above its field, 6 per row) */
 #glomos-panel .glomos-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px 36px !important;
-    max-width: 980px;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 8px 14px !important;
+    max-width: none;
 }
 #glomos-panel .glomos-item {
-    grid-template-columns: 150px minmax(0, 1fr) !important;
+    grid-template-columns: 1fr !important;
+    row-gap: 3px !important;
+}
+#glomos-panel .glomos-item > span { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#glomos-panel .glomos-item input, #glomos-panel .glomos-item select { height: 34px; }
+@media (max-width: 1100px) and (min-width: 769px) {
+    #glomos-panel .glomos-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 }
 #glomos-estimate {
     grid-column: 1 / -1;
@@ -3686,3 +3692,26 @@ select:focus-visible {
 /* long SMILES / titles never widen the results column */
 .visualization-controls { min-width: 0; }
 .sp-head, .sp-title, #individual-downloads, #individual-downloads button { min-width: 0; max-width: 100%; }
+
+/* Desktop: the results column is as tall as the 3D view and scrolls inside, so a finished GLOMOS
+   run no longer leaves a long page with an empty area under the viewer */
+@media (min-width: 769px) {
+    .visualization-controls {
+        position: sticky;
+        top: 76px;
+        align-self: flex-start;
+        max-height: clamp(460px, calc(100vh - 110px), 760px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        padding-right: 4px;
+    }
+    #xyz-display { max-height: 300px; }
+    #glomos-live-panel { margin-top: 0 !important; }
+}
+
+/* wider results column on desktop (GLOMOS table and stats were cramped at 1/3 of the row) */
+@media (min-width: 1100px) {
+    .conversion-row > .visualization-container { flex: 3 1 0 !important; min-width: 0; }
+    .conversion-row > .visualization-controls { flex: 2 1 0 !important; min-width: 0; }
+}

@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.2.0"
+VERSION = "2.2.1"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -280,10 +280,13 @@ def export():
         fmt = (data.get("format") or "xyz").lower()
         if fmt not in MIME:
             return err("Unsupported format")
-        name = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(data.get("name", "elaya")))[:50] or "elaya"
-        text = tool().export(smiles_from(data), data.get("xyz", ""), fmt, name, data.get("properties"))
+        raw_name = str(data.get("name", "elaya"))
+        # record title inside the file (MOL/SDF header line, PDB COMPND...): readable, one line, <= 80 chars
+        title = "".join(c if (c.isprintable() and c not in "\r\n\t$") else " " for c in raw_name).strip()[:80] or "elaya"
+        fname = "".join(c if c.isalnum() or c in "-_" else "_" for c in raw_name)[:50] or "elaya"
+        text = tool().export(smiles_from(data), data.get("xyz", ""), fmt, title, data.get("properties"))
         return Response(text, mimetype=MIME[fmt], headers={
-            "Content-Disposition": 'attachment; filename="%s.%s"' % (name, fmt)})
+            "Content-Disposition": 'attachment; filename="%s.%s"' % (fname, fmt)})
     except ValueError as exc:
         return err(str(exc))
     except Exception as exc:                                    # noqa: BLE001

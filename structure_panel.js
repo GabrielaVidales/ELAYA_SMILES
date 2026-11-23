@@ -76,6 +76,7 @@
       return {
         smiles: set.smiles || m.smiles, xyz, set, conf: c,
         name: `${safe(molLabel(m) || set.smiles)}_conf${set.index + 1}_${safe(c.name)}`,
+        label: `${molLabel(m) || set.smiles} | conformer ${set.index + 1} (${c.name})`,
         title: `Conformer ${set.index + 1}/${set.list.length}`,
         sub: `${c.name} · ΔE ${Number(c.rel_kcal).toFixed(3)} kcal/mol · ${(100 * (c.boltzmann_298 || 0)).toFixed(1)} % (298 K)`,
       };
@@ -84,6 +85,7 @@
     return {
       smiles: m.smiles || '', xyz, set: null,
       name: safe(label) || `molecule_${i + 1}`,
+      label: label || `molecule ${i + 1}`,
       title: list.length > 1 ? `Molecule ${i + 1}/${list.length}` : 'Structure',
       sub: label && label !== m.smiles ? `${label} · ${short(m.smiles || '', 60)}` : short(m.smiles || '', 80),
     };
@@ -92,7 +94,7 @@
   // ------------------------------------------------------------------ export
   async function exportText(smiles, xyz, f, name, props) {
     if (f === 'xyz') return xyz.endsWith('\n') ? xyz : xyz + '\n';
-    const key = `${f}\u0000${smiles}\u0000${xyz}`;
+    const key = `${f}\u0000${smiles}\u0000${name || ''}\u0000${xyz}`;
     if (cache.has(key)) return cache.get(key);
     const r = await fetch('/api/export', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -125,7 +127,7 @@
     try {
       const props = cur.conf ? { Energy_kcal_mol: Number(cur.conf.energy_kcal).toFixed(4),
                                  Rel_energy_kcal_mol: Number(cur.conf.rel_kcal).toFixed(4) } : {};
-      const text = await exportText(cur.smiles, cur.xyz, fmt, cur.name, props);
+      const text = await exportText(cur.smiles, cur.xyz, fmt, cur.label, props);
       saveBlob(`${cur.name}.${fmt}`, new Blob([text], { type: 'text/plain' }));
     } catch (e) { showErr(`Export to ${fmt.toUpperCase()} failed: ${e.message}`); }
   }
@@ -137,12 +139,13 @@
       const base = safe(molLabel(molList()[molIndex()]) || set.smiles);
       return { kind: 'conformers', items: set.list.map((c, k) => ({
         smiles: set.smiles, xyz: c.xyz, name: `${base}_conf${k + 1}_${safe(c.name)}`,
+        label: `${molLabel(molList()[molIndex()]) || set.smiles} | conformer ${k + 1} (${c.name})`,
         props: { Energy_kcal_mol: Number(c.energy_kcal).toFixed(4), Rel_energy_kcal_mol: Number(c.rel_kcal).toFixed(4) } })) };
     }
     const list = molList().filter(m => m && m.xyz);
     if (list.length > 1) {
       return { kind: 'molecules', items: list.map((m, k) => ({
-        smiles: m.smiles, xyz: m.xyz, name: `${String(k + 1).padStart(3, '0')}_${safe(molLabel(m))}` })) };
+        smiles: m.smiles, xyz: m.xyz, name: `${String(k + 1).padStart(3, '0')}_${safe(molLabel(m))}`, label: molLabel(m) })) };
     }
     return { kind: null, items: [] };
   }
@@ -154,7 +157,7 @@
     if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = 'Preparing…'; }
     try {
       const texts = [];
-      for (const it of items) texts.push(await exportText(it.smiles, it.xyz, fmt, it.name, it.props));
+      for (const it of items) texts.push(await exportText(it.smiles, it.xyz, fmt, it.label || it.name, it.props));
       const zipName = `elaya_${kind}_${fmt}`;
       if (window.JSZip) {
         const zip = new JSZip();
@@ -213,17 +216,34 @@
     refresh();
   }
 
+  /** Aligned XYZ (same layout as app.js). */
+  function formatXYZ(raw) {
+    const lines = String(raw || '').trim().split('\n');
+    if (lines.length < 3) return lines.join('\n');
+    const atoms = lines.slice(2).map(line => {
+      const p = line.trim().split(/\s+/);
+      if (p.length < 4) return line;
+      const f = v => parseFloat(v).toFixed(4).padStart(10);
+      return `${p[0].padEnd(2)}  ${f(p[1])}  ${f(p[2])}  ${f(p[3])}`;
+    });
+    return [lines[0].trim(), lines[1] || '', ...atoms].join('\n');
+  }
+
   let renderToken = 0;
   async function renderText() {
     const disp = $('xyz-display');
     const cur = current();
     if (!disp || !cur.xyz) return;
-    if (fmt === 'xyz') return;                        // app.js already wrote the aligned XYZ
-    const token = ++renderToken;
+    const token = ++renderToken;                      // any older pending export is now stale
+    if (fmt === 'xyz') {
+      disp.classList.remove('sp-loading');
+      disp.textContent = formatXYZ(cur.xyz);
+      return;
+    }
     disp.classList.add('sp-loading');
     try {
-      const text = await exportText(cur.smiles, cur.xyz, fmt, cur.name);
-      if (token === renderToken) disp.textContent = text;
+      const text = await exportText(cur.smiles, cur.xyz, fmt, cur.label);
+      if (token === renderToken && fmt !== 'xyz') disp.textContent = text;
     } catch (e) {
       if (token === renderToken) disp.textContent = `Could not build ${fmt.toUpperCase()}: ${e.message}`;
     } finally {

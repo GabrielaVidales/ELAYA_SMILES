@@ -1709,7 +1709,10 @@ document.addEventListener('fullscreenchange', () => {
     }
     if (card) {
       card.style.removeProperty('overflow');
+      card.style.removeProperty('position');   // back to the stylesheet (sticky on desktop)
     }
+    // the canvas was sized for the whole screen: fit it to the card again
+    setTimeout(() => { try { window.elayaFitViewer?.(); } catch (e) { /* */ } }, 150);
   }
 
   // Swap in-page button icon

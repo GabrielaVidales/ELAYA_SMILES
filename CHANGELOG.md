@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.2.1
+
+* Fullscreen: leaving it restored an inline `position: relative`, so the viewer lost its sticky layout and the
+  controls (Fit, fullscreen) landed on the footer. The stylesheet position is restored and the view re-fitted.
+* Format tabs: switching back to XYZ kept the previous format's text (the card assumed app.js had rewritten it).
+  The card now always writes its own content and discards stale exports; the record name inside MOL/SDF/PDB is
+  readable ("dopamine | conformer 1 (mating_004_0002)"); file names stay safe.
+* GLOMOS parameters in two compact rows (label above its field, 6 per row; 4 on tablets, 2 on phones).
+* "Running" badge replaced by an ASCII lab driven by the job's real events: one worker spins bonds, candidates ride
+  a conveyor belt, the other relaxes and stamps them; a new generation makes them cheer; click to say hi.
+  Static frame with prefers-reduced-motion. Hidden when the job ends.
+* Space: on desktop the results column is as tall as the 3D view and scrolls inside (no long page with an empty area
+  under the viewer); the log collapses when the job ends; compact one-row stats; wider results column (3:2).
+
 ## 2.2.0
 
 ### Viewer and results

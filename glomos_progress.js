@@ -55,7 +55,7 @@ function _glInjectStyles() {
     .glomos-log-line-gen { color:#3cb49a; font-weight:600; }
     .glomos-log-line-energy { color:#f0b429; }
     .glomos-log-line-warning { color:#e8784a; }
-    .glomos-table-wrap { margin:.9rem 0 .5rem; max-height:300px; overflow:auto; border:1px solid #132030; border-radius:8px; }
+    .glomos-table-wrap { margin:.6rem 0 .4rem; max-height:236px; overflow:auto; border:1px solid #132030; border-radius:8px; }
     table.glomos-table { width:100%; border-collapse:collapse; font-size:.76rem; font-variant-numeric:tabular-nums; }
     .glomos-table th { position:sticky; top:0; background:#122234; color:#8bafc9; font-weight:600; text-align:right; padding:5px 8px; }
     .glomos-table td { text-align:right; padding:4px 8px; border-top:1px solid #132030; }
@@ -64,9 +64,80 @@ function _glInjectStyles() {
     .glomos-table tbody tr:hover { background:#16304a; }
     .glomos-table tbody tr.selected { background:#0f4a55; color:#fff; }
     .glomos-export { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-top:.4rem; font-size:.76rem; }
+    .glomos-lab { margin:0 0 .7rem; padding:.45rem .7rem; background:#060e17; border:1px solid #132030; border-radius:8px;
+                  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.74rem; line-height:1.25;
+                  color:#98ebc4; white-space:pre; overflow:hidden; cursor:pointer; user-select:none; }
+    .glomos-stats-row { display:grid !important; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.4rem .8rem !important; }
+    .glomos-stat-value { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .glomos-export select { background:#0d1b2a; color:#c9d8e8; border:1px solid #1e3a52; border-radius:6px; padding:3px 6px; }
   `;
   document.head.appendChild(style);
+}
+
+
+// ── ASCII lab: shown while a job runs, driven by the real events ─────────────────────────────
+//   left worker spins bonds (new candidates), the belt carries them, the right worker relaxes
+//   them with ANI and stamps them. Each 'optimized' event puts a molecule on the belt; a new
+//   generation makes both cheer. Click the scene to say hi.
+function _glAsciiLab(pre) {
+  const W = 46;                                   // characters per line
+  const GLYPHS = ['o-o', 'o=o', '<o>', 'o~o', 'o-<', '>o<'];
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let tick = 0, items = [], pending = 0, stamped = 0, relaxed = 0, cheer = 0, wave = 0, gen = 0, phase = 'load', timer = null;
+  const BELT0 = 7, BELT1 = 37;                     // belt between the two workers
+
+  const left = () => {
+    if (cheer > 0 || wave > 0) return ['\\o/', ' | ', '/ \\'];
+    const f = Math.floor(tick / 3) % 4;          // spinning a bond
+    return [[' o_', ' o ', '_o ', ' o '][f], ['/| ', '/|\\', ' |\\', '/|\\'][f], ['/ \\', '| |', '/ \\', '| |'][f]];
+  };
+  const right = () => {
+    if (cheer > 0 || wave > 0) return ['\\o/', ' | ', '/ \\'];
+    const busy = items.some(it => it.x >= BELT1 - 4);
+    const f = busy ? Math.floor(tick / 2) % 2 : 0;  // stamping
+    return [[' o ', ' o_'][f], ['/|\\', '/|'][f] .padEnd(3), ['/ \\', '/ \\'][f]];
+  };
+
+  function frame() {
+    tick++;
+    if (cheer > 0) cheer--;
+    if (wave > 0) wave--;
+    if (phase === 'run') {
+      if (pending > 0 && !items.some(it => it.x < BELT0 + 5)) { items.push({ x: BELT0, g: GLYPHS[(stamped + pending) % GLYPHS.length] }); pending--; }
+      else if (!items.length && tick % 28 === 0) items.push({ x: BELT0, g: GLYPHS[tick % GLYPHS.length], idle: true });
+      items.forEach(it => { it.x += 1; });
+      items = items.filter(it => {
+        if (it.x >= BELT1 - 2) { if (!it.idle) stamped++; return false; }
+        return true;
+      });
+    }
+    const L = left(), R = right();
+    const row = Array(W).fill(' ');
+    items.forEach(it => { for (let k = 0; k < it.g.length; k++) if (it.x + k < BELT1 - 1) row[it.x + k] = it.g[k]; });
+    const belt = Array(W).fill(' ');
+    for (let k = BELT0 - 1; k < BELT1; k++) belt[k] = (phase === 'run' ? ((k + tick) % 4 === 0 ? '=' : '-') : '-');
+    const pile = '✓'.repeat(Math.min(stamped, 6)) + (stamped > 6 ? '+' : '');
+    const place = (arr, col, str) => { for (let k = 0; k < str.length; k++) arr[col + k] = str[k]; return arr; };
+    let status;
+    if (phase === 'load') status = `  loading the ANI model${'.'.repeat(1 + (tick >> 2) % 3)}`;
+    else if (phase === 'polish') status = '  final tight re-optimisation...';
+    else status = `  generation ${gen} · relaxed ${relaxed}${cheer > 0 ? '   NEW GENERATION!' : wave > 0 ? '   hi! :)' : ''}`;
+    const l1 = place(place(row.slice(), 1, L[0]), BELT1 + 2, R[0]).join('');
+    const l2 = place(place(belt.slice(), 1, L[1]), BELT1 + 2, R[1]).join('');
+    const l3 = place(place(Array(W).fill(' '), 1, L[2]), BELT1 + 2, R[2]).join('') + ' ' + pile;
+    pre.textContent = [status.padEnd(W), l1, l2, l3].join('\n');
+  }
+
+  pre.addEventListener('click', () => { wave = 10; frame(); });
+  const api = {
+    start() { if (!timer) { frame(); if (!reduce) timer = setInterval(frame, 140); } },
+    stop() { clearInterval(timer); timer = null; },
+    running() { phase = 'run'; },
+    optimized() { phase = 'run'; relaxed++; pending = Math.min(pending + 1, 8); if (reduce) { stamped++; frame(); } },
+    generation(g) { if (g !== gen) { gen = g; if (g > 0) cheer = 14; } },
+    polish() { phase = 'polish'; },
+  };
+  return api;
 }
 
 function createGlomosPanel() {
@@ -83,6 +154,7 @@ function createGlomosPanel() {
           <span id="gl-badge" class="glomos-badge queued">Starting</span>
         </span>
       </div>
+      <pre id="gl-lab" class="glomos-lab" title="GLOMOS is working — click to say hi" aria-label="GLOMOS is running"></pre>
       <div id="gl-notes"></div>
       <div class="glomos-progress-row">
         <span id="gl-gen" class="glomos-gen-label">Preparing…</span>
@@ -91,7 +163,7 @@ function createGlomosPanel() {
       <div class="glomos-bar-track"><div id="gl-bar" class="glomos-bar-fill" style="width:0%"></div></div>
       <div class="glomos-stats-row">
         <div class="glomos-stat"><span class="glomos-stat-label">Elapsed</span><span id="gl-elapsed" class="glomos-stat-value">0:00</span></div>
-        <div class="glomos-stat"><span class="glomos-stat-label">Best energy</span><span id="gl-best" class="glomos-stat-value">—</span></div>
+        <div class="glomos-stat"><span class="glomos-stat-label" title="ANI electronic energy of the best structure">Best E (kcal/mol)</span><span id="gl-best" class="glomos-stat-value">—</span></div>
         <div class="glomos-stat"><span class="glomos-stat-label">Rotors</span><span id="gl-rotors" class="glomos-stat-value">—</span></div>
         <div class="glomos-stat"><span class="glomos-stat-label">Model</span><span id="gl-model" class="glomos-stat-value">—</span></div>
         <div class="glomos-stat"><span class="glomos-stat-label">Evaluated</span><span id="gl-evals" class="glomos-stat-value">0</span></div>
@@ -138,13 +210,15 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
     evals: _gl('gl-evals'), log: _gl('gl-log'), notes: _gl('gl-notes'), results: _gl('gl-results'),
     cancel: _gl('gl-cancel'),
   };
+  const lab = _glAsciiLab(_gl('gl-lab'));
+  lab.start();
   const t0 = Date.now();
   let jobId = null, cursor = 0, stopped = false, timer = null, errors = 0, nEval = 0, gatewayErrors = 0;
   let totalGen = glomosParams.generations ?? 3;
   let genTimes = [];
 
   const clock = setInterval(() => { el.elapsed.textContent = _glFmtTime((Date.now() - t0) / 1000); }, 1000);
-  const setBadge = (cls, text) => { el.badge.className = 'glomos-badge ' + cls; el.badge.textContent = text; };
+  const setBadge = (cls, text) => { el.badge.className = 'glomos-badge ' + cls; el.badge.textContent = text; el.badge.style.display = ''; };
   const addLog = (line) => {
     const d = document.createElement('div');
     const c = classifyLogLine(line); if (c) d.className = c;
@@ -171,7 +245,10 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
     navigator.clipboard?.writeText(text).catch(() => {});
   };
 
-  function finishClock() { clearInterval(clock); if (timer) clearTimeout(timer); el.cancel.disabled = true; }
+  function finishClock() {
+    clearInterval(clock); if (timer) clearTimeout(timer); el.cancel.disabled = true;
+    lab.stop(); const p = _gl('gl-lab'); if (p) p.style.display = 'none';      // the scene only lives while it runs
+  }
 
   function fail(msg) {
     if (stopped) return;
@@ -247,6 +324,7 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
           el.gen.textContent = `Waiting in queue (position ${data.queue_position || 1})`;
         } else if (data.status === 'running') {
           setBadge('running', 'Running');
+          el.badge.style.display = 'none';          // the ASCII scene says it better
         }
         if (data.done) return conclude(data);
         schedule(1000);
@@ -264,18 +342,20 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
   function handle(e) {
     switch (e.type) {
       case 'start':
+        lab.running();
         totalGen = e.generations ?? totalGen;
         if (e.n_rotors != null) el.rotors.textContent = e.n_rotors;
         if (e.model) el.model.textContent = e.model;
         break;
       case 'log': addLog(e.line); break;
-      case 'optimized': nEval += 1; el.evals.textContent = nEval; break;
+      case 'optimized': nEval += 1; el.evals.textContent = nEval; lab.optimized(); break;
       case 'progress': {
         const gen = e.gen ?? 0, of = e.of || 1, done = e.done || 0;
+        lab.running(); lab.generation(gen);
         const pct = Math.min(99, Math.round(((gen + done / of) / (totalGen + 1)) * 100));
         el.bar.style.width = pct + '%';
         el.gen.textContent = gen === 0 ? 'Generation 0 (initial population)' : `Generation ${gen} / ${totalGen}`;
-        if (e.best_energy != null) el.best.textContent = e.best_energy.toFixed(3) + ' kcal/mol';
+        if (e.best_energy != null) el.best.textContent = e.best_energy.toFixed(3);
         genTimes = e.gen_times || genTimes;
         if (genTimes.length && gen < totalGen) {
           const avg = genTimes.reduce((a, b) => a + b, 0) / genTimes.length;
@@ -284,7 +364,7 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
         break;
       }
       case 'phase':
-        if (e.name === 'polish') el.gen.textContent = 'Final tight re-optimisation…';
+        if (e.name === 'polish') { el.gen.textContent = 'Final tight re-optimisation…'; lab.polish(); }
         break;
       case 'error': addLog('ERROR: ' + (e.message || '')); break;
       default: break;
@@ -312,6 +392,8 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
           (m.stop_reason === 'stagnation' ? ' (converged: lowest structures stopped changing)' : '');
         el.gen.textContent = `${res.conformers.length} conformer(s) · ${m.n_evaluated ?? nEval} ANI relaxations · seed ${m.random_seed ?? '?'}`;
         renderResults(res);
+        el.log.style.display = 'none';                       // results first; the log is one click away
+        _gl('gl-log-toggle').textContent = 'Show';
         try {   // lets the page estimate the duration of the next run on this server
           const atoms = parseInt(String(res.conformers[0]?.xyz || '').split('\n')[0], 10) || 0;
           window.dispatchEvent(new CustomEvent('elaya:glomos-done', { detail: {
