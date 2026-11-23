@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.3.1
+
+* Authors: Gabriela Vidales-Ayala, Filiberto Ortiz-Chi, Gabriel Merino, Luis Ortiz-Gonzalez (page, footer, BibTeX,
+  README); © 2026.
+* Course progress: a lesson is ticked when you scroll to its end or stay on it for a few seconds; finishing the quiz
+  ticks it; lessons skipped over by a jump are not counted. Reset button, "Continue the course" button in the
+  header and a message when all 8 lessons are done. (Before, the tick needed the "next" button fully visible for
+  1.5 s, which often never happened.)
+* Course search (press "/"): lessons, tables, glossary, resources, GLOMOS steps and quiz; Spanish words work
+  (conformero, enlace, anillo…); results highlighted and the target flashes; recent searches kept for the session.
+* Lesson 0: the video and the PNG flowchart are replaced by an animated, clickable flowchart drawn in code (each
+  step explains itself and opens its lesson).
+* Same background gradient as the explorer on About and Contact; Contact gets an orbit animation like the logo ring.
+* Links checked one by one: JoVE (paywalled) replaced by Khan Academy's butane video; ASE now ase-lib.org.
+  Info icons: RDKit documentation (3D construction), Sherrill's molecular-mechanics lecture, Georgia Tech
+  (force fields), LibreTexts (conformers); each tooltip says where the icon leads.
+* Back-to-top button on long pages.
+
 ## 2.3.0
 
 ### About → interactive mini-course (for people with no chemistry background)

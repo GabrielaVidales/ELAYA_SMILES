@@ -190,7 +190,7 @@ def test_info_icon_of_post_optimisation_points_to_conformer_reading():
 def test_course_and_contact_elements_exist():
     """Every element learn.js looks up by id is in the page (or created by learn.js itself)."""
     js = _read("learn.js")
-    created = {"qz-score", "qz-retry", "bt-cursor", "bt-dot"}
+    created = {"qz-score", "qz-retry", "bt-cursor", "bt-dot", "lr-clear"}
     ids = set(re.findall(r"\$\('([a-z0-9-]+)'\)", js))
     page_ids = set(re.findall(r'id="([^"]+)"', HTML))
     missing = sorted(i for i in ids - created if i not in page_ids)

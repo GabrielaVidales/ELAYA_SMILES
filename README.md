@@ -90,7 +90,7 @@ Accurate 3D structures are critical for molecular dynamics simulations, structur
 
 ```bash
 # Clone the repository
-git clone https://github.com/GabrielaVidales/elaya-smiles.git
+git clone https://github.com/GabrielaVidales/Elaya_SMILES.git
 cd elaya-smiles
 
 # Create and activate virtual environment
@@ -174,12 +174,12 @@ on the hosted instance; ≤ 120 heavy atoms.
 
 ## Development
 
-Developed by **Gabriela Yasmin Vidales Ayala** as part of an initiative to bridge cheminformatics tools with accessible, reproducible workflows for molecular modeling.
+Developed by **Gabriela Vidales-Ayala** as part of an initiative to bridge cheminformatics tools with accessible, reproducible workflows for molecular modeling.
 
-Special thanks to **Dr. Filiberto Ortiz Chi** and **Dr. Luis Ortiz** for their scientific guidance and support. Part of the [TheoChemMérida](https://github.com/TheoChemMerida) research group at CINVESTAV Mérida.
+Scientific guidance: **Dr. Filiberto Ortiz-Chi**, **Dr. Gabriel Merino** and **MSc Luis Ortiz-Gonzalez**. Part of the [TheoChemMérida](https://github.com/TheoChemMerida) research group at CINVESTAV Mérida.
 
 ---
 
 ## License
 
-MIT © Gabriela Yasmin Vidales Ayala · TheoChemMérida · CINVESTAV Mérida
+MIT © 2026 Gabriela Vidales-Ayala · TheoChemMérida · CINVESTAV Mérida

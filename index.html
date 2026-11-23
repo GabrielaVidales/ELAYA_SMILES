@@ -136,12 +136,13 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         ② 3D Construction Method
                         <span class="info-icon" 
                             data-tooltip-id="tooltip-method" 
-                            data-url="https://en.wikipedia.org/wiki/Simplified_Molecular_Input_Line_Entry_System">🛈</span>
+                            data-url="https://www.rdkit.org/docs/GettingStartedInPython.html#working-with-3d-molecules">🛈</span>
                         <div id="tooltip-method" class="custom-tooltip">
                             Algorithm used to convert a SMILES string into a 3D structure.<br><br>
                             <strong>● RDKit:</strong> Generates 3D molecular structures using distance geometry.<br>
                             <strong>● OpenBabel:</strong> Builds 3D from template-based methods and force fields.<br>
-                            <strong>● NetworkX:</strong> Generates approximate 3D-like coordinates using a graph-based spring layout applied to molecular connectivity. Useful for topological visualization, but not intended to produce physically accurate molecular geometries.<br>
+                            <strong>● NetworkX:</strong> Approximate 3D coordinates from a graph layout of the connectivity (Kamada-Kawai with chemical distances). Good for a quick sketch; not a physically optimised geometry.<br>
+                            <span class="tt-src">Click ⓘ to read: RDKit documentation — Working with 3D molecules</span>
                             <!--<strong>● Auto3D:</strong> Deep learning-based geometry generation...-->
                         </div>
                     </label>
@@ -158,11 +159,12 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         ③ Force Field optimization (Optional)
                         <span class="info-icon" 
                             data-tooltip-id="tooltip-forcefield"
-                            data-url="https://en.wikipedia.org/wiki/Force_field_(chemistry)">🛈</span>
+                            data-url="https://vergil.chemistry.gatech.edu/static/content/molmech-lecture.pdf">🛈</span>
                         <div id="tooltip-forcefield" class="custom-tooltip">
                             Mathematical models that describe the potential energy of a system.<br><br>
                             <strong>● UFF:</strong> Universal Force Field – covers most elements, good for general use.<br>
                             <strong>● MMFF94:</strong> Merck Molecular Force Field – optimized for organic molecules.<br>
+                            <span class="tt-src">Click ⓘ to read: Introduction to Molecular Mechanics — C. D. Sherrill, Georgia Tech</span>
                             <!--<strong>● GAFF:</strong> General Amber Force Field – for drug-like molecules.<br>
                             <strong>● CHARMM:</strong> Chemistry at HARvard Macromolecular Mechanics...-->
                         </div>
@@ -184,8 +186,8 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                             data-url="https://chem.libretexts.org/Bookshelves/Organic_Chemistry/Book%3A_Organic_Chemistry_with_a_Biological_Emphasis_v2.0_(Soderberg)/03%3A_Conformations_and_Stereochemistry/3.02%3A_Conformations_of_open-chain_organic_molecules">🛈</span>
                         <div id="tooltip-postopt" class="custom-tooltip">
                             Optional post-processing step applied after the initial 3D structure is generated.<br><br>
-                            <strong>● GLOMOS (ANI conformers):</strong> Genetic-algorithm-based conformational search powered by TorchANI neural network potentials. Explores the rotational space of the molecule to find low-energy conformers. Parameters such as population size, number of generations, matings, mutants, and energy cutoff can be configured. Outputs the best conformer ranked by ANI energy (kcal/mol).<br><br>
-                            Requires a working TorchANI environment. Streaming progress is shown in real time.
+                            <strong>● GLOMOS (ANI conformers):</strong> Genetic-algorithm-based conformational search powered by TorchANI neural network potentials. Explores the rotational space of the molecule to find low-energy conformers. Parameters such as population size, number of generations, matings, mutants, and energy cutoff can be configured. Returns the low-energy conformers ranked by ANI energy (kcal/mol) with Boltzmann populations. Progress is shown live.
+                            <span class="tt-src">Click ⓘ to read: Conformations of open-chain molecules — LibreTexts (Soderberg)</span>
                         </div>
                     </label>
                     <select id="post-optimization">
@@ -416,6 +418,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">
                             New to chemistry? Start the mini-course ↓
                         </a>
+                        <a href="#c-start" class="lp-cta-ghost lp-cta-continue" id="hero-continue-btn" hidden>Continue the course ↓</a>
                     </div>
                 </div>
                 <div class="lp-hero-visual">
@@ -454,7 +457,14 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                 <div class="learn-progress" aria-hidden="true"><div id="learn-progress-bar"></div></div>
 
                 <nav class="learn-toc" aria-label="Course contents">
-                    <div class="learn-toc-title">Mini-course <span id="learn-done-count">0/8</span></div>
+                    <div class="learn-toc-title">Mini-course <span><span id="learn-done-count">0/8</span>
+                        <button type="button" id="learn-reset" class="learn-reset" title="Reset my progress" aria-label="Reset my progress">↺</button></span></div>
+                    <div class="learn-search" role="search">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                        <input type="search" id="learn-q" placeholder="Search the course…  ( / )" autocomplete="off" spellcheck="false"
+                               role="combobox" aria-expanded="false" aria-controls="learn-results" aria-label="Search the course">
+                        <div class="learn-results" id="learn-results" role="listbox" hidden></div>
+                    </div>
                     <ol>
                         <li><a href="#c-start" data-ch="c-start"><span class="toc-n">0</span>Start here</a></li>
                         <li><a href="#c-smiles" data-ch="c-smiles"><span class="toc-n">1</span>Molecules as text</a></li>
@@ -477,16 +487,57 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     <p class="lead">No chemistry background needed. In about 15 minutes you will know how a molecule can be written as
                         text, how ELAYA turns that text into a 3D shape, why one molecule has many shapes (<em>conformers</em>), and how
                         GLOMOS finds the most likely ones.</p>
-                    <div class="lp-workflow-steps learn-steps">
-                        <div class="lp-ws"><div class="lp-ws-num">01</div><div class="lp-ws-body"><strong>Write</strong><p>A molecule as a SMILES string, or a file with many.</p></div></div>
-                        <div class="lp-ws"><div class="lp-ws-num">02</div><div class="lp-ws-body"><strong>Build</strong><p>A 3D structure with RDKit, OpenBabel or NetworkX.</p></div></div>
-                        <div class="lp-ws"><div class="lp-ws-num">03</div><div class="lp-ws-body"><strong>Relax</strong><p>Optionally with a force field (UFF / MMFF94).</p></div></div>
-                        <div class="lp-ws"><div class="lp-ws-num">04</div><div class="lp-ws-body"><strong>Search</strong><p>Low-energy conformers with GLOMOS + ANI.</p></div></div>
-                        <div class="lp-ws"><div class="lp-ws-num">05</div><div class="lp-ws-body"><strong>Export</strong><p>XYZ, MOL, SDF, PDB, MOL2 or CML.</p></div></div>
-                    </div>
-                    <div class="learn-media">
-                        <figure class="learn-figure"><video src="pictures/example.webm" autoplay loop muted playsinline aria-label="ELAYA converting a SMILES string into 3D"></video><figcaption>A SMILES string becoming an optimised 3D structure.</figcaption></figure>
-                        <figure class="learn-figure"><img src="pictures/flowchart_elaya.png" alt="ELAYA workflow diagram" loading="lazy"><figcaption>What happens inside ELAYA.</figcaption></figure>
+                    <div class="flowchart" id="elaya-flow" aria-label="How ELAYA works">
+                        <div class="fc-row">
+                        <button type="button" class="fc-node" data-go="c-smiles" data-detail="1">
+                            
+                            <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
+                            <span class="fc-n">01</span>
+                            <b>Input</b>
+                            <small>SMILES or a .smi / .csv file</small>
+                        </button>
+                        <span class="fc-link" aria-hidden="true"><i></i></span>
+                        <button type="button" class="fc-node" data-go="c-smiles" data-detail="2">
+                            
+                            <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+                            <span class="fc-n">02</span>
+                            <b>Check</b>
+                            <small>RDKit reads it: valence, formula, stereo</small>
+                        </button>
+                        <span class="fc-link" aria-hidden="true"><i></i></span>
+                        <button type="button" class="fc-node" data-go="c-3d" data-detail="3">
+                            
+                            <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/></svg></span>
+                            <span class="fc-n">03</span>
+                            <b>Build 3D</b>
+                            <small>RDKit · OpenBabel · NetworkX + quality checks</small>
+                        </button>
+                        <span class="fc-link" aria-hidden="true"><i></i></span>
+                        <button type="button" class="fc-node fc-opt" data-go="c-energy" data-detail="4">
+                            <span class="fc-tag">optional</span>
+                            <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17c3 0 3-10 6-10s3 10 6 10 3-6 6-6"/></svg></span>
+                            <span class="fc-n">04</span>
+                            <b>Relax</b>
+                            <small>Force field: UFF or MMFF94</small>
+                        </button>
+                        <span class="fc-link" aria-hidden="true"><i></i></span>
+                        <button type="button" class="fc-node fc-opt" data-go="c-glomos" data-detail="5">
+                            <span class="fc-tag">optional</span><svg class="fc-loop" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><polyline points="20 4 20 9 15 9"/></svg>
+                            <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l2.6 8M16 7.5l-2.6 8M8.5 6h7"/></svg></span>
+                            <span class="fc-n">05</span>
+                            <b>GLOMOS</b>
+                            <small>ANI conformer search, generation after generation</small>
+                        </button>
+                        <span class="fc-link" aria-hidden="true"><i></i></span>
+                        <button type="button" class="fc-node" data-go="c-results" data-detail="6">
+                            
+                            <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></span>
+                            <span class="fc-n">06</span>
+                            <b>Results</b>
+                            <small>3D viewer, ΔE, populations, 6 file formats</small>
+                        </button>
+                        </div>
+                        <div class="fc-detail" id="fc-detail" aria-live="polite"></div>
                     </div>
                     <button type="button" class="lesson-next" data-next="c-smiles">Lesson 1 · Molecules as text →</button>
                 </article>
@@ -699,11 +750,11 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     <div class="res-grid">
                         <a class="res" href="https://daylight.com/dayhtml_tutorials/languages/smiles/index.html" target="_blank" rel="noopener"><span class="res-tag">Tutorial</span><b>SMILES tutorial</b><span>Daylight — atoms, bonds, branches, rings, aromaticity and stereo, with examples.</span></a>
                         <a class="res" href="https://www.daylight.com/dayhtml/doc/theory/index.html" target="_blank" rel="noopener"><span class="res-tag">Reference</span><b>Daylight Theory Manual</b><span>The original specification of SMILES (chapter 3).</span></a>
-                        <a class="res" href="https://sites.tntech.edu/biochem/smiles-tutorial/" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>SMILES in practice</b><span>Getting SMILES from PubChem and ChemDraw and importing them into 3D software.</span></a>
+                        <a class="res" href="https://sites.tntech.edu/biochem/smiles-tutorial/" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>SMILES in practice</b><span>Tennessee Tech biochemistry tutorial, with a video: getting SMILES from PubChem and using them in 3D software.</span></a>
                         <a class="res" href="https://www.inchi-trust.org/inchi-post/a-brief-introduction-to-smiles-and-inchi/" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>A brief introduction to SMILES and InChI</b><span>InChI Trust classroom material.</span></a>
                         <a class="res" href="https://chem.libretexts.org/Bookshelves/Organic_Chemistry/Map%3A_Organic_Chemistry_(Wade)_Complete_and_Semesters_I_and_II/Map%3A_Organic_Chemistry_(Wade)/04%3A_Structure_and_Stereochemistry_of_Alkanes/4.04%3A_Conformations_of_Butane" target="_blank" rel="noopener"><span class="res-tag">Textbook</span><b>Conformations of butane</b><span>LibreTexts — Newman projections and the butane energy diagram.</span></a>
                         <a class="res" href="https://chem.libretexts.org/Bookshelves/Organic_Chemistry/Book%3A_Organic_Chemistry_with_a_Biological_Emphasis_v2.0_(Soderberg)/03%3A_Conformations_and_Stereochemistry/3.02%3A_Conformations_of_open-chain_organic_molecules" target="_blank" rel="noopener"><span class="res-tag">Textbook</span><b>Conformations of open-chain molecules</b><span>LibreTexts (Soderberg) — conformations with a biological emphasis.</span></a>
-                        <a class="res" href="https://www.jove.com/v/11709" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>Conformations of butane</b><span>JoVE — short animated lesson.</span></a>
+                        <a class="res" href="https://www.youtube.com/watch?v=ryJvNEHcuDg" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>Newman projections of butane</b><span>Khan Academy — anti, gauche and eclipsed butane, drawn step by step (11 min).</span></a>
                         <a class="res" href="https://www.youtube.com/watch?v=9zfeTw-uFCw" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>Genetic algorithms: introduction</b><span>The Coding Train — the idea behind evolution-inspired search.</span></a>
                         <a class="res" href="https://www.youtube.com/watch?v=ziMHaGQJuSI" target="_blank" rel="noopener"><span class="res-tag res-tag--video">Video</span><b>How do genetic algorithms work?</b><span>Two Minute Papers — in three minutes.</span></a>
                         <a class="res" href="https://doi.org/10.1021/acs.jcim.5b00654" target="_blank" rel="noopener"><span class="res-tag res-tag--paper">Paper</span><b>ETKDG</b><span>Riniker &amp; Landrum, J. Chem. Inf. Model. 2015 — RDKit's 3D embedding.</span></a>
@@ -735,7 +786,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     <table class="lp-tech-table">
                         <tr><td class="lp-tt-label">Backend</td><td><a href="https://flask.palletsprojects.com/" target="_blank" rel="noopener">Flask</a> · Waitress · <a href="https://www.python.org/" target="_blank" rel="noopener">Python 3</a></td></tr>
                         <tr><td class="lp-tt-label">Cheminformatics</td><td><a href="https://www.rdkit.org/" target="_blank" rel="noopener">RDKit</a> · <a href="https://openbabel.org/" target="_blank" rel="noopener">OpenBabel</a> · <a href="https://networkx.org/" target="_blank" rel="noopener">NetworkX</a></td></tr>
-                        <tr><td class="lp-tt-label">Neural potentials</td><td>ANI-1x / ANI-1ccx / ANI-2x via <a href="https://github.com/aiqm/torchani" target="_blank" rel="noopener">TorchANI</a> · <a href="https://wiki.fysik.dtu.dk/ase/" target="_blank" rel="noopener">ASE</a></td></tr>
+                        <tr><td class="lp-tt-label">Neural potentials</td><td>ANI-1x / ANI-1ccx / ANI-2x via <a href="https://github.com/aiqm/torchani" target="_blank" rel="noopener">TorchANI</a> · <a href="https://ase-lib.org/" target="_blank" rel="noopener">ASE</a></td></tr>
                         <tr><td class="lp-tt-label">Conformer search</td><td>GLOMOS genetic algorithm (batched L-BFGS, USR shape descriptors)</td></tr>
                         <tr><td class="lp-tt-label">Visualization</td><td><a href="https://3dmol.csb.pitt.edu/" target="_blank" rel="noopener">3Dmol.js</a> · RDKit 2D depiction</td></tr>
                         <tr><td class="lp-tt-label">Frontend</td><td>HTML5 · CSS3 · Vanilla JavaScript</td></tr>
@@ -745,8 +796,8 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     <h3>Project Authors</h3>
                     <p>
                         ELAYA SMILES was designed and developed by
-                        <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link">Gabriela Vidales</a>,
-                        with scientific guidance from <strong>MSc Luis Ortiz</strong>, <strong>PhD Filiberto Ortiz Chi</strong> and <strong>PhD Gabriel Merino</strong>.
+                        <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link">Gabriela Vidales-Ayala</a>,
+                        with scientific guidance from <strong>PhD Filiberto Ortiz-Chi</strong>, <strong>PhD Gabriel Merino</strong> and <strong>MSc Luis Ortiz-Gonzalez</strong>.
                     </p>
                     <p style="margin-top:0.75rem;">
                         <i>Passion for building tools that bring science closer to people. Fostering open and reproducible science.</i>
@@ -764,44 +815,35 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
         ════════════════════════════════════════════════════ -->
         <section id="contact-section" style="display: none;">
 
-            <!-- Animated molecule background -->
-            <div class="contact-mol-bg">
-                <svg class="contact-mol-svg" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <filter id="cglow">
-                            <feGaussianBlur stdDeviation="4" result="b"/>
-                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-                        </filter>
-                        <radialGradient id="cgrad" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#3cb49a" stop-opacity="0.08"/>
-                            <stop offset="100%" stop-color="#3cb49a" stop-opacity="0"/>
-                        </radialGradient>
-                    </defs>
-                    <circle cx="250" cy="200" r="180" fill="url(#cgrad)"/>
-                    <g>
-                        <polygon points="250,120 300,148 300,204 250,232 200,204 200,148"
-                                 fill="none" stroke="#3cb49a" stroke-width="1.2" opacity="0.2">
-                            <animateTransform attributeName="transform" type="rotate" from="0 250 176" to="360 250 176" dur="28s" repeatCount="indefinite"/>
-                        </polygon>
-                        <circle cx="250" cy="120" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="300" cy="148" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="300" cy="204" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="250" cy="232" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="200" cy="204" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                        <circle cx="200" cy="148" r="6" fill="#0a1a2a" stroke="#3cb49a" stroke-width="1.5" opacity="0.4" filter="url(#cglow)"/>
-                    </g>
-                    <!-- Outer slow-pulse ring -->
-                    <circle cx="250" cy="200" r="155" fill="none" stroke="#3cb49a" stroke-width="0.6" opacity="0.1">
-                        <animate attributeName="r" values="148;162;148" dur="6s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" values="0.12;0.03;0.12" dur="6s" repeatCount="indefinite"/>
-                    </circle>
-                    <!-- Second ring -->
-                    <circle cx="250" cy="200" r="110" fill="none" stroke="#98ebc4" stroke-width="0.4" stroke-dasharray="3,7" opacity="0.12">
-                        <animateTransform attributeName="transform" type="rotate" from="0 250 200" to="-360 250 200" dur="18s" repeatCount="indefinite"/>
-                    </circle>
+            <!-- Animated background: orbits like the ELAYA logo ring -->
+            <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+                <radialGradient id="co-glow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#3cb49a" stop-opacity="0.12"/><stop offset="55%" stop-color="#9D4EDD" stop-opacity="0.05"/><stop offset="100%" stop-color="#3cb49a" stop-opacity="0"/>
+                </radialGradient></defs></svg>
+            <div class="contact-orbits co-top" aria-hidden="true">
+                <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="400" cy="400" r="390" fill="url(#co-glow)"/>
+                    <g class="co-spin co-s1"><circle cx="400" cy="400" r="360" class="co-ring co-faint"/></g>
+                    <g class="co-spin co-s2"><circle cx="400" cy="400" r="300" class="co-ring co-dash"/><circle cx="400" cy="100" r="7" class="co-dot"/><circle cx="700" cy="400" r="4" class="co-dot co-mint"/></g>
+                    <g class="co-spin co-s3"><circle cx="400" cy="400" r="240" class="co-ring co-dot2"/><circle cx="400" cy="640" r="5" class="co-dot co-purple"/><circle cx="160" cy="400" r="3.5" class="co-dot co-mint"/></g>
+                    <circle cx="400" cy="400" r="180" class="co-ring co-pulse"/>
+                    <g class="co-spin co-s4"><polygon points="400,330 461,365 461,435 400,470 339,435 339,365" class="co-hex"/>
+                        <circle cx="400" cy="330" r="5" class="co-atom"/><circle cx="461" cy="365" r="5" class="co-atom"/><circle cx="461" cy="435" r="5" class="co-atom"/>
+                        <circle cx="400" cy="470" r="5" class="co-atom"/><circle cx="339" cy="435" r="5" class="co-atom"/><circle cx="339" cy="365" r="5" class="co-atom"/></g>
                 </svg>
             </div>
-
+            <div class="contact-orbits co-bottom" aria-hidden="true">
+                <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="400" cy="400" r="390" fill="url(#co-glow)"/>
+                    <g class="co-spin co-s1"><circle cx="400" cy="400" r="360" class="co-ring co-faint"/></g>
+                    <g class="co-spin co-s2"><circle cx="400" cy="400" r="300" class="co-ring co-dash"/><circle cx="400" cy="100" r="7" class="co-dot"/><circle cx="700" cy="400" r="4" class="co-dot co-mint"/></g>
+                    <g class="co-spin co-s3"><circle cx="400" cy="400" r="240" class="co-ring co-dot2"/><circle cx="400" cy="640" r="5" class="co-dot co-purple"/><circle cx="160" cy="400" r="3.5" class="co-dot co-mint"/></g>
+                    <circle cx="400" cy="400" r="180" class="co-ring co-pulse"/>
+                    <g class="co-spin co-s4"><polygon points="400,330 461,365 461,435 400,470 339,435 339,365" class="co-hex"/>
+                        <circle cx="400" cy="330" r="5" class="co-atom"/><circle cx="461" cy="365" r="5" class="co-atom"/><circle cx="461" cy="435" r="5" class="co-atom"/>
+                        <circle cx="400" cy="470" r="5" class="co-atom"/><circle cx="339" cy="435" r="5" class="co-atom"/><circle cx="339" cy="365" r="5" class="co-atom"/></g>
+                </svg>
+            </div>
             <!-- Header -->
             <div class="contact-hero scroll-reveal">
                 <h2 class="contact-title" >Share your feedback</h2>
@@ -818,7 +860,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     <img src="pictures/Logo_Elaya.jpg" alt="ELAYA" class="contact-author-logo"/>
                     <div class="contact-author-info">
                         <div class="contact-author-name">
-                            <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales</a>
+                            <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales-Ayala</a>
                         </div>
                         <div class="contact-author-role">Physics Engineering Student</div>
                         <p class="contact-author-bio">
@@ -897,12 +939,12 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         <p>If ELAYA helped your work, please cite the software (a paper is in preparation).</p>
                     </div>
                     <pre class="cite-box" id="cite-bibtex">@software{elaya_smiles,
-  author  = {Vidales Ayala, Gabriela and Ortiz, Luis and
-             Ortiz Chi, Filiberto and Merino, Gabriel},
+  author  = {Vidales-Ayala, Gabriela and Ortiz-Chi, Filiberto and
+             Merino, Gabriel and Ortiz-Gonzalez, Luis},
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.3.0</span>},
+  version = {<span id="cite-version">2.3.1</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
@@ -927,8 +969,8 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
 
     <footer class="site-footer">
         <div class="footer-content">
-        <p>Elaya SMILES - Molecular Viewer© 2025</p>
-        <p><em>Developed by <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener" class="author-linkedin-link">Gabriela Vidales</a>, Luis Gonzalez, Filiberto Ortiz, and Gabriel Merino.</em></p>
+        <p>ELAYA SMILES · Molecular Viewer © 2026</p>
+        <p><em>Developed by <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener" class="author-linkedin-link">Gabriela Vidales-Ayala</a>, Filiberto Ortiz-Chi, Gabriel Merino and Luis Ortiz-Gonzalez.</em></p>
         </div>
     </footer>
 

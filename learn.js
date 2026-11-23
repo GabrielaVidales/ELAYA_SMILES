@@ -16,6 +16,18 @@
   const NAV_OFFSET = 70;
 
   // ------------------------------------------------------------------ TOC, progress, read ticks
+  // shared course state (used by the search, the quiz and the flowchart)
+  const course = { go: () => {}, markRead: () => {}, openAboutThen: (fn) => fn() };
+
+  function toast(msg) {
+    let t = document.querySelector('.learn-toast');
+    if (!t) { t = document.createElement('div'); t.className = 'learn-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
   function initToc() {
     const toc = document.querySelector('.learn-toc');
     const lessons = [...document.querySelectorAll('.learn .lesson')];
@@ -23,54 +35,76 @@
     const links = [...toc.querySelectorAll('a[data-ch]')];
     const read = new Set(store.get('elaya.learn.read', []));
     const counted = lessons.filter(l => l.id !== 'c-more');
+    const aboutVisible = () => { const a = $('about-section'); return a && a.style.display !== 'none'; };
 
     const paint = () => {
       links.forEach(a => a.classList.toggle('read', read.has(a.dataset.ch)));
       const n = counted.filter(l => read.has(l.id)).length;
       if ($('learn-done-count')) $('learn-done-count').textContent = `${n}/${counted.length}`;
+      const cont = $('hero-continue-btn'), first = counted.find(l => !read.has(l.id));
+      if (cont) {
+        cont.hidden = !(n > 0 && first);
+        if (first) { cont.setAttribute('href', `#${first.id}`); cont.textContent = `Continue the course: ${first.querySelector('h2')?.textContent || ''} ↓`; }
+      }
     };
+    const markRead = (id) => {
+      if (!id || read.has(id) || !counted.some(l => l.id === id)) return;
+      read.add(id);
+      store.set('elaya.learn.read', [...read]);
+      paint();
+      if (counted.every(l => read.has(l.id))) toast('🎉 Mini-course completed! You are ready to run GLOMOS.');
+    };
+    course.markRead = markRead;
+
     // on narrow screens the contents become a sticky chip bar, which also covers the top of the page
     const tocCovers = () => getComputedStyle(toc).position === 'sticky' && window.innerWidth <= 1000 ? toc.offsetHeight + 8 : 0;
-    const go = (id) => {
-      const el = $(id);
-      if (!el) return;
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - NAV_OFFSET - tocCovers(), behavior: 'smooth' });
+    let jumping = false, jumpTimer = null;      // lessons flown over by a jump are not "visited"
+    const go = (id, el) => {
+      const t = el || $(id);
+      if (!t) return;
+      jumping = true;
+      clearTimeout(jumpTimer);
+      jumpTimer = setTimeout(() => { jumping = false; spy(); }, 1100);
+      window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - NAV_OFFSET - tocCovers() - (el ? 24 : 0), behavior: 'smooth' });
     };
+    const openAboutThen = (fn) => {
+      if (aboutVisible()) return fn();
+      document.querySelector('a[href="#about"]')?.click();
+      setTimeout(fn, 450);
+    };
+    course.go = go;
+    course.openAboutThen = openAboutThen;
+
     links.forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); go(a.dataset.ch); }));
-    // any other link to a lesson (hero button, contact page) opens About first
+    // any other link to a lesson (hero buttons, contact page) opens About first
     document.querySelectorAll('a[href^="#c-"]:not([data-ch])').forEach(a => a.addEventListener('click', (e) => {
       e.preventDefault();
       const id = a.getAttribute('href').slice(1);
-      const about = $('about-section');
-      if (about && about.style.display === 'none') {
-        document.querySelector('a[href="#about"]')?.click();
-        setTimeout(() => go(id), 450);
-      } else go(id);
+      openAboutThen(() => go(id));
     }));
     document.querySelectorAll('.lesson-next').forEach(b => b.addEventListener('click', () => {
-      const cur = b.closest('.lesson');
-      if (cur) { read.add(cur.id); store.set('elaya.learn.read', [...read]); paint(); }
+      markRead(b.closest('.lesson')?.id);
       go(b.dataset.next);
     }));
+    $('learn-reset')?.addEventListener('click', () => {
+      read.clear(); store.set('elaya.learn.read', []); paint();
+      toast('Progress reset.');
+    });
 
-    // a lesson counts as read once its end has been on screen
-    const endObs = new IntersectionObserver((entries) => {
-      entries.forEach(en => {
-        const l = en.target.closest('.lesson');
-        if (!l) return;
-        clearTimeout(l._readTimer);
-        if (en.isIntersecting && !read.has(l.id)) {
-          l._readTimer = setTimeout(() => { read.add(l.id); store.set('elaya.learn.read', [...read]); paint(); }, 1500);
-        }
-      });
-    }, { threshold: 1 });
-    lessons.forEach(l => { const b = l.querySelector('.lesson-next'); if (b) endObs.observe(b); });
-
+    // A lesson counts as visited once you have scrolled to its end (its bottom edge is on screen while the
+    // lesson fills the reading area), or after it has been the lesson you are reading for a few seconds.
+    let activeId = null, activeSince = 0;
     const spy = () => {
-      const about = $('about-section');
-      if (!about || about.style.display === 'none') return;
+      if (!aboutVisible()) return;
+      const vh = window.innerHeight;
+      const line = Math.max(vh * 0.35, NAV_OFFSET + tocCovers() + 20);
       let active = lessons[0].id;
-      for (const l of lessons) if (l.getBoundingClientRect().top < Math.max(window.innerHeight * 0.35, NAV_OFFSET + tocCovers() + 20)) active = l.id;
+      for (const l of lessons) {
+        const r = l.getBoundingClientRect();
+        if (r.top < line) active = l.id;
+        if (!jumping && r.height && r.bottom <= vh - 4 && r.bottom > NAV_OFFSET) markRead(l.id);     // its end is visible
+      }
+      if (active !== activeId) { activeId = active; activeSince = performance.now(); }
       links.forEach(a => {
         const on = a.dataset.ch === active;
         if (on && !a.classList.contains('active')) {
@@ -84,14 +118,196 @@
       const bar = $('learn-progress-bar');
       if (learn && bar) {
         const r = learn.getBoundingClientRect();
-        const p = Math.min(1, Math.max(0, (window.innerHeight * 0.5 - r.top) / r.height));
+        const p = Math.min(1, Math.max(0, (vh * 0.5 - r.top) / r.height));
         bar.style.width = `${(p * 100).toFixed(1)}%`;
       }
+      const top = document.querySelector('.to-top');
+      if (top) top.classList.toggle('show', window.scrollY > 900);
     };
+    setInterval(() => {      // dwell: 6 s on a lesson also counts (long lessons read on a small screen)
+      if (aboutVisible() && activeId && !document.hidden && performance.now() - activeSince > 6000) markRead(activeId);
+    }, 1000);
     window.addEventListener('scroll', spy, { passive: true });
     window.addEventListener('resize', spy);
+    document.querySelector('a[href="#about"]')?.addEventListener('click', () => setTimeout(spy, 300));
+
+    const topBtn = document.createElement('button');
+    topBtn.type = 'button'; topBtn.className = 'to-top'; topBtn.setAttribute('aria-label', 'Back to top'); topBtn.textContent = '↑';
+    topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    document.body.appendChild(topBtn);
+    window.addEventListener('scroll', () => { if (!aboutVisible()) topBtn.classList.toggle('show', window.scrollY > 900); }, { passive: true });
+
     paint();
     spy();
+  }
+
+  // ------------------------------------------------------------------ course search (history kept for this session)
+  const SYN = {      // Spanish → English, so Spanish speakers find things in the English course
+    conformero: 'conformer', conformeros: 'conformer', enlace: 'bond', enlaces: 'bond', anillo: 'ring', anillos: 'ring',
+    energia: 'energy', poblacion: 'population', algoritmo: 'algorithm', genetico: 'genetic', archivo: 'file', formato: 'format',
+    estereo: 'stereo', carga: 'charge', temperatura: 'temperature', molecula: 'molecule', atomo: 'atom', doble: 'double',
+    triple: 'triple', rama: 'branch', ramificacion: 'branch', aromatico: 'aromatic', campo: 'force field', fuerza: 'force',
+    mutacion: 'mutation', cruce: 'mating', generacion: 'generation', semilla: 'seed', diedro: 'dihedral', torsion: 'torsion',
+    descargar: 'download', citar: 'cite', rotacional: 'rotational', constantes: 'constants', isomero: 'isomer', red: 'network',
+    neuronal: 'neural', video: 'video', videos: 'video', glosario: 'glossary', butano: 'butane', hidrogeno: 'hydrogen',
+  };
+  const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  function initSearch() {
+    const q = $('learn-q'), box = $('learn-results');
+    if (!q || !box) return;
+    const HKEY = 'elaya.learn.searches';
+    const hist = { get: () => { try { return JSON.parse(sessionStorage.getItem(HKEY) || '[]'); } catch (e) { return []; } },
+                   set: (v) => { try { sessionStorage.setItem(HKEY, JSON.stringify(v)); } catch (e) { /* */ } } };
+    const remember = (term) => {
+      term = term.trim();
+      if (term.length < 2) return;
+      hist.set([term, ...hist.get().filter(h => norm(h) !== norm(term))].slice(0, 8));
+    };
+
+    let index = null;
+    const build = () => {
+      const out = [];
+      document.querySelectorAll('.learn .lesson').forEach(l => {
+        const where = l.querySelector('h2')?.textContent.trim() || '';
+        l.querySelectorAll('h2, h3, p, li, tr, dt, .res, .learn-card, .learn-callout, .fc-node, .bt-note, .pg-title').forEach(el => {
+          if (el.closest('.res') && !el.classList.contains('res')) return;
+          if (el.closest('.learn-card') && !el.classList.contains('learn-card')) return;
+          if (el.closest('.learn-callout') && !el.classList.contains('learn-callout')) return;
+          if (el.closest('.fc-node') && !el.classList.contains('fc-node')) return;
+          let text;
+          if (el.tagName === 'TR') text = [...el.children].map(c => c.textContent.trim()).join(' — ');
+          else if (el.classList.contains('fc-node')) text = `${el.querySelector('b')?.textContent}: ${el.querySelector('small')?.textContent}`;
+          else if (el.classList.contains('res')) text = [...el.querySelectorAll('b, span:not(.res-tag)')].map(c => c.textContent.trim()).join(' — ');
+          else text = el.textContent;
+          text = text.replace(/\s+/g, ' ').trim();
+          if (el.tagName === 'DT') text += ' — ' + (el.nextElementSibling?.textContent || '').trim();
+          if (el.tagName === 'H2') text = `Lesson: ${text}`;
+          if (text.length > 2) out.push({ where, lesson: l.id, el, text, n: norm(text) });
+        });
+      });
+      STEPS.forEach((st, k) => out.push({ where: 'GLOMOS step by step', lesson: 'c-glomos', step: k, text: `${k + 1}. ${st.t} — ${st.b} ${st.p}`, n: norm(`${st.t} ${st.b} ${st.p}`) }));
+      QUIZ.forEach((x, k) => out.push({ where: 'Check yourself', lesson: 'c-quiz', el: null, quiz: k, text: `${x.q} ${x.why}`, n: norm(`${x.q} ${x.why}`) }));
+      return out;
+    };
+
+    const terms = (s) => norm(s).split(/\s+/).filter(Boolean).map(w => SYN[w] ? norm(SYN[w]) : w);
+    const snippet = (text, ts) => {
+      const n = norm(text);
+      let at = -1;
+      for (const t of ts) { at = n.indexOf(t); if (at >= 0) break; }
+      const start = Math.max(0, at - 50);
+      let out = (start ? '…' : '') + text.slice(start, start + 150) + (start + 150 < text.length ? '…' : '');
+      out = esc(out);
+      ts.forEach(t => {
+        if (t.length < 2) return;
+        const re = new RegExp(`(${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').split('').map(c => c === 'a' ? '[aáà]' : c === 'e' ? '[eéè]' : c === 'i' ? '[ií]' : c === 'o' ? '[oóò]' : c === 'u' ? '[uúü]' : c === 'n' ? '[nñ]' : c).join('')})`, 'gi');
+        out = out.replace(re, '<mark>$1</mark>');
+      });
+      return out;
+    };
+
+    let results = [], sel = -1;
+    const open = (on) => { box.hidden = !on; q.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+    const showHistory = () => {
+      const h = hist.get();
+      if (!h.length) { open(false); return; }
+      box.innerHTML = `<div class="lr-head">Recent searches (this session)<button type="button" id="lr-clear">clear</button></div>
+        <div class="lr-hist">${h.map(x => `<button type="button" data-h="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
+      box.querySelectorAll('[data-h]').forEach(b => b.addEventListener('mousedown', (e) => { e.preventDefault(); q.value = b.dataset.h; run(); }));
+      $('lr-clear').addEventListener('mousedown', (e) => { e.preventDefault(); hist.set([]); open(false); });
+      open(true);
+    };
+    const run = () => {
+      const raw = q.value.trim();
+      if (raw.length < 2) { results = []; showHistory(); return; }
+      index = index || build();
+      const ts = terms(raw);
+      results = index.map(r => {
+        let score = 0;
+        for (const t of ts) { const i = r.n.indexOf(t); if (i < 0) return null; score += (i < 40 ? 3 : 1) + (r.el && /^H[23]$/.test(r.el.tagName) ? 4 : 0); }
+        return { r, score: score - r.text.length / 400 };
+      }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 8).map(x => x.r);
+      sel = -1;
+      box.innerHTML = results.length
+        ? `<div class="lr-head">${results.length} result${results.length === 1 ? '' : 's'}</div>` +
+          results.map((r, i) => `<button type="button" class="lr-item" role="option" data-i="${i}"><span class="lr-where">${esc(r.where)}</span>${snippet(r.text, ts)}</button>`).join('')
+        : `<div class="lr-empty">No results for “${esc(raw)}”. Try another word (e.g. ring, conformer, ANI).</div>`;
+      box.querySelectorAll('.lr-item').forEach(b => b.addEventListener('mousedown', (e) => { e.preventDefault(); pick(Number(b.dataset.i)); }));
+      open(true);
+    };
+    const pick = (i) => {
+      const r = results[i];
+      if (!r) return;
+      remember(q.value);
+      open(false);
+      q.blur();
+      course.openAboutThen(() => {
+        let target = r.el;
+        if (r.step !== undefined) { window.elayaShowStep?.(r.step); target = $('glomos-stepper'); }
+        if (r.quiz !== undefined) target = document.querySelectorAll('#learn-quiz .qz')[r.quiz];
+        target = target || $(r.lesson);
+        const det = target.closest('details'); if (det) det.open = true;
+        course.go(r.lesson, target);
+        target.classList.remove('learn-flash'); void target.offsetWidth; target.classList.add('learn-flash');
+        setTimeout(() => target.classList.remove('learn-flash'), 2300);
+      });
+    };
+    const mark = () => box.querySelectorAll('.lr-item').forEach((b, i) => { b.classList.toggle('sel', i === sel); if (i === sel) b.scrollIntoView({ block: 'nearest' }); });
+
+    q.addEventListener('input', run);
+    q.addEventListener('focus', run);
+    q.addEventListener('blur', () => setTimeout(() => open(false), 120));
+    q.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' && results.length) { e.preventDefault(); sel = (sel + 1) % results.length; mark(); }
+      else if (e.key === 'ArrowUp' && results.length) { e.preventDefault(); sel = (sel - 1 + results.length) % results.length; mark(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (results.length) pick(sel < 0 ? 0 : sel); else remember(q.value); }
+      else if (e.key === 'Escape') { open(false); q.blur(); }
+    });
+    // "/" focuses the search while reading the course
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (['input', 'textarea', 'select'].includes(tag) || document.activeElement?.isContentEditable) return;
+      const about = $('about-section');
+      if (!about || about.style.display === 'none') return;
+      e.preventDefault();
+      q.focus();
+    });
+  }
+
+  // ------------------------------------------------------------------ lesson 0 flowchart
+  const FLOW = {
+    1: '<b>Input.</b> Type a SMILES string, pick an example, or upload a file with one molecule per line (names are kept).',
+    2: '<b>Check.</b> RDKit reads the string: valences, charges, rings, stereocentres and E/Z bonds. Invalid input is flagged before anything runs.',
+    3: '<b>Build 3D.</b> Atoms get x, y, z coordinates with RDKit (distance geometry), OpenBabel (templates) or NetworkX (graph layout). The result is checked back against your SMILES.',
+    4: '<b>Relax (optional).</b> A force field (UFF or MMFF94) nudges the structure into the nearest energy valley in a fraction of a second.',
+    5: '<b>GLOMOS (optional).</b> A genetic algorithm twists the rotatable bonds, relaxes every candidate with the ANI neural network and keeps the best — generation after generation.',
+    6: '<b>Results.</b> Explore the structure in 3D, compare conformers (ΔE, populations, rotational constants) and download XYZ, MOL, SDF, PDB, MOL2 or CML.',
+  };
+  function initFlow() {
+    const flow = $('elaya-flow');
+    if (!flow) return;
+    const det = $('fc-detail');
+    const nodes = [...flow.querySelectorAll('.fc-node')];
+    const show = (n) => {
+      nodes.forEach(b => b.classList.toggle('on', b.dataset.detail === String(n)));
+      const b = nodes.find(x => x.dataset.detail === String(n));
+      const title = $(b?.dataset.go)?.querySelector('h2')?.textContent || '';
+      det.innerHTML = `${FLOW[n]} <span class="fc-more">→ ${esc(title)}</span>`;
+    };
+    nodes.forEach(b => {
+      b.addEventListener('mouseenter', () => show(b.dataset.detail));
+      b.addEventListener('focus', () => show(b.dataset.detail));
+      b.addEventListener('click', () => course.go(b.dataset.go));
+    });
+    // gently walk through the steps until the user interacts
+    let k = 1, auto = setInterval(() => { show(k); k = k % 6 + 1; }, 3200);
+    const stop = () => { clearInterval(auto); auto = null; };
+    flow.addEventListener('mouseenter', stop, { once: true });
+    flow.addEventListener('focusin', stop, { once: true });
+    flow.addEventListener('touchstart', stop, { once: true, passive: true });
+    show(1);
   }
 
   // ------------------------------------------------------------------ SMILES playground
@@ -353,6 +569,7 @@
         }
       });
     };
+    window.elayaShowStep = show;
     rail.querySelectorAll('button').forEach(b => b.addEventListener('click', () => show(Number(b.dataset.k))));
     $('st-prev').addEventListener('click', () => show(i - 1));
     $('st-next').addEventListener('click', () => show(i + 1));
@@ -399,6 +616,7 @@
         why.innerHTML = `${answers[k] ? '✓ Correct.' : '✗ Not quite.'} ${esc(QUIZ[k].why)}`;
         const n = Object.keys(answers).length;
         if (n === QUIZ.length) {
+          course.markRead('c-quiz');
           const good = Object.values(answers).filter(Boolean).length;
           $('qz-score').innerHTML = `You got <b>${good}/${QUIZ.length}</b>. ${good === QUIZ.length ? 'Ready to run GLOMOS like a pro. 🎉' : 'Revisit the lessons above and try the explorer.'}
             <button type="button" id="qz-retry">Try again</button>`;
@@ -499,6 +717,8 @@
 
   function init() {
     initToc();
+    initFlow();
+    initSearch();
     initPlayground();
     initButane();
     initStepper();
