@@ -430,16 +430,37 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
-document.querySelectorAll('#smiles-examples span').forEach(span => {
-    span.addEventListener('click', () => {
-        const smiles = span.getAttribute('data-smiles');
+document.querySelectorAll('#smiles-examples [data-smiles]').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const smiles = chip.getAttribute('data-smiles');
         const smilesInput = document.getElementById('smiles');
         if (smilesInput) {
             smilesInput.value = smiles;
             smilesInput.classList.add('touched');
+            smilesInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
+        document.querySelectorAll('#smiles-examples .example-chip').forEach(c => c.classList.toggle('active', c === chip));
     });
 });
+
+// Enter in the SMILES field = Convert (unless the history dropdown is choosing an entry)
+(function () {
+    const smilesInput = document.getElementById('smiles');
+    if (!smilesInput) return;
+    smilesInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.isComposing) return;
+        const btn = document.getElementById('convert-molecules');
+        if (btn && !btn.disabled && smilesInput.value.trim()) {
+            e.preventDefault();
+            btn.click();
+        }
+    });
+    // typing by hand clears the highlighted example
+    smilesInput.addEventListener('input', (e) => {
+        if (!e.isTrusted) return;
+        document.querySelectorAll('#smiles-examples .example-chip.active').forEach(c => c.classList.remove('active'));
+    });
+})();
 
     // Event listeners
 document.querySelectorAll('input[name="input-method"]').forEach(radio => {
@@ -477,7 +498,8 @@ if (btnDownloadImage) btnDownloadImage.addEventListener('click', downloadImage);
 const btnDownloadFloating = document.getElementById('download-xyz-floating');
 if (btnDownloadFloating) {
     btnDownloadFloating.addEventListener('click', () => {
-        downloadXYZ(); // Esta función ya usa currentXYZ y currentMoleculeIndex
+        // structure on screen, in the format selected in the structure card
+        if (window.ElayaPanel) window.ElayaPanel.downloadCurrent(); else downloadXYZ();
     });
 }
 
@@ -1037,6 +1059,37 @@ document.querySelectorAll('.mol-entry').forEach((entry, idx) => {
 });
 
 // Funciones principales
+// Limits the server enforces, shown in the page (the time limit used to accept 60 min while
+// the server silently capped it at 20) + disable GLOMOS if the server cannot run it.
+async function applyServerLimits() {
+    try {
+        const r = await fetch('/api/health');
+        if (!r.ok) return;
+        const h = await r.json();
+        const minutes = document.getElementById('glomos-minutes');
+        if (minutes && Number.isFinite(h.max_minutes)) {
+            minutes.max = String(h.max_minutes);
+            if (Number(minutes.value) > h.max_minutes) minutes.value = String(h.max_minutes);
+            minutes.title = `Server limit: ${h.max_minutes} min per job`;
+        }
+        const opt = document.querySelector('#post-optimization option[value="glomos"]');
+        if (opt && h.glomos_ready === false) {
+            opt.disabled = true;
+            opt.textContent = 'GLOMOS (not available on this server)';
+        }
+    } catch (e) { /* offline: keep the defaults in the page */ }
+}
+
+// clamp the time limit to the field's max as the user types
+document.addEventListener('DOMContentLoaded', () => {
+    const minutes = document.getElementById('glomos-minutes');
+    minutes?.addEventListener('change', () => {
+        const max = Number(minutes.max) || 20, v = Number(minutes.value);
+        if (v > max) { minutes.value = String(max); showError(`The server allows at most ${max} min per GLOMOS job.`); }
+        if (v < 1) minutes.value = '1';
+    });
+});
+
 async function checkBackendConnection() {
     try {
         console.log("Verificando conexión con el backend...");
@@ -1047,7 +1100,7 @@ async function checkBackendConnection() {
         } else {
             const data = await response.json();
             console.log('Backend conectado:', data);
-            showSuccess('<strong>✔ Connection established.</strong> Ready for use.');
+            applyServerLimits();          // silent: a toast on every visit was just noise
         }
     } catch (error) {
         console.error('Conexión fallida con el backend:', error);
@@ -1283,7 +1336,8 @@ async function convertSingleMolecule() {
     if (xyzDisplay) xyzDisplay.style.display = 'block';
 
     updateViewerContainerLayout();
-    showSuccess?.(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${molecule.smiles}`);
+    const _s = String(molecule.smiles || '');
+    showSuccess?.(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${_s.length > 70 ? _s.slice(0, 67) + '…' : _s}`);
 
     const moleculeCtrls = document.getElementById('molecule-controls');
     const speedControl  = document.querySelector('.speed-control');
@@ -1458,7 +1512,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
             viewer.addModel(modelData, format, { keepH: true, noComputeSecondaryStructure: true });
             viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.25 } });
             viewer.zoomTo();
-            viewer.zoom(1);
+            viewer.zoom(0.9);                       // whole molecule with a small margin
             if (isVisible()) viewer.render();      // a hidden (0×0) canvas would raise WebGL errors
         } catch (e) {
             console.error("❌ Error al renderizar modelo:", e);
@@ -1477,7 +1531,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
                 if (wasHidden) {
                     wasHidden = false;
                     // zoom computed while the canvas was 0×0 is meaningless: redo it now
-                    try { viewer.resize(); viewer.zoomTo(); viewer.zoom(1); } catch (e) { /* ignore */ }
+                    try { viewer.resize(); viewer.zoomTo(); viewer.zoom(0.9); } catch (e) { /* ignore */ }
                 }
                 if (!isRotationPaused) {
                     viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
@@ -1494,7 +1548,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         if (placeholder) placeholder.style.display = 'none';
 
         setTimeout(() => {
-            try { if (isVisible()) { viewer.resize(); viewer.zoomTo(1.2); viewer.render(); } }
+            try { if (isVisible()) { viewer.resize(); viewer.zoomTo(); viewer.zoom(0.9); viewer.render(); } }
             catch (err) { console.warn("⚠ Error al redibujar viewer:", err); }
         }, 150);
     }
@@ -1867,7 +1921,7 @@ function toggleForceField() {
     const forceFieldDiv = document.getElementById('force-field-options');
 
     if (!method || !forceFieldDiv) {
-        console.warn("Elementos necesarios para toggleForceField no están disponibles aún.");
+        console.debug("toggleForceField: DOM not ready yet");
         return;
     }
 

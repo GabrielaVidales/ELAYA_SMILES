@@ -125,6 +125,7 @@ function _glDownload(name, text, mime) {
 }
 
 function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
+  window.ELAYA_CONFORMERS = null;          // a new job: the previous conformer set no longer applies
   const panel = createGlomosPanel();
   const container = document.querySelector('.visualization-controls')
                  || document.querySelector('.conversion-section')
@@ -311,6 +312,12 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
           (m.stop_reason === 'stagnation' ? ' (converged: lowest structures stopped changing)' : '');
         el.gen.textContent = `${res.conformers.length} conformer(s) · ${m.n_evaluated ?? nEval} ANI relaxations · seed ${m.random_seed ?? '?'}`;
         renderResults(res);
+        try {   // lets the page estimate the duration of the next run on this server
+          const atoms = parseInt(String(res.conformers[0]?.xyz || '').split('\n')[0], 10) || 0;
+          window.dispatchEvent(new CustomEvent('elaya:glomos-done', { detail: {
+            seconds: (Date.now() - t0) / 1000, n_evaluated: m.n_evaluated ?? nEval, atoms,
+            screening: m.screening || 'ensemble', status: data.status } }));
+        } catch (e) { /* informative only */ }
         const best = res.conformers[0];
         if (onDone) onDone(best.xyz, res);
       })
@@ -335,32 +342,22 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
       <div class="glomos-export">
         <button class="glomos-btn" id="gl-dl-all">Download all (multi-XYZ)</button>
         <button class="glomos-btn" id="gl-dl-json">Download results (JSON)</button>
-        <span>Selected as:</span>
-        <select id="gl-fmt"><option>xyz</option><option>mol</option><option>sdf</option><option>pdb</option><option>mol2</option><option>cml</option></select>
-        <button class="glomos-btn" id="gl-dl-one">Download</button>
+        <span class="gl-export-hint">Other formats (MOL, SDF, PDB, MOL2, CML) and .zip of all conformers: structure card below.</span>
       </div>`;
     let sel = 0;
-    el.results.querySelectorAll('tbody tr').forEach(tr => tr.addEventListener('click', () => {
-      sel = Number(tr.dataset.i);
-      el.results.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
-      tr.classList.add('selected');
-      if (onSelect) onSelect(c[sel], sel, res);
-    }));
+    const select = (i) => {
+      if (!(i >= 0 && i < c.length)) return;
+      sel = i;
+      el.results.querySelectorAll('tbody tr').forEach(r => r.classList.toggle('selected', Number(r.dataset.i) === i));
+      el.results.querySelector(`tbody tr[data-i="${i}"]`)?.scrollIntoView({ block: 'nearest' });
+      if (window.ELAYA_CONFORMERS && window.ELAYA_CONFORMERS.list === c) window.ELAYA_CONFORMERS.index = i;
+      if (onSelect) onSelect(c[i], i, res);
+    };
+    // shared with the viewer: conformer bar, keyboard arrows and format tabs use the same set
+    window.ELAYA_CONFORMERS = { list: c, smiles, result: res, index: 0, select };
+    el.results.querySelectorAll('tbody tr').forEach(tr => tr.addEventListener('click', () => select(Number(tr.dataset.i))));
     _gl('gl-dl-all').onclick = () => _glDownload('elaya_conformers.xyz', c.map(x => x.xyz).join(''), 'chemical/x-xyz');
     _gl('gl-dl-json').onclick = () => _glDownload('elaya_glomos_result.json', JSON.stringify(res, null, 2), 'application/json');
-    _gl('gl-dl-one').onclick = async () => {
-      const fmt = _gl('gl-fmt').value, x = c[sel];
-      if (fmt === 'xyz') return _glDownload(`${x.name}.xyz`, x.xyz, 'chemical/x-xyz');
-      try {
-        const r = await fetch('/api/export', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ smiles, xyz: x.xyz, format: fmt, name: x.name,
-            properties: { Energy_kcal_mol: x.energy_kcal.toFixed(4), Rel_energy_kcal_mol: x.rel_kcal.toFixed(4) } }),
-        });
-        if (!r.ok) throw new Error((await r.json()).error || `HTTP ${r.status}`);
-        _glDownload(`${x.name}.${fmt}`, await r.text());
-      } catch (err) { alert('Export failed: ' + err.message); }
-    };
   }
 
   return ctrl;

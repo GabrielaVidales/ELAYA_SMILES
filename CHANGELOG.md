@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.2.0
+
+### Viewer and results
+* **The whole molecule is always in view.** The 3D view has a bounded height and stays in sight (sticky)
+  while the results column scrolls; it is re-fitted whenever its box changes size (ResizeObserver).
+  Before, it stretched to the height of the GLOMOS card (1500 px+) and the molecule was cropped. New "Fit" button.
+* **Conformer bar over the 3D view** (◀ Conformer 2/6 ▶ · name · ΔE · population), synchronised with the
+  highlighted row of the GLOMOS table; ← → keys browse conformers (or the molecules of a file).
+* **Structure card with format tabs** (XYZ · MOL · SDF · PDB · MOL2 · CML) for every result: single SMILES, file
+  batch and GLOMOS. Title of what is on screen (molecule i/n with its name from the .smi file, or conformer i/n),
+  Copy button, "Download <FORMAT>" for the structure on screen and "Download all N molecules/conformers" as .zip.
+  The separate format selector of the GLOMOS card was removed (one list of formats).
+
+### Interface ↔ backend audit (tests/test_ui_contract.py)
+* Every control is checked against the backend: ANI model and screening choices, presets (identical numbers in
+  page and server), min/max of every GLOMOS field = server limits, every parameter reaches the GA's INPUT.txt,
+  every method x force-field choice is applied as selected, export formats, scripts served, and (with a toy
+  potential) that a random seed reproduces a run and that Ecut and Keep best bound the result.
+* Found and fixed: the time limit accepted 60 min while the server capped it at 20 without saying so. The field
+  now takes its maximum from /api/health and explains the limit.
+
+### Convenience
+* SMILES field: ✕ to clear; live check while typing (formula, mass, atoms, rotatable bonds, or the parser's error).
+* Options are remembered in the browser (method, force field, GLOMOS settings, format); post-optimisation is not
+  restored, so GLOMOS never starts by itself.
+* GLOMOS estimate: number of ANI relaxations of the chosen settings and, after one run on the server, an
+  approximate duration scaled by the number of atoms.
+* GLOMOS parameters in two columns; info icon of post-optimisation links to a text on conformers (LibreTexts)
+  instead of the repository; no "Connection established" toast on every visit; GLOMOS option disabled when the
+  server cannot run it.
+
+## 2.1.1
+
+* Example molecules as visible chips (mint outline, highlighted when selected) on one line with the SMILX link
+  ("Only a formula? SMILX-isogenerator"); Oxytocin removed from the chips (it is already the first-visit demo).
+  The previous colour (#42e27273, 45 % opacity) made them almost invisible.
+* Enter in the SMILES field runs Convert; examples are real buttons (keyboard accessible).
+
 ## 2.1.0
 
 ### GLOMOS speed (same results)

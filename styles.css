@@ -592,43 +592,72 @@ button.secondary:hover {
 }
 
 #smiles-examples {
-  margin-top: 5px;
-  font-size: 0.9rem;
-  color: #ccc;
+  margin-top: 8px;
   padding-left: 10px;
   user-select: none;
   display: flex;
-  flex-wrap: wrap;  /* Permite que los bloques se bajen si no caben */
-}
-
-#smiles-examples small {
-  display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: wrap;               /* one line on desktop; wraps only when there is no room */
   align-items: center;
-  gap: 5px;
+  gap: 6px 8px;
+  font-size: 0.85rem;
+  color: #cfd8dc;
 }
 
-#smiles-examples span,
-#smiles-examples a {
-  color: #42e27273;
+#smiles-examples .examples-label { font-weight: 600; color: #e8f0f2; }
+
+/* reset the generic ".input-overlay-wrapper button" rules (absolute / full-width) for the chips */
+.input-overlay-wrapper #smiles-examples .example-chip {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  top: auto !important; right: auto !important; bottom: auto !important; left: auto !important;
+  transform: none;
+  box-shadow: none !important;
+  flex: none !important;
+}
+#smiles-examples .example-chip {
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1;
+  padding: 0.32rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(152, 235, 196, 0.55);
+  background: rgba(152, 235, 196, 0.08);
+  color: #98ebc4;
   cursor: pointer;
-  margin-right: 10px;
-  transition: color 0.2s;
-  text-decoration: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
 }
+#smiles-examples .example-chip:hover {
+  background: rgba(152, 235, 196, 0.2) !important;
+  border-color: #98ebc4;
+}
+#smiles-examples .example-chip.active {
+  background: #98ebc4 !important;
+  color: #0a0a1a !important;
+  border-color: #98ebc4;
+}
+#smiles-examples .example-chip:focus-visible,
+#smiles-examples a:focus-visible { outline: 2px solid #ffbf00; outline-offset: 2px; }
 
-#smiles-examples span:hover,
-#smiles-examples a:hover {
+#smiles-examples .examples-sep { color: #6c7a80; margin: 0 2px; }
+
+#smiles-examples .formula-link { color: #cfd8dc; white-space: nowrap; }
+#smiles-examples .formula-link a {
   color: #ffbf00;
-  text-decoration: underline;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
 }
+#smiles-examples .formula-link a:hover { text-decoration: underline; }
 
-/* Ajuste para pantallas pequeñas */
 @media (max-width: 600px) {
-  #smiles-examples {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  #smiles-examples { padding-left: 2px; }
+  #smiles-examples .examples-sep { display: none; }
+  #smiles-examples .formula-link { flex-basis: 100%; white-space: normal; }
 }
 
 @keyframes waveMove {
@@ -3502,3 +3531,158 @@ select:focus-visible {
     .conversion-section > *, .conversion-row, .visualization-container, .visualization-controls { min-width: 0; max-width: 100%; }
     .glomos-hint { white-space: normal; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v2.2 — structure card (title + format tabs), conformer bar, GLOMOS in 2 columns
+═══════════════════════════════════════════════════════════════════════════ */
+.sp-head {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 0.6rem;
+}
+.sp-title { font-size: 0.85rem; color: #cfd8dc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-title strong { color: #98ebc4; font-weight: 700; }
+.sp-tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    border-bottom: 1px solid rgba(152, 235, 196, 0.25);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+.sp-tab, .sp-copy {
+    font: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    padding: 0.35rem 0.8rem;
+    background: transparent !important;
+    color: #9fb3ba !important;
+    border: 1px solid transparent !important;
+    border-bottom: none !important;
+    border-radius: 8px 8px 0 0 !important;
+    cursor: pointer;
+    width: auto !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    position: static !important;
+    flex: none;
+}
+.sp-tab:hover { color: #e8f0f2 !important; background: rgba(152, 235, 196, 0.06) !important; }
+.sp-tab.active {
+    color: #0a0a1a !important;
+    background: #98ebc4 !important;
+    border-color: #98ebc4 !important;
+    font-weight: 700;
+}
+.sp-copy { margin-left: auto !important; color: #ffbf00 !important; }
+#xyz-display.sp-loading { opacity: 0.55; }
+
+/* conformer bar over the 3D view */
+.visualization-container { position: relative; }
+#conformer-bar {
+    display: none;
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 12;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100% - 260px);
+    padding: 6px 8px;
+    border-radius: 14px;
+    background: rgba(10, 10, 26, 0.78);
+    border: 1px solid rgba(152, 235, 196, 0.35);
+    backdrop-filter: blur(6px);
+}
+#conformer-bar .control-btn {
+    width: 34px !important;
+    height: 30px;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    position: static !important;
+}
+#conformer-bar .control-btn:disabled { opacity: 0.35; cursor: default; }
+#conformer-bar .cb-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; text-align: center; }
+#conformer-bar .cb-text strong { color: #98ebc4; font-size: 0.9rem; }
+#conformer-bar .cb-text span { color: #cfd8dc; font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fit-btn { font-size: 0.8rem; }
+
+@media (max-width: 768px) {
+    #conformer-bar { top: auto; bottom: 64px; max-width: calc(100% - 24px); }
+    .sp-tab, .sp-copy { padding: 0.35rem 0.55rem; }
+}
+
+/* GLOMOS parameters: two columns, label column aligned */
+#glomos-panel .glomos-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px 36px !important;
+    max-width: 980px;
+}
+#glomos-panel .glomos-item {
+    grid-template-columns: 150px minmax(0, 1fr) !important;
+}
+#glomos-estimate {
+    grid-column: 1 / -1;
+    font-size: 0.8rem;
+    color: #cfd8dc;
+    margin-top: 2px;
+}
+#glomos-estimate b { color: #ffbf00; }
+@media (max-width: 768px) {
+    #glomos-panel .glomos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px 14px !important; }
+    #glomos-panel .glomos-item { grid-template-columns: 1fr !important; }
+}
+
+/* SMILES field: clear button, live check */
+#smiles-clear {
+    position: absolute !important;
+    right: 46px; top: 50%;
+    transform: translateY(-50%);
+    width: 26px !important; height: 26px; min-width: 0 !important;
+    display: none; align-items: center; justify-content: center;
+    padding: 0 !important; margin: 0 !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: rgba(10, 10, 26, 0.12) !important;
+    color: #33424a !important;
+    font-size: 13px; line-height: 1; cursor: pointer;
+    box-shadow: none !important; z-index: 3;
+}
+#smiles-clear:hover { background: rgba(10, 10, 26, 0.25) !important; }
+#smiles.smiles-invalid { box-shadow: 0 0 0 2px #ff6b6b !important; }
+#smiles-status { font-size: 0.8rem; margin: 6px 0 0 12px; min-height: 0; }
+#smiles-status.ok { color: #98ebc4; }
+#smiles-status.bad { color: #ff9c9c; }
+@media (max-width: 600px) { #smiles-status { margin-left: 4px; } }
+
+/* The 3D view keeps a sensible size and stays in sight while the results column (GLOMOS table,
+   log, structure card) scrolls. It used to stretch to the height of that column (1500 px+), so the
+   canvas became tall and narrow and the molecule was cropped at the sides. */
+@media (min-width: 769px) {
+    .conversion-row { align-items: flex-start; }
+    .visualization-container {
+        position: sticky !important;
+        top: 76px;
+        height: clamp(460px, calc(100vh - 110px), 760px) !important;
+        min-height: 460px;
+        align-self: flex-start;
+    }
+    .visualization-container:fullscreen,
+    .visualization-container:-webkit-full-screen { position: relative !important; height: 100vh !important; top: 0; }
+}
+@media (max-width: 768px) {
+    .visualization-container { height: min(70vh, 460px) !important; }
+}
+
+/* clear button lives inside the field's own wrapper */
+
+.gl-export-hint { font-size: 0.75rem; color: #9fb3ba; flex-basis: 100%; }
+
+/* long SMILES / titles never widen the results column */
+.visualization-controls { min-width: 0; }
+.sp-head, .sp-title, #individual-downloads, #individual-downloads button { min-width: 0; max-width: 100%; }

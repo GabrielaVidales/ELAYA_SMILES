@@ -87,23 +87,18 @@
 
                 <div id="single-input" class="input-group">
                     <div class="input-overlay-wrapper">
-                        <input type="text" id="smiles" list="smiles-history" placeholder="Enter your SMILES string eg: C1=CC2=C(C=C1O)NC=C2CCN">
+                        <input type="text" id="smiles" list="smiles-history" placeholder="Enter a SMILES string and press Enter, e.g. C1=CC2=C(C=C1O)NC=C2CCN">
                         <div id="smiles-examples" class="smiles-examples">
-                        <small>
-                            <b>No SMILES in mind? Try one of these:</b>
-                            <span data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine,</span>
-                            <span data-smiles="N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O">Oxytocin,</span>
-                            <span data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O">Glucose,</span>
-                            <span data-smiles="CC(=O)Oc1ccccc1C(=O)O">Aspirin,</span>
-                            <span data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin,</span>
-                            <span data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</span>
-                        </small>
-                        <small class="formula-link">
-                            <b>Have a formula but no SMILE? Click here: </b>
-                            <span>
-                            <a href="https://smilx-isogenerator.streamlit.app/" target="_blank">SMILX-isogenerator</a>
+                            <span class="examples-label">Try:</span>
+                            <button type="button" class="example-chip" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button>
+                            <button type="button" class="example-chip" data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O">Glucose</button>
+                            <button type="button" class="example-chip" data-smiles="CC(=O)Oc1ccccc1C(=O)O">Aspirin</button>
+                            <button type="button" class="example-chip" data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin</button>
+                            <button type="button" class="example-chip" data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</button>
+                            <span class="examples-sep" aria-hidden="true">·</span>
+                            <span class="formula-link">Only a formula?
+                                <a href="https://smilx-isogenerator.streamlit.app/" target="_blank" rel="noopener">SMILX-isogenerator ↗</a>
                             </span>
-                        </small>
                         </div>
                     </div>
                     <datalist id="smiles-history"></datalist>
@@ -178,7 +173,7 @@
                         ④ Post-optimization (Advanced)
                         <span class="info-icon"
                             data-tooltip-id="tooltip-postopt"
-                            data-url="https://github.com/GabrielaVidales/Elaya_SMILES">🛈</span>
+                            data-url="https://chem.libretexts.org/Bookshelves/Organic_Chemistry/Book%3A_Organic_Chemistry_with_a_Biological_Emphasis_v2.0_(Soderberg)/03%3A_Conformations_and_Stereochemistry/3.02%3A_Conformations_of_open-chain_organic_molecules">🛈</span>
                         <div id="tooltip-postopt" class="custom-tooltip">
                             Optional post-processing step applied after the initial 3D structure is generated.<br><br>
                             <strong>● GLOMOS (ANI conformers):</strong> Genetic-algorithm-based conformational search powered by TorchANI neural network potentials. Explores the rotational space of the molecule to find low-energy conformers. Parameters such as population size, number of generations, matings, mutants, and energy cutoff can be configured. Outputs the best conformer ranked by ANI energy (kcal/mol).<br><br>
@@ -257,7 +252,7 @@
 
                     <div class="glomos-item">
                     <span>Time limit (min)</span>
-                    <input type="number" id="glomos-minutes" value="10" min="1" max="60">
+                    <input type="number" id="glomos-minutes" value="10" min="1" max="20" title="Server limit: 20 min per job">
                     </div>
 
                     <div class="glomos-item" title="0 = a new random seed each run; any other value reproduces a run">
@@ -983,5 +978,7 @@
 
     <script src="/glomos_progress.js"></script>
     <script src="/app.js" defer></script>
+    <script src="/structure_panel.js" defer></script>
+    <script src="/ux_extras.js" defer></script>
 </body>
 </html>
