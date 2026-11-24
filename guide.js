@@ -100,7 +100,7 @@
     // step 2 hint, pinned on the settings box
     const sHint = document.createElement('div');
     sHint.className = 'settings-hint';
-    sHint.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Choose the options or keep the defaults, then press <b>Convert structure</b>';
+    sHint.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Optional settings, then <b>Convert</b>';
     document.querySelector('.method-controls')?.prepend(sHint);
     let touched = false;
     document.querySelector('.method-controls')?.addEventListener('change', () => { touched = true; });
@@ -160,7 +160,7 @@
     { el: () => document.querySelector('.method-controls'), t: '2 · Settings', b: 'Change them or keep the defaults. How to build the 3D structure, an optional force-field clean-up, and the advanced GLOMOS conformer search. The defaults work. Each ⓘ explains its option.' },
     { el: () => $('convert-molecules'), t: '3 · Convert', b: 'Press this button to build the 3D structure. It usually takes a second; GLOMOS takes minutes and shows its progress live.' },
     { el: () => document.querySelector('.visualization-container'), t: '4 · Explore', b: 'Drag to rotate, scroll to zoom, switch between 3D and 2D. The buttons at the top left save a picture, record a video, and measure distances, angles and dihedrals (click the atoms). ⤢ is full screen.' },
-    { el: () => document.querySelector('.visualization-controls'), t: 'Results & downloads', b: 'Coordinates in six formats (XYZ, MOL, SDF, PDB, MOL2, CML), quality checks, and buttons to download one or all.' },
+    { el: () => document.querySelector('.visualization-controls'), t: 'Results & downloads', b: 'Coordinates in six formats (XYZ, MOL, SDF, PDB, MOL2, CML) and buttons to download one or all. A warning appears here only if the 3D structure does not match the SMILES.' },
     { el: () => document.querySelector('.navbar a[href="#about"]'), t: 'New to chemistry?', b: 'The About tab has a 15-minute mini-course: SMILES, 3D structures, conformers and GLOMOS, with interactive examples.' },
   ];
 

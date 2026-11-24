@@ -355,10 +355,9 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         <ol class="re-list">
                             <li><b>Coordinates</b> of every atom, ready to copy</li>
                             <li><b>Six file formats</b>: XYZ, MOL, SDF, PDB, MOL2, CML</li>
-                            <li><b>Quality checks</b> of stereochemistry and bonds</li>
                             <li>With GLOMOS: a <b>ranked list of conformers</b></li>
                         </ol>
-                        <p class="re-hint"><span class="when-empty">Start by typing a SMILES above, or click an example like <button type="button" class="re-example" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button></span><span class="when-ready">✓ Your molecule is ready. Choose the options (or keep the defaults) and press <b>Convert structure</b>.</span></p>
+                        <p class="re-hint"><span class="when-empty">Start by typing a SMILES above, or click an example like <button type="button" class="re-example" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button></span><span class="when-ready">✓ Ready. Press <b>Convert structure</b>.</span></p>
                     </div>
                    
                      <!--<div class="tab-bar" id="format-tab-bar" style="display: none;">
@@ -625,10 +624,9 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         </table>
                     </div>
                     <div class="learn-callout">
-                        <b>Quality checks under the viewer.</b> ELAYA reads the 3D structure back and compares it with your SMILES:
-                        <span class="qa-chip ok">Stereo ✓</span> means every stereocentre and E/Z bond came out as written;
-                        <span class="qa-chip ok">Bonds ✓</span> means the bonds perceived from the distances are the SMILES bonds.
-                        The <span class="qa-chip info">A · B · C GHz</span> chip shows rotational constants (lesson 6).
+                        <b>Automatic checks.</b> ELAYA reads every 3D structure back and compares it with your SMILES
+                        (stereocentres, E/Z bonds, bond lengths). If something does not match, a warning appears above the
+                        coordinates; when everything is right, nothing is shown.
                     </div>
                     <button type="button" class="lesson-next" data-next="c-energy">Lesson 3 · Energy →</button>
                 </article>
@@ -962,7 +960,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.3</span>},
+  version = {<span id="cite-version">2.4.4</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>

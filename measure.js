@@ -77,15 +77,17 @@
     box.hidden = !on;
     if (!on) return;
     const r = result();
-    const need = ['Click an atom to start.', 'Click a 2nd atom → distance.', 'A 3rd atom → angle.', 'A 4th atom → dihedral.', ''][Math.min(picks.length, 4)];
+    const need = ['Click 2 atoms (distance), 3 (angle) or 4 (dihedral).', 'Click another atom.', '', '', ''][Math.min(picks.length, 4)];
+    const older = history.slice(r ? 1 : 0, 4);
     box.innerHTML = `
-      <div class="mp-head"><b>Measure</b><span>2 atoms = distance · 3 = angle · 4 = dihedral</span></div>
-      <div class="mp-now">${picks.length ? `<span class="mp-atoms">${picks.map(name).join(' – ')}</span>` : ''}
-        ${r ? `<span class="mp-val">${r.kind}: <b>${r.value}</b></span>` : ''}<span class="mp-need">${need}${picks.length === 4 ? 'Click another atom to start a new measurement.' : ''}</span></div>
-      ${history.length ? `<ol class="mp-hist">${history.map(h => `<li><span>${h.kind}</span> ${esc(h.text)} <b>${h.value}</b></li>`).join('')}</ol>` : ''}
-      <div class="mp-actions"><button type="button" id="mp-copy" ${history.length ? '' : 'disabled'}>Copy</button><button type="button" id="mp-clear">Clear</button><button type="button" id="mp-done">Done</button></div>`;
+      <div class="mp-head"><b>Measure</b><button type="button" class="mp-x" id="mp-done" aria-label="Stop measuring">✕</button></div>
+      ${r ? `<div class="mp-val"><span>${esc(r.text)}</span><b>${r.value}</b></div>` : `<div class="mp-need">${need}</div>`}
+      ${older.length ? `<ul class="mp-hist">${older.map(h => `<li><span>${esc(h.text)}</span><b>${h.value}</b></li>`).join('')}</ul>` : ''}
+      ${history.length ? `<div class="mp-actions"><button type="button" id="mp-copy">Copy</button><button type="button" id="mp-clear">Clear</button></div>` : ''}`;
+    if (!$('mp-clear')) { $('mp-done').onclick = () => toggle(false); return; }
     $('mp-clear').onclick = () => { picks = []; history = []; draw(); panel(); };
     $('mp-done').onclick = () => toggle(false);
+    if (!$('mp-copy')) return;
     $('mp-copy').onclick = async () => {
       const txt = history.map(h => `${h.kind}\t${h.text}\t${h.value}`).join('\n');
       try { await navigator.clipboard.writeText(txt); $('mp-copy').textContent = 'Copied ✓'; } catch (e) { /* */ }
@@ -116,7 +118,7 @@
     try {
       viewer.setClickable({}, true, (atom) => onPick(atom));
       viewer.setHoverable({}, true,
-        (atom) => { if (!on || hoverLabel) return; hoverLabel = viewer.addLabel(name(atom), { position: atom, inFront: true, fontSize: 11, fontColor: '#e8eef2', backgroundColor: '#000', backgroundOpacity: 0.6 }); viewer.render(); },
+        (atom) => { if (!on || hoverLabel || picks.some(p => p.index === atom.index)) return; hoverLabel = viewer.addLabel(name(atom), { position: atom, inFront: true, fontSize: 11, fontColor: '#e8eef2', backgroundColor: '#000', backgroundOpacity: 0.6 }); viewer.render(); },
         () => { if (hoverLabel) { try { viewer.removeLabel(hoverLabel); viewer.render(); } catch (e) { /* */ } hoverLabel = null; } });
       viewer.setHoverDuration?.(60);
       viewer.render();      // 3Dmol builds its pick list while rendering; rotation is paused, so render once here

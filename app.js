@@ -1372,23 +1372,14 @@ function renderStructureQA() {
     const qa = cur ? cur.qa : null;
     if (!qa || window.ELAYA_GLOMOS_RUNNING) { box.style.display = 'none'; box.innerHTML = ''; return; }
     const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    // v2.4.4: only problems are shown; when everything matches the SMILES nothing is added
     const chips = [];
-    if (qa.approximate) chips.push(`<span class="qa-chip warn" title="NetworkX builds a graph layout, not a force-field geometry">Approximate layout</span>`);
-    if (qa.stereo) {
-        if (qa.stereo.ok) {
-            if (qa.stereo.n_checked) chips.push(`<span class="qa-chip ok" title="Stereocentres and E/Z bonds of the 3D structure match the SMILES">Stereo ✓ (${qa.stereo.n_checked})</span>`);
-        } else {
-            chips.push(`<span class="qa-chip bad" title="${esc((qa.stereo.problems || []).join('\n'))}">Stereo ✗ ${esc((qa.stereo.problems || [])[0] || '')}</span>`);
-        }
+    if (qa.approximate) chips.push(`<span class="qa-chip warn" title="NetworkX builds a graph layout, not a force-field geometry">Approximate layout (NetworkX)</span>`);
+    if (qa.stereo && !qa.stereo.ok) {
+        chips.push(`<span class="qa-chip bad" title="${esc((qa.stereo.problems || []).join('\n'))}">Stereo differs from the SMILES: ${esc((qa.stereo.problems || [])[0] || '')}</span>`);
     }
-    if (qa.bonds && qa.bonds.ok !== undefined && qa.bonds.ok !== null) {
-        chips.push(qa.bonds.ok
-            ? `<span class="qa-chip ok" title="Bonds perceived from the 3D distances match the SMILES">Bonds ✓</span>`
-            : `<span class="qa-chip warn" title="${esc(qa.bonds.detail || '')}">Bonds: some distances off</span>`);
-    }
-    if (qa.rot && qa.rot.A_GHz != null) {
-        const g = v => (v == null ? '—' : Number(v).toFixed(3));
-        chips.push(`<span class="qa-chip info" title="Rotational constants of this geometry">A ${g(qa.rot.A_GHz)} · B ${g(qa.rot.B_GHz)} · C ${g(qa.rot.C_GHz)} GHz</span>`);
+    if (qa.bonds && qa.bonds.ok === false) {
+        chips.push(`<span class="qa-chip warn" title="${esc(qa.bonds.detail || '')}">Some bond lengths look off</span>`);
     }
     box.innerHTML = chips.join('');
     box.style.display = chips.length ? 'flex' : 'none';

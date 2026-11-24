@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.4
+
+* Guidance without frames: no outline around the input box, the settings or the Convert button; Convert keeps a soft
+  glow. Settings hint shortened to "Optional settings, then Convert".
+* Measure panel: compact (current value + earlier ones, Copy / Clear, ✕ to stop); nothing overlaps it; no duplicate
+  atom label under the pointer.
+* Structure checks: the "Stereo ✓ / Bonds ✓ / A·B·C GHz" chips are gone; a warning appears only when the 3D
+  structure does not match the SMILES (or NetworkX gives an approximate layout). Course and tour texts updated.
+
 ## 2.4.3
 
 * **Measure fixed**: atom clicks were ignored because 3Dmol builds its pick list while rendering and the view was

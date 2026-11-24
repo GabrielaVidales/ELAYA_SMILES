@@ -4560,3 +4560,31 @@ select.touched {
   .method-controls select, .glomos-item select, .select-wrapper select, #glomos-panel select, #rb-area { display: flex; align-items: center; }
   #glomos-panel select { height: 34px; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.4 — quieter guidance, compact measure panel
+════════════════════════════════════════════════════════════ */
+/* no frames around the steps any more; the hints and the Convert glow are enough */
+body.g-no-molecule .input-section, body.g-settings .method-controls, body.g-settings .input-section { box-shadow: none !important; }
+body.g-no-molecule .method-controls, body.g-no-molecule .visualization-container, body.g-no-molecule .visualization-controls { opacity: 1 !important; }
+body.g-ready #convert-molecules { outline: none !important; animation: g-soft 2.2s ease-in-out infinite; }
+@keyframes g-soft { 0%, 100% { box-shadow: 0 0 0 0 rgba(143,227,203,0); } 50% { box-shadow: 0 0 22px 2px rgba(143,227,203,.45); } }
+.settings-hint { font-size: .74rem !important; padding: .1rem .6rem !important; }
+
+/* measure panel: small, nothing behind it */
+.visualization-container.measuring #molecule-controls .controls-left { visibility: hidden !important; }
+.measure-panel { width: auto; min-width: 210px; max-width: min(280px, calc(100% - 20px)); padding: .5rem .7rem; font-size: .78rem; }
+.mp-head { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: .25rem; }
+.mp-head b { font-size: .8rem; }
+.mp-x { background: none; border: 0; color: var(--on-md); cursor: pointer; font-size: .85rem; padding: 0 2px; line-height: 1; }
+.mp-x:hover { color: var(--on-hi); }
+.mp-val { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; }
+.mp-val span { color: var(--lav); font-family: ui-monospace, Menlo, monospace; font-size: .76rem; }
+.mp-val b { color: var(--mint); font-size: 1.05rem; }
+.mp-need { font-size: .74rem; line-height: 1.4; }
+.mp-hist { list-style: none; margin: .35rem 0 0; padding: .3rem 0 0; border-top: 1px solid rgba(255,255,255,.08); max-height: none; }
+.mp-hist li { display: flex; justify-content: space-between; gap: .8rem; color: var(--on-md); font-size: .74rem; }
+.mp-hist li span { font-family: ui-monospace, Menlo, monospace; }
+.mp-hist li b { color: var(--on-hi); font-weight: 600; }
+.mp-actions { margin-top: .4rem; }
+.mp-actions button { padding: .15rem .55rem; font-size: .72rem; }
