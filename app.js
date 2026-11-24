@@ -1183,7 +1183,7 @@ async function convertMolecules(pickedList = null) {
       });
 
       const _smi = String(mol.smiles || '');
-      showSuccess(`<strong>✔ Successfully converted</strong> <span class="toast-smi">${_esc(_smi.length > 70 ? _smi.slice(0, 67) + '…' : _smi)}</span>`);
+      showSuccess(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${_esc(_smi.length > 70 ? _smi.slice(0, 67) + '…' : _smi)}`);
     }
 
     // Estado final + render/XYZ
@@ -1332,7 +1332,7 @@ async function convertSingleMolecule() {
 
     updateViewerContainerLayout();
     const _s = String(molecule.smiles || '');
-    showSuccess?.(`<strong>✔ Successfully converted</strong> <span class="toast-smi">${_esc(_s.length > 70 ? _s.slice(0, 67) + '…' : _s)}</span>`);
+    showSuccess?.(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${_esc(_s.length > 70 ? _s.slice(0, 67) + '…' : _s)}`);
 
     const moleculeCtrls = document.getElementById('molecule-controls');
     const speedControl  = document.querySelector('.speed-control');

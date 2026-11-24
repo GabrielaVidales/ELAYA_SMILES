@@ -310,8 +310,40 @@
     } catch (e) { /* storage off */ }
   }
 
+  // ------------------------------------------------------------------ animated placeholder + example hint
+  // Types "Type a SMILES · e.g. <smiles>" and lights up the matching example word, so it is clear the
+  // examples can be clicked. Stops while the box has text or focus with text.
+  function initTypewriter() {
+    const input = $('smiles');
+    if (!input) return;
+    const BASE = 'Type a SMILES · e.g. ';
+    const picks = ['Aspirin', 'Dopamine', 'Glucose', 'Serotonin']
+      .map(n => [...document.querySelectorAll('#smiles-examples .example-chip')].find(c => c.textContent.trim() === n))
+      .filter(Boolean);
+    if (reduceMotion || !picks.length) { input.placeholder = 'Type a SMILES or click an example'; return; }
+    let k = 0, i = 0, phase = 'type', timer = null;
+    const clear = () => picks.forEach(c => c.classList.remove('hint-click'));
+    const tick = () => {
+      if (input.value || page() !== 'explore') { clear(); input.placeholder = 'Type a SMILES'; timer = setTimeout(tick, 1200); return; }
+      const chip = picks[k], smi = chip.dataset.smiles;
+      if (phase === 'type') {
+        i++;
+        input.placeholder = BASE + smi.slice(0, i);
+        if (i >= smi.length) { phase = 'hold'; chip.classList.add('hint-click'); timer = setTimeout(tick, 2200); return; }
+        timer = setTimeout(tick, 55);
+      } else {
+        clear(); i = 0; phase = 'type'; k = (k + 1) % picks.length;
+        input.placeholder = BASE;
+        timer = setTimeout(tick, 500);
+      }
+    };
+    input.addEventListener('input', clear);
+    timer = setTimeout(tick, 900);
+  }
+
   function init() {
     forgetOldDeviceData();
+    initTypewriter();
     initPages();
     initSteps();
     initTour();

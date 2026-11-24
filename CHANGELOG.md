@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.9
+
+* SMILES box: animated placeholder "Type a SMILES · e.g. …" types an example while the matching example word
+  lights up with a small 👆, so it is clear the examples can be clicked (static with reduced motion).
+* SMILES file: compact drop zone; help, a light-blue divider, the example (monospace, aligned) and the download
+  button on one line.
+* Notifications back to the earlier look: top right, "✔ Molecule successfully converted / SMILES: …".
+* About header: actions on one line ("New here? Mini-course ↓", "Continue: <lesson> ↓").
+* Contact: purple→blue→teal bar on top of each card; "Share your feedback" in the ELAYA gold.
+
 ## 2.4.8
 
 * 2D drawing can be zoomed (wheel / pinch), moved (drag) and reset (double-click or Fit).

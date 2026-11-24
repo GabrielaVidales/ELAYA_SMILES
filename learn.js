@@ -45,7 +45,7 @@
       const cont = $('hero-continue-btn'), first = counted.find(l => !read.has(l.id));
       if (cont) {
         cont.hidden = !(n > 0 && first);
-        if (first) { cont.setAttribute('href', `#${first.id}`); cont.textContent = `Continue the course: ${first.querySelector('h2')?.textContent || ''} ↓`; }
+        if (first) { cont.setAttribute('href', `#${first.id}`); cont.textContent = `Continue: ${first.querySelector('h2')?.textContent || ''} ↓`; }
       }
     };
     const markRead = (id) => {
