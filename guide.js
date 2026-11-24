@@ -96,44 +96,53 @@
     // the "start here" bubble next to the SMILES box
     const bubble = document.createElement('div');
     bubble.className = 'start-bubble';
-    bubble.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Start here: type a SMILES or click an example';
+    bubble.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Start here';
     const wrap = $('single-input');
     if (wrap) wrap.insertAdjacentElement('afterbegin', bubble);
 
-    const cta = document.createElement('div');
-    cta.className = 'convert-cta';
-    cta.innerHTML = 'Next: <b>Convert</b> <span aria-hidden="true">→</span>';
-    const btn = $('convert-molecules');
-    if (btn) btn.insertAdjacentElement('beforebegin', cta);
+    // step 2 hint, pinned on the settings box
+    const sHint = document.createElement('div');
+    sHint.className = 'settings-hint';
+    sHint.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Step 2 · Change the options or keep the defaults, then press <b>Convert</b>';
+    document.querySelector('.method-controls')?.prepend(sHint);
+    let touched = false;
+    document.querySelector('.method-controls')?.addEventListener('change', () => { touched = true; });
+    document.getElementById('glomos-panel')?.addEventListener('change', () => { touched = true; });
+    $('smiles')?.addEventListener('input', () => { if (!hasResults()) touched = false; });
+
+    // the formula line moves out of the search bar: shown in the results column instead
+    const status = () => $('smiles-status');
+    const info = $('re-info');
 
     const update = () => {
       if (page() !== 'explore') return;
       const s1 = moleculeReady();
       const res = hasResults();
       const busy = isBusy();
-      const cur = res ? 4 : s1 ? 3 : 1;
-      const state = `${s1}|${res}|${busy}|${cur}`;
+      const cur = res ? 4 : !s1 ? 1 : (!touched ? 2 : 3);
+      const st = status();
+      const infoText = st && st.className === 'ok' ? st.textContent : '';
+      const state = `${s1}|${res}|${busy}|${cur}|${infoText}`;
       if (state === lastState) return;
       lastState = state;
 
       items.forEach(li => {
         const n = Number(li.dataset.step);
-        const done = n < cur || (n === 4 && res) || (n === 2 && s1);
-        li.classList.toggle('done', done && !(n === 3 && busy));
-        li.classList.toggle('current', n === cur && !(n === 4 && res && false));
+        const done = n < cur && !(n === 3 && busy);
+        li.classList.toggle('done', done);
+        li.classList.toggle('current', n === cur && !busy);
         li.classList.toggle('busy', n === 3 && busy);
         li.querySelector('button').setAttribute('aria-current', n === cur ? 'step' : 'false');
       });
-      if (busy) items[2].querySelector('small').textContent = 'Working… please wait';
-      else items[2].querySelector('small').textContent = res ? 'Done · convert again any time' : 'Build the 3D structure';
 
       document.body.classList.toggle('g-no-molecule', !s1 && !res);
+      document.body.classList.toggle('g-settings', s1 && !res && !busy && cur === 2);
       document.body.classList.toggle('g-ready', s1 && !res && !busy);
       document.body.classList.toggle('g-results', res);
       document.body.classList.toggle('g-busy', busy);
       const empty = (($('smiles')?.value || '').trim() === '');
       bubble.classList.toggle('show', !s1 && !res && empty && !document.querySelector('input[name="input-method"][value="file"]')?.checked);
-      cta.classList.toggle('show', s1 && !res && !busy);
+      if (info) { info.textContent = infoText; info.hidden = !infoText; }
       if (res) {   // they found their way: the welcome card is no longer needed
         const w = document.querySelector('.welcome-card');
         if (w) { w.classList.remove('show'); setTimeout(() => w.remove(), 300); store.set('elaya.tour.seen', true); }
@@ -147,6 +156,8 @@
       if (el) { el.classList.remove('g-flash'); void el.offsetWidth; el.classList.add('g-flash'); }
     }));
 
+    $('convert-molecules')?.addEventListener('click', () => { touched = true; });
+    $('smiles')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') touched = true; });
     ['input', 'change', 'click', 'keyup'].forEach(ev => document.addEventListener(ev, () => setTimeout(update, 60), true));
     window.addEventListener('elaya:file-loaded', () => setTimeout(update, 60));
     window.addEventListener('elaya:glomos-state', () => setTimeout(update, 60));
@@ -165,11 +176,11 @@
   // ------------------------------------------------------------------ guided tour
   const TOUR = [
     { el: () => $('guide-steps'), t: 'Four steps, in order', b: 'This bar shows where you are. The glowing step is the next thing to do; finished steps get a ✓. Click any step to jump to it.' },
-    { el: () => document.querySelector('.input-section'), t: '1 · Enter a molecule', b: 'Type a SMILES string (a molecule written as text) and press Enter, or click one of the examples. Below the box ELAYA tells you the formula and whether the SMILES is valid.' },
+    { el: () => document.querySelector('.input-section'), t: '1 · Enter a molecule', b: 'Type a SMILES string (a molecule written as text) and press Enter, or click one of the examples. If the SMILES has a mistake, ELAYA tells you right under the box.' },
     { el: () => document.querySelector('.input-method'), t: 'Many molecules?', b: 'Switch to “SMILES File” and drop a .smi, .txt or .csv file with one molecule per line. You can download an example file there.' },
     { el: () => document.querySelector('.method-controls'), t: '2 · Settings (optional)', b: 'How to build the 3D structure, an optional force-field clean-up, and the advanced GLOMOS conformer search. The defaults work. Each ⓘ explains its option.' },
     { el: () => $('convert-molecules'), t: '3 · Convert', b: 'Builds the 3D structure. It usually takes a second; GLOMOS takes minutes and shows its progress live.' },
-    { el: () => document.querySelector('.visualization-container'), t: '4 · Explore', b: 'Drag to rotate, scroll to zoom. Switch between 3D and 2D, record a video or take a picture, and use ⤢ for full screen.' },
+    { el: () => document.querySelector('.visualization-container'), t: '4 · Explore', b: 'Drag to rotate, scroll to zoom, switch between 3D and 2D. The buttons at the top left save a picture, record a video, and measure distances, angles and dihedrals (click the atoms). ⤢ is full screen.' },
     { el: () => document.querySelector('.visualization-controls'), t: 'Results & downloads', b: 'Coordinates in six formats (XYZ, MOL, SDF, PDB, MOL2, CML), quality checks, and buttons to download one or all.' },
     { el: () => document.querySelector('.navbar a[href="#about"]'), t: 'New to chemistry?', b: 'The About tab has a 15-minute mini-course: SMILES, 3D structures, conformers and GLOMOS, with interactive examples.' },
   ];

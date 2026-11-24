@@ -177,6 +177,30 @@
 
   function showErr(msg) { if (typeof showError === 'function') showError(msg); else console.error(msg); }
 
+  // ------------------------------------------------------------------ formula line on top of the card
+  const infoCache = new Map();
+  let infoFor = '';
+  async function showInfo(smiles) {
+    const el = $('sp-info');
+    if (!el) return;
+    if (!smiles) { el.hidden = true; return; }
+    if (smiles === infoFor && !el.hidden) return;
+    infoFor = smiles;
+    let d = infoCache.get(smiles);
+    if (!d) {
+      try {
+        const r = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ smiles }) });
+        if (!r.ok) { el.hidden = true; return; }
+        d = await r.json();
+        infoCache.set(smiles, d);
+      } catch (e) { el.hidden = true; return; }
+    }
+    if (infoFor !== smiles) return;
+    const rb = d.rotatable_bonds;
+    el.textContent = `✓ ${d.formula} · ${Number(d.mol_weight).toFixed(2)} g/mol · ${d.atoms_with_h} atoms · ${rb} rotatable bond${rb === 1 ? '' : 's'}`;
+    el.hidden = false;
+  }
+
   // ------------------------------------------------------------------ the card (title + tabs)
   function ensureCard() {
     const disp = $('xyz-display');
@@ -188,6 +212,7 @@
       head.className = 'sp-head';
       head.innerHTML = `
         <div class="sp-title"><strong id="sp-title"></strong><span id="sp-sub"></span></div>
+        <div class="sp-info" id="sp-info" hidden></div>
         <div class="sp-tabs" role="tablist" aria-label="File format">
           ${FORMATS.map(f => `<button type="button" role="tab" class="sp-tab" data-fmt="${f}">${f.toUpperCase()}</button>`).join('')}
           <button type="button" class="sp-copy" id="sp-copy" title="Copy to clipboard">Copy</button>
@@ -346,6 +371,7 @@
       head.style.display = 'flex';
       $('sp-title').textContent = cur.title;
       $('sp-sub').textContent = cur.sub ? ` · ${cur.sub}` : '';
+      showInfo(cur.smiles);
       head.querySelectorAll('.sp-tab').forEach(b => {
         const on = b.dataset.fmt === fmt;
         b.classList.toggle('active', on);

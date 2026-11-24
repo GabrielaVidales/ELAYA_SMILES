@@ -76,20 +76,9 @@ document.addEventListener("DOMContentLoaded", function () {
         // Silenciado: se vuelve a llamar cuando el usuario cambia el método de conversión
     }
 
-    // Autocarga de la molécula de oxitocina
-    const smilesInput = document.getElementById('smiles');
-    if (smilesInput && !sessionStorage.getItem('oxytocinShown')) {
-        const oxytocinSmiles = "N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O";
-        smilesInput.value = oxytocinSmiles;
-        molecules = [{ smiles: oxytocinSmiles, id: oxytocinSmiles }];
-        updateSmilesHistory(oxytocinSmiles);
-
-        convertSingleMolecule().catch(err => {
-            console.error("❌ Error al convertir oxitocina automáticamente:", err);
-        });
-
-        sessionStorage.setItem('oxytocinShown', 'true');
-    }
+    // v2.4.2: no molecule is preloaded any more. A ready-made result on the first visit skipped the
+    // steps the page now teaches (enter → settings → convert) and cost a cold-start conversion on the
+    // server; oxytocin is offered as an example chip instead.
 
     // Conexión al backend
     try {
@@ -696,7 +685,9 @@ function toggleRecordingUI(recording) {
         : `<circle cx="12" cy="12" r="8" />`;
 
     recordBtn.classList.toggle('recording-blink', recording);
-    recordBtn.title = recording ? "Stop Recording" : "Start Recording";
+    recordBtn.title = recording ? "Stop recording" : "Record a video (WebM) of the rotating molecule";
+    const lbl = recordBtn.querySelector('.tool-label');
+    if (lbl) lbl.textContent = recording ? 'Stop' : 'Record';
 }
 
 function countdown(seconds, callback) {

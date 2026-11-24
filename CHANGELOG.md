@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.4.2
+
+* **Measure tool** in the viewer: click 2 atoms → distance (Å), 3 → angle (°), 4 → dihedral (°); values drawn in
+  3D and listed (copyable); rotation pauses while measuring.
+* Viewer tools now say what they do: Image (PNG) · Record (video) · Measure.
+* Step bar: one compact line; the ✓ no longer covers the step number; step 2 has its own instruction ("change the
+  options or keep the defaults") so it is never skipped silently; step 3 emphasis is on the Convert button itself
+  (pulse + "or press Enter ↵"); the misleading "Next: Convert" label was removed.
+* Search bar: shorter placeholder, "Start here" bubble; the formula line (✓ formula · mass · atoms · rotatable bonds)
+  moved to the results card / structure card. Errors still show under the box.
+* Examples: "Examples:", alphabetical, plus Oxytocin ♥ (the "love hormone").
+* No molecule is preloaded on the first visit any more (it skipped the steps and cost a cold conversion).
+* Results column scrolls with the page instead of being a sticky box with its own scrollbar.
+* Videos: all video cards link straight to YouTube (all checked); "Video" tag is purple instead of red.
+* About: less space between the header and the course; "More below" button brighter, with a glow.
+
 ## 2.4.1
 
 * No more white areas. Following dark-theme colour practice (Material Design): raised parts use slightly lighter dark
