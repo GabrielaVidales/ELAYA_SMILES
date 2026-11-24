@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.1
+
+* No more white areas. Following dark-theme colour practice (Material Design): raised parts use slightly lighter dark
+  surfaces instead of white, text is off-white, accents are desaturated (soft mint #8fe3cb, lavender #c9a7f0).
+* Results placeholder, tutorial menu, interactive tools, Contact cards and report form, tour, welcome card and the
+  "More below" button are dark, raised surfaces; mint marks "you are here / do this" (current step, current lesson,
+  action buttons).
+
 ## 2.4.0 — clearer for first-time users
 
 ### Explorer

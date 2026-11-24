@@ -4259,104 +4259,6 @@ body.g-no-molecule .visualization-controls { opacity: 1; }
 #molecule-controls .fullscreen-btn svg { fill: #ffffff !important; }
 #molecule-controls .speed-control { color: #e6f4f1 !important; }
 
-/* ═══════════════════════════════════════════════════════════
-   v2.4 — LIGHT CARDS for what you can do (About, Contact)
-════════════════════════════════════════════════════════════ */
-/* course menu: a light "tutorial" card with a progress bar */
-.learn-toc { background: #f7fbfa !important; border: 1px solid #d7e6e2 !important; box-shadow: 0 14px 34px rgba(0,0,0,.35); top: 64px !important; }
-.learn-toc-title { color: #1f8f78 !important; border-bottom-color: #e2ece9 !important; }
-#learn-done-count { color: #3d5560 !important; }
-.learn-reset { border-color: #cfe0db !important; color: #3d5560 !important; }
-.learn-toc-progress { height: 6px; border-radius: 3px; background: #e2ece9; margin: 0 .5rem .7rem; overflow: hidden; }
-.learn-toc-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #9D4EDD, #3cb49a); border-radius: 3px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
-.learn-toc-sub { font-size: .76rem; color: #5b7480; padding: 0 .5rem .5rem; }
-.learn-toc a { color: #33505c !important; position: relative; }
-.learn-toc a:hover { background: #e9f4f1 !important; color: #0b2a2a !important; }
-.learn-toc a.active { background: #3cb49a !important; color: #ffffff !important; box-shadow: 0 6px 16px rgba(60,180,154,.35); }
-.learn-toc a.active::before { content: ''; position: absolute; left: -10px; top: 20%; bottom: 20%; width: 4px; border-radius: 2px; background: #9D4EDD; animation: toc-in .35s ease-out; }
-@keyframes toc-in { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-.learn-toc .toc-n { border-color: #9fd9cb !important; color: #1f8f78 !important; background: #fff; }
-.learn-toc a.active .toc-n { background: #fff !important; color: #1f8f78 !important; border-color: #fff !important; }
-.learn-toc a.read .toc-n { background: #d8f1ea !important; }
-#learn-q { background: #ffffff !important; color: #0b2a2a !important; border-color: #cfe0db !important; }
-#learn-q::placeholder { color: #7d939c; }
-.learn-search > svg { stroke: #7d939c !important; }
-@media (max-width: 1000px) {
-  .learn-toc { top: 44px !important; background: rgba(247,251,250,.97) !important; }
-  .learn-toc-progress, .learn-toc-sub { display: none; }
-  .learn-toc a.active::before { display: none; }
-}
-
-/* interactive widgets: light, with a "Try it" badge */
-.playground, .butane, .stepper { position: relative; background: #f7fbfa !important; border: 1px solid #d7e6e2 !important; color: #22343d; box-shadow: 0 12px 30px rgba(0,0,0,.3); }
-.playground::before, .butane::before, .stepper::before { content: 'Try it'; position: absolute; top: -11px; right: 14px; background: linear-gradient(135deg, #9D4EDD, #3cb49a); color: #fff; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
-.pg-title, .bt-title, .st-text h3 { color: #0b2a2a !important; }
-.pg-title span, .bt-note { color: #5b7480 !important; }
-#pg-input { background: #fff !important; color: #0b2a2a !important; border-color: #b9d6cf !important; }
-.pg-chips button, .bt-snaps button { background: #ffffff !important; border-color: #cbb5e6 !important; color: #5b2a8c !important; }
-.pg-chips button:hover, .bt-snaps button:hover { background: #f1e8fb !important; }
-.pg-tokens { background: #0f1424 !important; }
-.pg-explain { color: #22343d !important; }
-.pg-explain code { background: #e3f3ef !important; color: #136b59 !important; }
-.pg-facts, .pg-facts b { color: #22343d !important; }
-.pg-canon { color: #5b7480 !important; }
-.pg-draw { border: 1px solid #e2ece9; }
-.bt-slider, .bt-readout { color: #22343d !important; }
-.bt-readout b { color: #0b2a2a !important; }
-.nm-circle { fill: rgba(60,180,154,.08); }
-.nm-front { stroke: #1b2b36 !important; }
-.nm-back { stroke: #8aa0ab !important; }
-.nm-center { fill: #1b2b36 !important; }
-.nm-lab { fill: #33505c !important; }
-.nm-back-lab { fill: #7d939c !important; }
-.nm-me { fill: #c27c00 !important; }
-.nm-back-lab.nm-me { fill: #e0a238 !important; }
-.bt-axis { stroke: #9fb3bb !important; } .bt-grid { stroke: #e2ece9 !important; }
-.bt-tick, .bt-lab { fill: #5b7480 !important; }
-.bt-path { stroke: #7b2cbf !important; }
-.bt-cursor { stroke: rgba(31,143,120,.6) !important; }
-.bt-dot { fill: #3cb49a !important; stroke: #fff; }
-#bt-pop-anti { color: #04140f; } 
-.st-rail button { color: #4b6570 !important; border-color: #d7e6e2 !important; background: #fff !important; }
-.st-rail button span { background: #eef5f3 !important; color: #33505c; }
-.st-rail button.done { color: #1f8f78 !important; border-color: #9fd9cb !important; }
-.st-rail button.done span { background: #d8f1ea !important; }
-.st-rail button.active { background: #3cb49a !important; color: #fff !important; border-color: #3cb49a !important; }
-.st-rail button.active span { background: #fff !important; color: #1f8f78 !important; }
-.st-text p, .st-param { color: #22343d !important; }
-.st-param .kbd { background: #f1e8fb !important; color: #5b2a8c !important; border-color: #cbb5e6 !important; }
-.st-nav { color: #5b7480 !important; }
-.st-nav button { background: #fff !important; color: #1f8f78 !important; border-color: #9fd9cb !important; }
-.qz { background: #f7fbfa !important; border: 1px solid #d7e6e2 !important; color: #22343d; }
-.qz-q { color: #0b2a2a !important; }
-.qz-q span { background: #e8dcf6 !important; color: #5b2a8c; }
-.qz-a button { background: #fff !important; border-color: #cfe0db !important; color: #22343d !important; }
-.qz-a button:hover:not(:disabled) { border-color: #3cb49a !important; }
-.qz-a button.right { background: #d8f1ea !important; border-color: #3cb49a !important; color: #0b2a2a !important; }
-.qz-a button.wrong { background: #fde8e8 !important; border-color: #e57373 !important; }
-.qz-why { color: #33505c !important; }
-.lesson-next { background: #f7fbfa !important; color: #0b2a2a !important; border-color: #f7fbfa !important; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
-.lesson-next:hover { background: #ffffff !important; }
-.lp-cta-ghost#hero-course-btn { background: #f7fbfa; color: #0b2a2a !important; border-color: #f7fbfa !important; }
-.lp-cta-ghost#hero-course-btn:hover { background: #fff; }
-
-/* Contact: the things to do are light cards */
-.contact-action-card--link { background: #f7fbfa !important; border: 1px solid #d7e6e2 !important; color: #22343d !important; box-shadow: 0 12px 28px rgba(0,0,0,.3); }
-.contact-action-card--link h3 { color: #0b2a2a !important; }
-.contact-action-card--link p { color: #3d5560 !important; }
-.contact-action-card--link .contact-action-icon { background: #e3f3ef !important; border-color: #b9d6cf !important; }
-.contact-action-card--link .contact-action-icon svg { stroke: #1f8f78 !important; }
-.contact-action-card--link .contact-link-btn { background: #3cb49a !important; color: #fff !important; border-color: #3cb49a !important; }
-.contact-action-card--link:hover { box-shadow: 0 16px 34px rgba(60,180,154,.3); }
-#report-builder { background: #f7fbfa !important; border-color: #d7e6e2 !important; color: #22343d; }
-#report-builder .cp-head h3 { color: #0b2a2a; }
-#report-builder .cp-head p { color: #3d5560; }
-#report-builder .rb-grid label { color: #22343d; }
-#report-builder .rb-grid textarea, #report-builder .rb-grid input, #report-builder .rb-grid select { background: #fff !important; color: #0b2a2a !important; border-color: #cfe0db !important; }
-#report-builder .rb-preview summary { color: #1f8f78; }
-#report-builder .rb-preview pre { background: #0f1424; }
-#report-builder .rb-actions button.contact-link-btn { color: #1f8f78 !important; border-color: #9fd9cb !important; background: #fff !important; }
-#report-builder .rb-status { color: #1f8f78; }
 @media (prefers-reduced-motion: reduce) {
   .gs-n::after, body.g-ready #convert-molecules, .sb-arrow, .convert-cta span, .scroll-cue .sc-arrow svg, .nav-indicator, .tour-spot, .tour-card { animation: none !important; transition: none !important; }
 }
@@ -4366,8 +4268,6 @@ body.tour-on .start-bubble, body.tour-on .convert-cta { opacity: 0 !important; }
 body.g-ready .re-hint .when-empty { display: none; }
 body.g-ready .re-hint .when-ready { display: inline; }
 .mode-2d #molecule-controls .controls-left { background: transparent !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; }
-.pg-open { background: linear-gradient(135deg, #9D4EDD, #3cb49a) !important; border: 0 !important; color: #fff !important; box-shadow: 0 6px 16px rgba(60,180,154,.3); }
-.pg-canon code { background: #e3f3ef !important; color: #136b59 !important; }
 @media (max-width: 820px) {
   #single-input, .input-section .input-overlay-wrapper { margin-top: 0 !important; }
   .start-bubble { position: static; display: none; margin: 0 0 .5rem; white-space: normal; transform: none; }
@@ -4398,3 +4298,95 @@ body.g-ready .re-hint .when-ready { display: inline; }
   .guide-tour-btn { flex: 0 0 40px; width: 40px; height: 40px; justify-content: center; }
 }
 body:not([data-page="explore"]) .welcome-card { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.1 — DARK, ELEVATED SURFACES instead of white
+   Dark-theme colour practice (Material Design): higher = slightly lighter surface, no pure white
+   areas, off-white text, desaturated accents. One light touch: a soft mint for "you are here / do this".
+════════════════════════════════════════════════════════════ */
+:root {
+  --sf-1: #121426;                 /* card */
+  --sf-2: #1a1d33;                 /* raised card: menus, interactive tools */
+  --sf-3: #232741;                 /* floating: tour, welcome, pills */
+  --on-hi: #e8eef2;                /* main text (not pure white) */
+  --on-md: #a9bcc6;                /* secondary text */
+  --mint: #8fe3cb;                 /* desaturated teal: highlights on dark */
+  --mint-bg: rgba(143,227,203,.13);
+  --lav: #c9a7f0;                  /* desaturated purple */
+  --edge: rgba(143,227,203,.22);
+}
+
+/* step bar: current step = raised mint-tinted surface */
+.guide-steps li.current button { background: linear-gradient(135deg, rgba(143,227,203,.16), rgba(201,167,240,.10)) !important; border-color: rgba(143,227,203,.55) !important; box-shadow: 0 6px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06); }
+.guide-steps li.current .gs-t b { color: var(--on-hi) !important; }
+.guide-steps li.current .gs-t small { color: var(--mint) !important; }
+.guide-steps li.current .gs-n { background: var(--mint) !important; border-color: var(--mint) !important; color: #0c1a1a !important; }
+.guide-steps li.current .gs-n::after { border-color: var(--mint) !important; }
+
+/* small floating hints */
+.start-bubble, .convert-cta { background: var(--sf-3) !important; color: var(--on-hi) !important; border: 1px solid rgba(143,227,203,.5); box-shadow: 0 8px 22px rgba(0,0,0,.45) !important; }
+.start-bubble::after { border-top-color: var(--sf-3) !important; }
+.sb-arrow, .convert-cta span { color: var(--mint) !important; }
+
+/* empty results: back to dark, as before */
+.results-empty { background: linear-gradient(160deg, rgba(143,227,203,.06), rgba(201,167,240,.04)), var(--sf-1) !important; color: var(--on-md) !important; border: 1px dashed var(--edge); box-shadow: none !important; }
+.results-empty h3 { color: var(--on-hi) !important; }
+.re-icon { background: var(--mint-bg) !important; }
+.re-icon svg { stroke: var(--mint) !important; }
+.re-list b { color: var(--on-hi) !important; }
+.re-hint { color: var(--on-md) !important; }
+.re-hint b { color: var(--mint); }
+.re-example { background: var(--mint-bg) !important; color: var(--mint) !important; border: 1px solid rgba(143,227,203,.45) !important; }
+.re-example:hover { background: rgba(143,227,203,.24) !important; }
+
+/* tour + welcome: floating dark surface */
+.tour-card, .welcome-card { background: var(--sf-3) !important; color: var(--on-md) !important; border: 1px solid var(--edge); box-shadow: 0 22px 50px rgba(0,0,0,.6) !important; }
+.welcome-card { border-top: 3px solid var(--mint) !important; }
+.tour-card h3, .welcome-card b { color: var(--on-hi) !important; }
+.tour-count { color: var(--mint) !important; }
+.tour-x, .tour-skip, .wc-no { color: var(--on-md) !important; }
+.tour-dots span { background: rgba(255,255,255,.12) !important; }
+.tour-dots span.done { background: rgba(143,227,203,.45) !important; }
+.tour-dots span.on { background: var(--mint) !important; }
+.tour-back { background: transparent !important; border-color: var(--edge) !important; color: var(--on-hi) !important; }
+.tour-spot { box-shadow: 0 0 0 9999px rgba(3,3,12,.74), 0 0 0 2px var(--mint), 0 0 26px rgba(143,227,203,.45) !important; }
+
+/* "more below" button */
+.scroll-cue { background: var(--sf-3) !important; color: var(--on-hi) !important; border: 1px solid var(--edge) !important; }
+
+/* course menu: raised dark card, mint for "you are here" */
+.learn-toc { background: linear-gradient(180deg, rgba(143,227,203,.05), transparent 40%), var(--sf-2) !important; border: 1px solid var(--edge) !important; box-shadow: 0 14px 34px rgba(0,0,0,.4); top: 64px !important; }
+.learn-toc-title { color: var(--mint) !important; }
+.learn-toc-sub { font-size: .76rem; color: var(--on-md); padding: 0 .5rem .5rem; line-height: 1.45; }
+.learn-toc-progress { height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); margin: 0 .5rem .75rem; overflow: hidden; }
+.learn-toc-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--lav), var(--mint)); border-radius: 3px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.learn-toc a { color: var(--on-md) !important; position: relative; }
+.learn-toc a:hover { background: rgba(255,255,255,.05) !important; color: var(--on-hi) !important; }
+.learn-toc a.active { background: var(--mint-bg) !important; color: var(--on-hi) !important; }
+.learn-toc a.active::before { content: ''; position: absolute; left: -9px; top: 18%; bottom: 18%; width: 3px; border-radius: 2px; background: var(--mint); box-shadow: 0 0 10px var(--mint); animation: toc-in .35s ease-out; }
+@keyframes toc-in { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.learn-toc a.active .toc-n { background: var(--mint) !important; color: #0c1a1a !important; border-color: var(--mint) !important; }
+.learn-toc a.read .toc-n { background: rgba(143,227,203,.18) !important; color: var(--mint) !important; }
+#learn-q { background: rgba(0,0,0,.35) !important; border-color: var(--edge) !important; color: var(--on-hi) !important; }
+@media (max-width: 1000px) {
+  .learn-toc { top: 44px !important; background: rgba(26,29,51,.96) !important; }
+  .learn-toc-progress, .learn-toc-sub { display: none; }
+  .learn-toc a.active::before { display: none; }
+}
+
+/* interactive tools: raised surface + mint edge + "Try it" */
+.playground, .butane, .stepper { position: relative; background: linear-gradient(160deg, rgba(143,227,203,.07), rgba(201,167,240,.05) 60%, transparent), var(--sf-2) !important; border: 1px solid var(--edge) !important; box-shadow: 0 14px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); }
+.playground::before, .butane::before, .stepper::before { content: 'Try it'; position: absolute; top: -11px; right: 14px; background: linear-gradient(135deg, #9D4EDD, #3cb49a); color: #fff; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+.pg-open { background: linear-gradient(135deg, #9D4EDD, #3cb49a) !important; border: 0 !important; color: #fff !important; }
+.qz { background: var(--sf-2) !important; border-color: var(--edge) !important; }
+
+/* Contact: raised dark cards; the thing to do gets the mint accent */
+.contact-action-card--link { background: linear-gradient(180deg, rgba(143,227,203,.07), transparent 55%), var(--sf-2) !important; border: 1px solid var(--edge) !important; border-top: 3px solid var(--mint) !important; box-shadow: 0 12px 28px rgba(0,0,0,.35); }
+.contact-action-card--link h3 { color: var(--on-hi) !important; }
+.contact-action-card--link p { color: var(--on-md) !important; }
+.contact-action-card--link .contact-link-btn { background: var(--mint-bg) !important; color: var(--mint) !important; border: 1px solid rgba(143,227,203,.45) !important; }
+.contact-action-card--link:hover { border-color: rgba(143,227,203,.5) !important; box-shadow: 0 16px 34px rgba(0,0,0,.45), 0 0 0 1px rgba(143,227,203,.25); }
+.contact-action-card--link:hover .contact-link-btn { background: rgba(143,227,203,.24) !important; }
+#report-builder { background: linear-gradient(160deg, rgba(143,227,203,.06), rgba(201,167,240,.04) 60%, transparent), var(--sf-2) !important; border: 1px solid var(--edge) !important; border-left: 3px solid var(--mint) !important; }
+#report-builder .rb-grid textarea, #report-builder .rb-grid input, #report-builder .rb-grid select { background: rgba(0,0,0,.35) !important; border-color: var(--edge) !important; color: var(--on-hi) !important; }
+.contact-panel h3, .cp-head h3 { color: var(--on-hi); }
