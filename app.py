@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.3.1"
+VERSION = "2.4.0"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -49,7 +49,7 @@ def api_options(subpath):
 
 app.url_map.strict_slashes = False
 
-STATIC_FILES = {"index.html", "app.js", "glomos_progress.js", "structure_panel.js", "ux_extras.js", "learn.js", "styles.css"}
+STATIC_FILES = {"index.html", "app.js", "glomos_progress.js", "structure_panel.js", "ux_extras.js", "learn.js", "guide.js", "styles.css"}
 STATIC_DIRS = {"pictures"}
 
 _tool = None

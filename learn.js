@@ -41,6 +41,7 @@
       links.forEach(a => a.classList.toggle('read', read.has(a.dataset.ch)));
       const n = counted.filter(l => read.has(l.id)).length;
       if ($('learn-done-count')) $('learn-done-count').textContent = `${n}/${counted.length}`;
+      if ($('learn-toc-bar')) $('learn-toc-bar').style.width = `${(100 * n / counted.length).toFixed(0)}%`;
       const cont = $('hero-continue-btn'), first = counted.find(l => !read.has(l.id));
       if (cont) {
         cont.hidden = !(n > 0 && first);
@@ -104,7 +105,12 @@
         if (r.top < line) active = l.id;
         if (!jumping && r.height && r.bottom <= vh - 4 && r.bottom > NAV_OFFSET) markRead(l.id);     // its end is visible
       }
-      if (active !== activeId) { activeId = active; activeSince = performance.now(); }
+      if (active !== activeId) {
+        activeId = active; activeSince = performance.now();
+        const k = lessons.findIndex(l => l.id === active);
+        const sub = $('learn-toc-sub');
+        if (sub) sub.textContent = k < counted.length ? `You are on lesson ${k} of ${counted.length - 1} · ${lessons[k].querySelector('h2')?.textContent || ''}` : 'Extra: videos, papers and glossary';
+      }
       links.forEach(a => {
         const on = a.dataset.ch === active;
         if (on && !a.classList.contains('active')) {
@@ -121,8 +127,6 @@
         const p = Math.min(1, Math.max(0, (vh * 0.5 - r.top) / r.height));
         bar.style.width = `${(p * 100).toFixed(1)}%`;
       }
-      const top = document.querySelector('.to-top');
-      if (top) top.classList.toggle('show', window.scrollY > 900);
     };
     setInterval(() => {      // dwell: 6 s on a lesson also counts (long lessons read on a small screen)
       if (aboutVisible() && activeId && !document.hidden && performance.now() - activeSince > 6000) markRead(activeId);
@@ -130,12 +134,6 @@
     window.addEventListener('scroll', spy, { passive: true });
     window.addEventListener('resize', spy);
     document.querySelector('a[href="#about"]')?.addEventListener('click', () => setTimeout(spy, 300));
-
-    const topBtn = document.createElement('button');
-    topBtn.type = 'button'; topBtn.className = 'to-top'; topBtn.setAttribute('aria-label', 'Back to top'); topBtn.textContent = '↑';
-    topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    document.body.appendChild(topBtn);
-    window.addEventListener('scroll', () => { if (!aboutVisible()) topBtn.classList.toggle('show', window.scrollY > 900); }, { passive: true });
 
     paint();
     spy();

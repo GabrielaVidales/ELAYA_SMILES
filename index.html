@@ -67,6 +67,19 @@
     </header>
 
     <main>
+        <nav id="guide-steps" class="guide-steps" aria-label="How to use ELAYA, step by step">
+            <ol>
+                <li data-step="1"><button type="button" data-target="input"><span class="gs-n"><i>1</i></span><span class="gs-t"><b>Enter a molecule</b><small>SMILES, an example or a file</small></span></button></li>
+                <li data-step="2"><button type="button" data-target="settings"><span class="gs-n"><i>2</i></span><span class="gs-t"><b>Choose settings</b><small>Optional · defaults work</small></span></button></li>
+                <li data-step="3"><button type="button" data-target="convert"><span class="gs-n"><i>3</i></span><span class="gs-t"><b>Convert</b><small>Build the 3D structure</small></span></button></li>
+                <li data-step="4"><button type="button" data-target="results"><span class="gs-n"><i>4</i></span><span class="gs-t"><b>Explore &amp; download</b><small>Rotate, 2D, 6 file formats</small></span></button></li>
+            </ol>
+            <button type="button" id="guide-tour-btn" class="guide-tour-btn" title="A 30-second guided tour of the page">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><circle cx="12" cy="17.5" r=".6"/></svg>
+                <span>Guided tour</span>
+            </button>
+        </nav>
+
         <section class="input-section">
             <div class="input-row">
                 <div class="input-group">
@@ -344,6 +357,17 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                 </div>
 
                 <div class="visualization-controls">
+                    <div id="results-empty" class="results-empty">
+                        <div class="re-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/></svg></div>
+                        <h3>Your results will appear here</h3>
+                        <ol class="re-list">
+                            <li><b>Coordinates</b> of every atom, ready to copy</li>
+                            <li><b>Six file formats</b>: XYZ, MOL, SDF, PDB, MOL2, CML</li>
+                            <li><b>Quality checks</b> of stereochemistry and bonds</li>
+                            <li>With GLOMOS: a <b>ranked list of conformers</b></li>
+                        </ol>
+                        <p class="re-hint"><span class="when-empty">Start with <b>step 1</b>: type a SMILES above or click an example like <button type="button" class="re-example" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button></span><span class="when-ready">✓ Your molecule is ready. Now press <b>Convert structure</b> (step 3).</span></p>
+                    </div>
                    
                      <!--<div class="tab-bar" id="format-tab-bar" style="display: none;">
                         <button class="tab-btn" data-format="xyz">XYZ</button>
@@ -457,8 +481,10 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                 <div class="learn-progress" aria-hidden="true"><div id="learn-progress-bar"></div></div>
 
                 <nav class="learn-toc" aria-label="Course contents">
-                    <div class="learn-toc-title">Mini-course <span><span id="learn-done-count">0/8</span>
+                    <div class="learn-toc-title">Tutorial <span><span id="learn-done-count">0/8</span>
                         <button type="button" id="learn-reset" class="learn-reset" title="Reset my progress" aria-label="Reset my progress">↺</button></span></div>
+                    <div class="learn-toc-sub" id="learn-toc-sub">Interactive tutorial · 8 short lessons</div>
+                    <div class="learn-toc-progress" aria-hidden="true"><i id="learn-toc-bar"></i></div>
                     <div class="learn-search" role="search">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
                         <input type="search" id="learn-q" placeholder="Search the course…  ( / )" autocomplete="off" spellcheck="false"
@@ -944,7 +970,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.3.1</span>},
+  version = {<span id="cite-version">2.4.0</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
@@ -985,5 +1011,6 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
     <script src="/structure_panel.js" defer></script>
     <script src="/ux_extras.js" defer></script>
     <script src="/learn.js" defer></script>
+    <script src="/guide.js" defer></script>
 </body>
 </html>

@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.4.0 — clearer for first-time users
+
+### Explorer
+* **Step bar** under the title: 1 Enter a molecule → 2 Choose settings → 3 Convert → 4 Explore & download. It follows
+  what you do: the next step glows (pulsing ring), finished steps get ✓, step 3 spins while working; click a step to
+  jump to it. On phones it becomes four dots with only the current step spelled out.
+* **Spotlight on the next action**: the input box is highlighted until a molecule is entered (settings and viewer
+  dimmed), a "Start here" bubble points at it, and "Next: Convert" + a pulsing Convert button once the SMILES is valid.
+* **Empty results card** instead of a "Download XYZ file" button with nothing to download.
+* **Guided tour** (8 steps, spotlight + card, keyboard ← → Esc), offered once on the first visit and always
+  available from the step bar.
+* Viewer controls (Fit, full screen, speed) sit on a dark pill so they stay visible over the white 2D drawing.
+
+### Menu, zoom and layout
+* Animated indicator under the active menu item; clearer active state.
+* About hero: more space below the menu, no fixed height (the title was hidden behind the menu and buttons were cut
+  when zooming), aligned with the course on wide screens.
+* Input row rebuilt as a grid (no negative margins): the examples no longer overlap "SMILES File" at 125–175 % zoom.
+
+### About / Contact
+* Course menu is a light "Tutorial" card: "You are on lesson N of 7", progress bar, highlighted current lesson.
+* Interactive parts (SMILES playground, butane explorer, GLOMOS stepper, quiz) are light cards with a "Try it" badge;
+  "next lesson" and course buttons are light.
+* Contact: the action cards and the report form are light cards.
+* Floating **"More below" ↓** button (bouncing) on About and Contact; jumps to the next block and turns into
+  "Back to top" at the end.
+
 ## 2.3.1
 
 * Authors: Gabriela Vidales-Ayala, Filiberto Ortiz-Chi, Gabriel Merino, Luis Ortiz-Gonzalez (page, footer, BibTeX,

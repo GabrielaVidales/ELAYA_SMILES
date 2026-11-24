@@ -208,3 +208,14 @@ def test_course_contents_point_at_lessons():
 def test_external_links_open_safely():
     for tag in re.findall(r'<a [^>]*target="_blank"[^>]*>', HTML):
         assert 'rel="noopener"' in tag, tag
+
+
+def test_guide_targets_exist():
+    """Everything the step bar and the guided tour point at is in the page."""
+    js = _read("guide.js")
+    for sel in set(re.findall(r"document\.querySelector\('([.#][a-z0-9_-]+)'\)", js)) - {".learn-toast", ".welcome-card"}:
+        name = sel[1:]
+        attr = 'id="' if sel[0] == "#" else 'class="'
+        assert re.search(attr + r'[^"]*\b' + re.escape(name) + r'\b', HTML), sel
+    for i in re.findall(r"\$\('([a-z0-9-]+)'\)", js):
+        assert f'id="{i}"' in HTML or i in {"smiles-status"}, i
