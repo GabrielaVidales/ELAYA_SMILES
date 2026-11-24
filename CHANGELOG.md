@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.5
+
+* Fewer frames: viewer tools (Image, Record, Measure), Speed and Fit / full screen are borderless tonal pills;
+  About (hero buttons, lessons, course menu, flowchart, tools, resources) and Contact (cards, author links, report
+  form, citation, FAQ) are told apart by tone instead of outlines.
+* "Guided tour" in the top bar looks like the other menu items, in a lighter italic so it reads as a helper.
+
 ## 2.4.4
 
 * Guidance without frames: no outline around the input box, the settings or the Convert button; Convert keeps a soft

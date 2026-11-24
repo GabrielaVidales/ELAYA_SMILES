@@ -4588,3 +4588,65 @@ body.g-ready #convert-molecules { outline: none !important; animation: g-soft 2.
 .mp-hist li b { color: var(--on-hi); font-weight: 600; }
 .mp-actions { margin-top: .4rem; }
 .mp-actions button { padding: .15rem .55rem; font-size: .72rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.5 — fewer frames: surfaces are told apart by tone, not by outlines
+════════════════════════════════════════════════════════════ */
+/* viewer: tools, speed, Fit / full screen */
+#rec-controls .tool-btn { border: 0 !important; background: rgba(255,255,255,.08) !important; box-shadow: none !important; }
+#rec-controls .tool-btn:hover { background: rgba(255,255,255,.16) !important; }
+#molecule-controls .controls-left, #molecule-controls .controls-right { border: 0 !important; box-shadow: none !important; background: rgba(255,255,255,.08) !important; }
+.mode-2d #molecule-controls .controls-left, .mode-2d #molecule-controls .controls-right { background: rgba(8,12,30,.78) !important; }
+#molecule-controls .fullscreen-btn { background: transparent !important; }
+#molecule-controls .fullscreen-btn:hover { background: rgba(255,255,255,.12) !important; }
+.measure-panel { border: 0 !important; }
+
+/* About */
+.lp-cta-ghost { border: 0 !important; background: rgba(143,227,203,.1) !important; }
+.lp-cta-ghost:hover { background: rgba(143,227,203,.18) !important; }
+.lp-section-tag { border: 0 !important; background: rgba(143,227,203,.1) !important; }
+.lesson { border: 0 !important; background: rgba(18,20,38,.72) !important; }
+.learn-toc { border: 0 !important; }
+.fc-node { border: 0 !important; background: rgba(255,255,255,.045) !important; }
+.fc-node:hover, .fc-node:focus-visible, .fc-node.on { background: rgba(143,227,203,.1) !important; box-shadow: none !important; }
+.fc-opt { background: rgba(201,167,240,.06) !important; }
+.fc-opt:hover, .fc-opt.on { background: rgba(201,167,240,.12) !important; }
+.fc-tag { border: 0 !important; background: #2a2045 !important; }
+.fc-ico { border: 0 !important; }
+.learn-card, .learn-table-wrap, .learn-callout, .learn-figure, .res, .qz { border: 0 !important; }
+.learn-callout { background: rgba(143,227,203,.06) !important; }
+.res { background: rgba(255,255,255,.04) !important; }
+.res:hover { background: rgba(255,255,255,.08) !important; }
+.playground, .butane, .stepper { border: 0 !important; }
+.lesson-next { border: 0 !important; background: rgba(143,227,203,.1) !important; color: var(--mint) !important; box-shadow: none !important; }
+.lesson-next:hover { background: rgba(143,227,203,.18) !important; }
+.lp-bottom-card { border: 0 !important; }
+#learn-q { border-color: transparent !important; background: rgba(0,0,0,.3) !important; }
+#learn-q:focus { border-color: var(--mint) !important; }
+
+/* Contact */
+.contact-author-card, .contact-panel, .contact-action-card, .contact-action-card--link, #report-builder { border: 0 !important; }
+.contact-action-card--link { box-shadow: 0 12px 28px rgba(0,0,0,.3) !important; }
+.contact-action-card--link .contact-action-icon { border: 0 !important; }
+.contact-action-card--link .contact-link-btn { border: 0 !important; }
+#report-builder { border-left: 0 !important; }
+#report-builder .rb-actions button.contact-link-btn, .contact-panel .contact-link-btn { border: 0 !important; background: rgba(143,227,203,.1) !important; color: var(--mint) !important; }
+.faq details { border-top-color: rgba(255,255,255,.05) !important; }
+.cite-box, .rb-preview pre { border: 0 !important; }
+
+/* Guided tour in the top bar: same look as the menu links, a lighter weight + spacing so it reads as a helper */
+.nav-tour-btn {
+  border: 0 !important; background: transparent !important; box-shadow: none !important;
+  color: var(--primary-light) !important; font-family: inherit; font-size: 15px !important; font-weight: 600 !important;
+  letter-spacing: .02em; padding: 8px 10px !important; border-radius: 15px !important; margin-right: .4rem !important; gap: .45rem !important;
+  position: relative; transition: background .3s ease;
+}
+.nav-tour-btn:hover { background: #f0f0f0 !important; }
+.nav-tour-btn svg { width: 17px !important; height: 17px !important; stroke: #3cb49a !important; }
+.nav-tour-btn span { font-style: italic; }
+.nav-tour-btn::after { content: ''; position: absolute; right: -.25rem; top: 25%; bottom: 25%; width: 1px; background: rgba(0,0,0,.12); }
+@media (max-width: 600px) { .nav-tour-btn::after { display: none; } }
+.contact-author-card .contact-link-btn { border: 0 !important; background: rgba(143,227,203,.1) !important; color: var(--mint) !important; }
+.contact-author-card .contact-link-btn:hover { background: rgba(143,227,203,.2) !important; }
+#report-builder .rb-grid textarea, #report-builder .rb-grid input, #report-builder .rb-grid select { border-color: rgba(255,255,255,.06) !important; }
+#report-builder .rb-grid textarea:focus, #report-builder .rb-grid input:focus { border-color: var(--mint) !important; }
