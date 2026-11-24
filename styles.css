@@ -4650,3 +4650,56 @@ body.g-ready #convert-molecules { outline: none !important; animation: g-soft 2.
 .contact-author-card .contact-link-btn:hover { background: rgba(143,227,203,.2) !important; }
 #report-builder .rb-grid textarea, #report-builder .rb-grid input, #report-builder .rb-grid select { border-color: rgba(255,255,255,.06) !important; }
 #report-builder .rb-grid textarea:focus, #report-builder .rb-grid input:focus { border-color: var(--mint) !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.6
+════════════════════════════════════════════════════════════ */
+/* viewer tools: no backgrounds at all — icon + word, readable over any molecule */
+#rec-controls .tool-btn, #molecule-controls .controls-left, #molecule-controls .controls-right,
+.mode-2d #molecule-controls .controls-left, .mode-2d #molecule-controls .controls-right {
+  background: transparent !important; box-shadow: none !important; border: 0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+#rec-controls .tool-btn { text-shadow: 0 1px 3px rgba(0,0,0,.9); opacity: .85; }
+#rec-controls .tool-btn:hover { background: rgba(255,255,255,.08) !important; opacity: 1; }
+#rec-controls .tool-btn .icon { filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+#measure-btn.active { background: rgba(143,227,203,.16) !important; color: var(--mint) !important; opacity: 1; }
+#measure-btn.active .icon-stroke { stroke: var(--mint) !important; }
+#molecule-controls .speed-control { text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+#molecule-controls .control-btn, #fit-btn { background: transparent !important; color: var(--mint) !important; box-shadow: none !important; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+#molecule-controls .control-btn:hover, #fit-btn:hover { background: rgba(143,227,203,.14) !important; }
+#molecule-controls .fullscreen-btn, .mode-2d #molecule-controls .fullscreen-btn { background: transparent !important; box-shadow: none !important; }
+#molecule-controls .fullscreen-btn svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+/* 2D: the drawing sits on the same black stage, so the controls keep light ink (the full-screen icon was white on white) */
+.mode-2d #molecule-controls .fullscreen-btn svg { fill: #ffffff !important; }
+.mode-2d #molecule-controls .control-btn, .mode-2d #fit-btn { color: var(--mint) !important; }
+
+/* About hero: a little tighter so the course starts higher */
+.lp-hero { padding-top: 4.3rem !important; padding-bottom: 1.2rem !important; }
+.lp-hero-title { line-height: 1 !important; margin-bottom: .2rem !important; }
+.lp-hero-sub { margin-bottom: .7rem !important; }
+.lp-hero-desc { line-height: 1.5 !important; margin-bottom: 1.3rem !important; }
+/* "New to chemistry?" and "Continue": plain links like the example molecules, gold on hover */
+#hero-course-btn, #hero-continue-btn { background: transparent !important; border: 0 !important; box-shadow: none !important; color: #98ebc4 !important; padding: .4rem .3rem !important; font-weight: 600; }
+#hero-course-btn:hover, #hero-continue-btn:hover { color: #ffbf00 !important; background: transparent !important; }
+
+/* Contact: one row of links instead of four cards; author as a quiet line at the end */
+.contact-quick { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .2rem .7rem; margin: -.4rem auto 1.6rem; max-width: 1100px; padding: 0 1rem; }
+.contact-quick a { color: #98ebc4; text-decoration: none; font-weight: 600; font-size: .95rem; padding: .2rem .3rem; border-radius: 6px; transition: color .2s; }
+.contact-quick a:hover { color: #ffbf00; }
+.contact-quick span { color: rgba(255,255,255,.25); }
+.contact-author-strip { position: relative; z-index: 1; display: flex; align-items: center; gap: 1rem; max-width: 1100px; margin: 0 auto 2.5rem; padding: 1rem .5rem 0; border-top: 1px solid rgba(255,255,255,.06); box-sizing: border-box; color: var(--on-md); font-size: .85rem; }
+.cas-logo { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 44px; }
+.contact-author-strip > div:nth-child(2) { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.contact-author-strip b a { color: var(--on-hi); text-decoration: none; }
+.contact-author-strip b a:hover { color: #ffbf00; }
+.cas-links { display: flex; gap: .9rem; }
+.cas-links a { color: #98ebc4; text-decoration: none; font-weight: 600; }
+.cas-links a:hover { color: #ffbf00; }
+@media (max-width: 700px) { .contact-author-strip { flex-wrap: wrap; margin-left: .75rem; margin-right: .75rem; } .cas-links { width: 100%; padding-left: calc(44px + 1rem); } }
+
+/* formula hint next to the examples */
+.formula-link a { color: #ffbf00; }
+.mode-2d #molecule-controls { background: transparent !important; box-shadow: none !important; }
+/* readable on the black stage and on the white drawing alike */
+#molecule-controls .fullscreen-btn svg { stroke: rgba(0,0,0,.55); stroke-width: .8px; paint-order: stroke; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)) !important; }
+#molecule-controls .control-btn, #fit-btn { text-shadow: 0 0 2px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.8) !important; }

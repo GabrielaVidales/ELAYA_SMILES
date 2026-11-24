@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.6
+
+* Viewer tools, Speed, Fit and full screen without backgrounds or shadows (icon + word, readable over the molecule);
+  in 2D the full-screen icon was white on white and the bottom bar had a dark band: fixed.
+* About: tighter header so the course starts higher; "New to chemistry?" and "Continue the course" are plain links
+  that turn gold on hover, like the example molecules.
+* Contact simplified: the four cards are replaced by one row of links (Report a problem · Suggest a feature ·
+  Contribute on GitHub · Cite ELAYA); shorter report intro; author shown as a quiet line at the end.
+* Next to the examples: "Only have the formula? Get its SMILES ↗" (SMILX-isogenerator).
+
 ## 2.4.5
 
 * Fewer frames: viewer tools (Image, Record, Measure), Speed and Fit / full screen are borderless tonal pills;

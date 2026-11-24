@@ -708,7 +708,7 @@
       e.preventDefault();
       const t = $(a.dataset.scroll);
       if (t) window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - NAV_OFFSET, behavior: 'smooth' });
-      setTimeout(() => $('rb-what')?.focus({ preventScroll: true }), 500);
+      if (a.dataset.scroll === 'report-builder') setTimeout(() => $('rb-what')?.focus({ preventScroll: true }), 500);
     }));
     refresh();
   }

@@ -25,19 +25,7 @@
       }
       .fullscreen-btn:hover { opacity: 1 !important; }
 
-      /* ── 2D-only mode: dark bar over white background ── */
-      .mode-2d #molecule-controls {
-        background: rgba(12, 20, 48, 0.92) !important;
-      }
-      .mode-2d .speed-control { color: #c8e0ff !important; }
-      .mode-2d .control-btn {
-        background: rgba(30, 65, 140, 0.95) !important;
-        color: #fff !important;
-        border: 1px solid rgba(80,130,220,0.4) !important;
-      }
-      .mode-2d .control-btn:hover { background: rgba(50, 95, 200, 1) !important; }
-      .mode-2d .fullscreen-btn { opacity: 1 !important; }
-      .mode-2d .fullscreen-btn svg { fill: #fff !important; }
+      /* 2D mode: no extra bar; the shared viewer-control styles in styles.css apply */
     </style>
 </head>
 
@@ -102,8 +90,8 @@
                             <button type="button" class="example-chip" title="Oxytocin, the “love hormone” (a 9-amino-acid peptide)" data-smiles="N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O">Oxytocin</button>
                             <button type="button" class="example-chip" data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin</button>
                             <span class="examples-sep" aria-hidden="true">·</span>
-                            <span class="formula-link">Only a formula?
-                                <a href="https://smilx-isogenerator.streamlit.app/" target="_blank" rel="noopener">SMILX-isogenerator ↗</a>
+                            <span class="formula-link">Only have the formula?
+                                <a href="https://smilx-isogenerator.streamlit.app/" target="_blank" rel="noopener" title="SMILX-isogenerator lists the SMILES of the isomers of a molecular formula">Get its SMILES ↗</a>
                             </span>
                         </div>
                     </div>
@@ -870,57 +858,21 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
             </div>
 
             <!-- Author card + action cards -->
-            <div class="contact-layout">
-
-                <div class="contact-author-card scroll-reveal">
-                    <img src="pictures/Logo_Elaya.jpg" alt="ELAYA" class="contact-author-logo"/>
-                    <div class="contact-author-info">
-                        <div class="contact-author-name">
-                            <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales-Ayala</a>
-                        </div>
-                        <div class="contact-author-role">Physics Engineering Student</div>
-                        <p class="contact-author-bio">
-                            Committed to using science, education, and technology to improve people's quality of life.
-                        </p>
-                        <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener" class="contact-link-btn" style="margin-top:0.8rem;display:inline-block;">
-                            LinkedIn ↗
-                        </a>
-                        <a href="https://github.com/GabrielaVidales" target="_blank" rel="noopener" class="contact-link-btn" style="margin-top:0.8rem;display:inline-block;">
-                            GitHub ↗
-                        </a>
-                    </div>
-                </div>
-
-                <div class="contact-actions">
-                    <a class="contact-action-card contact-action-card--link" href="#report-builder" data-scroll="report-builder">
-                        <div class="contact-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-                        <h3>Report a problem</h3>
-                        <p>A guided form fills in the technical details for you.</p>
-                        <span class="contact-link-btn">Start a report ↓</span>
-                    </a>
-                    <a class="contact-action-card contact-action-card--link" href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener">
-                        <div class="contact-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-                        <h3>Suggest a feature</h3>
-                        <p>A new algorithm, output format or lesson? Open an idea on GitHub.</p>
-                        <span class="contact-link-btn">Share an idea ↗</span>
-                    </a>
-                    <a class="contact-action-card contact-action-card--link" href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener">
-                        <div class="contact-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3cb49a" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
-                        <h3>Contribute</h3>
-                        <p>Code, tests, translations or docs — pull requests are welcome.</p>
-                        <span class="contact-link-btn">View repository ↗</span>
-                    </a>
-                </div>
-
-            </div>
+            <nav class="contact-quick" aria-label="Ways to help">
+                <a href="#report-builder" data-scroll="report-builder">Report a problem ↓</a>
+                <span aria-hidden="true">·</span>
+                <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener">Suggest a feature ↗</a>
+                <span aria-hidden="true">·</span>
+                <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener">Contribute on GitHub ↗</a>
+                <span aria-hidden="true">·</span>
+                <a href="#cite-bibtex" data-scroll="cite-bibtex">Cite ELAYA ↓</a>
+            </nav>
 
             <!-- Guided bug report -->
             <div class="contact-panel" id="report-builder">
                 <div class="cp-head">
                     <h3>Report a problem</h3>
-                    <p>Fill in what you can. Your settings, the app version and your browser are added automatically, so the
-                        issue can be reproduced. Nothing is sent until you open it on GitHub (a free GitHub account is needed)
-                        — or copy the report and send it however you prefer.</p>
+                    <p>Your settings, app version and browser are added automatically. Nothing is sent until you open it on GitHub or copy it.</p>
                 </div>
                 <div class="rb-grid">
                     <label><span>What happened? <span class="req" aria-hidden="true">*</span></span>
@@ -960,7 +912,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.5</span>},
+  version = {<span id="cite-version">2.4.6</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
@@ -978,6 +930,17 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         <details><summary>Can I reproduce a run?</summary><p>Yes: set a fixed <em>Random seed</em> in the GLOMOS panel and keep the same parameters.</p></details>
                         <details><summary>Can I run it on my own computer?</summary><p>Yes, with Docker: <code>docker build -t elaya .</code> then <code>docker run -p 5000:5000 elaya</code>, and open <code>http://localhost:5000</code>. On a normal laptop GLOMOS is several times faster than on the free server.</p></details>
                     </div>
+                </div>
+            </div>
+            <div class="contact-author-strip">
+                <img src="pictures/Logo_Elaya.jpg" alt="" class="cas-logo">
+                <div>
+                    <b><a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener">Gabriela Vidales-Ayala</a></b>
+                    <span>Physics Engineering student · science, education and technology to improve people's quality of life</span>
+                </div>
+                <div class="cas-links">
+                    <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener">LinkedIn ↗</a>
+                    <a href="https://github.com/GabrielaVidales" target="_blank" rel="noopener">GitHub ↗</a>
                 </div>
             </div>
         </section>
