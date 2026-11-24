@@ -4491,3 +4491,72 @@ body.g-ready #convert-molecules { animation: g-cta 1.6s ease-in-out infinite; ou
   .settings-hint { position: static !important; display: none; margin: 0 0 .6rem; transform: none !important; white-space: normal; }
   body.g-settings .settings-hint { display: block; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.3 — one style for every drop-down
+════════════════════════════════════════════════════════════ */
+.method-controls select, .glomos-item select, .select-wrapper select, #glomos-panel select, #rb-area,
+select.touched {
+  appearance: none; -webkit-appearance: none;
+  background: var(--sf-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fe3cb' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 14px center / 14px !important;
+  color: var(--on-hi) !important;
+  border: 1px solid var(--edge) !important;
+  border-radius: 12px !important;
+  height: 40px; padding: 0 2.2rem 0 .9rem !important;
+  font-size: .92rem !important; font-weight: 500;
+  opacity: 1 !important; box-shadow: none;
+  cursor: pointer;
+}
+.method-controls select:hover, .glomos-item select:hover, .select-wrapper select:hover, #glomos-panel select:hover { border-color: rgba(143,227,203,.55) !important; background-color: #20243d !important; }
+.method-controls select:focus, .glomos-item select:focus, .select-wrapper select:focus, #glomos-panel select:focus, #rb-area:focus { outline: none; border-color: var(--mint) !important; box-shadow: 0 0 0 3px rgba(143,227,203,.18) !important; }
+/* the list itself (Firefox, Safari, older Chrome): dark rows, readable text */
+.method-controls select option, .glomos-item select option, .select-wrapper select option, #glomos-panel select option, #rb-area option {
+  background: #1a1d33 !important; color: #e8eef2 !important; font-size: .92rem; font-weight: 400;
+}
+/* Chrome 135+: fully styled list (rounded, dark, mint for the chosen option) */
+@supports (appearance: base-select) {
+  .method-controls select, .glomos-item select, .select-wrapper select, #glomos-panel select, #rb-area { appearance: base-select; }
+  .method-controls select::picker-icon, .glomos-item select::picker-icon, .select-wrapper select::picker-icon, #glomos-panel select::picker-icon, #rb-area::picker-icon { display: none; }
+  .method-controls select::picker(select), .glomos-item select::picker(select), .select-wrapper select::picker(select), #glomos-panel select::picker(select), #rb-area::picker(select) {
+    appearance: base-select; background: #1a1d33; border: 1px solid var(--edge); border-radius: 12px; padding: 4px;
+    box-shadow: 0 16px 36px rgba(0,0,0,.55); margin-top: 6px;
+  }
+  .method-controls select option, .glomos-item select option, .select-wrapper select option, #glomos-panel select option, #rb-area option {
+    padding: .45rem .75rem; border-radius: 8px; color: var(--on-md) !important; background: transparent !important;
+  }
+  .method-controls select option:hover, .glomos-item select option:hover, .select-wrapper select option:hover, #glomos-panel select option:hover, #rb-area option:hover,
+  .method-controls select option:focus-visible, .glomos-item select option:focus-visible, .select-wrapper select option:focus-visible, #glomos-panel select option:focus-visible, #rb-area option:focus-visible {
+    background: rgba(255,255,255,.06) !important; color: var(--on-hi) !important; outline: none;
+  }
+  .method-controls select option:checked, .glomos-item select option:checked, .select-wrapper select option:checked, #glomos-panel select option:checked, #rb-area option:checked {
+    background: var(--mint-bg) !important; color: var(--mint) !important; font-weight: 600;
+  }
+  .method-controls select option::checkmark, .glomos-item select option::checkmark, .select-wrapper select option::checkmark, #glomos-panel select option::checkmark, #rb-area option::checkmark { content: '✓'; color: var(--mint); }
+}
+
+/* examples: plain words with a simple colour change, as before */
+#smiles-examples .example-chip {
+  border: 0 !important; background: transparent !important; box-shadow: none !important;
+  padding: .1rem .35rem !important; color: #98ebc4 !important; font-weight: 500; border-radius: 6px !important;
+}
+#smiles-examples .example-chip:hover { color: #ffffff !important; background: rgba(143,227,203,.1) !important; }
+#smiles-examples .example-chip.active { color: #ffbf00 !important; background: transparent !important; }
+
+/* top bar tour button */
+.nav-tour-btn { display: inline-flex; align-items: center; gap: .4rem; background: transparent; border: 1px solid rgba(15,105,117,.35); color: #0f6975; border-radius: 999px; padding: .25rem .75rem; font-weight: 600; font-size: .85rem; cursor: pointer; margin-right: .9rem; transition: background .2s; }
+.nav-tour-btn:hover { background: rgba(60,180,154,.12); }
+.nav-tour-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.code-links { display: flex; align-items: center; }
+@media (max-width: 600px) { .nav-tour-btn span { display: none; } .nav-tour-btn { padding: .3rem; margin-right: .5rem; } }
+
+/* recording: countdown and time live inside the Record button */
+#countdown { display: none !important; }
+#record-btn .tool-label { font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: left; }
+#record-btn.counting { border-color: #ffbf00 !important; color: #ffbf00 !important; }
+#record-btn.recording-blink { animation: none !important; border-color: #ff6b6b !important; color: #ffd6d6 !important; }
+#record-btn.recording-blink .icon { fill: #ff6b6b !important; animation: blink 1s infinite; }
+.visualization-container.measuring .speed-control { visibility: hidden !important; }
+@supports (appearance: base-select) {
+  .method-controls select, .glomos-item select, .select-wrapper select, #glomos-panel select, #rb-area { display: flex; align-items: center; }
+  #glomos-panel select { height: 34px; }
+}

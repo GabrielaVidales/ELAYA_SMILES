@@ -51,6 +51,10 @@
             <a href="#about" id="nav-about">About</a>
             <a href="#contact" id="nav-contact">Contact</a>
             <div class="code-links">
+                <button type="button" id="guide-tour-btn" class="nav-tour-btn" title="A 30-second guided tour of the page">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><circle cx="12" cy="17.5" r=".6"/></svg>
+                    <span>Guided tour</span>
+                </button>
                 <a href="https://github.com/GabrielaVidales/ELAYA_SMILES" target="_blank" rel="noopener" class="view-code-icon"> View code
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#0f6975">
                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path>
@@ -67,18 +71,6 @@
     </header>
 
     <main>
-        <nav id="guide-steps" class="guide-steps" aria-label="How to use ELAYA, step by step">
-            <ol>
-                <li data-step="1"><button type="button" data-target="input"><span class="gs-n"><i>1</i></span><span class="gs-t"><b>Enter a molecule</b><small>SMILES, an example or a file</small></span></button></li>
-                <li data-step="2"><button type="button" data-target="settings"><span class="gs-n"><i>2</i></span><span class="gs-t"><b>Choose settings</b><small>Optional · defaults work</small></span></button></li>
-                <li data-step="3"><button type="button" data-target="convert"><span class="gs-n"><i>3</i></span><span class="gs-t"><b>Convert</b><small>Build the 3D structure</small></span></button></li>
-                <li data-step="4"><button type="button" data-target="results"><span class="gs-n"><i>4</i></span><span class="gs-t"><b>Explore &amp; download</b><small>Rotate, 2D, 6 file formats</small></span></button></li>
-            </ol>
-            <button type="button" id="guide-tour-btn" class="guide-tour-btn" title="A 30-second guided tour of the page">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><circle cx="12" cy="17.5" r=".6"/></svg>
-                <span>Guided tour</span>
-            </button>
-        </nav>
 
         <section class="input-section">
             <div class="input-row">
@@ -100,14 +92,14 @@
 
                 <div id="single-input" class="input-group">
                     <div class="input-overlay-wrapper">
-                        <input type="text" id="smiles" list="smiles-history" placeholder="Enter a SMILES string and press Enter">
+                        <input type="text" id="smiles" list="smiles-history" placeholder="Enter a SMILES string (not a molecular formula)">
                         <div id="smiles-examples" class="smiles-examples">
                             <span class="examples-label">Examples:</span>
                             <button type="button" class="example-chip" data-smiles="CC(=O)Oc1ccccc1C(=O)O">Aspirin</button>
                             <button type="button" class="example-chip" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button>
                             <button type="button" class="example-chip" data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O">Glucose</button>
                             <button type="button" class="example-chip" data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</button>
-                            <button type="button" class="example-chip example-chip--love" title="Oxytocin, the “love hormone” (a 9-amino-acid peptide)" data-smiles="N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O">Oxytocin ♥</button>
+                            <button type="button" class="example-chip" title="Oxytocin, the “love hormone” (a 9-amino-acid peptide)" data-smiles="N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O">Oxytocin</button>
                             <button type="button" class="example-chip" data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin</button>
                             <span class="examples-sep" aria-hidden="true">·</span>
                             <span class="formula-link">Only a formula?
@@ -211,7 +203,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                 </div>
 
                 <button id="convert-molecules">
-                    <span class="button-label"><b>Convert structure</b><small class="convert-kbd">or press Enter ↵</small></span>
+                    <span class="button-label"><b>Convert structure</b></span>
                     <div class="water-loader" style="display: none;"></div>
                     <span class="magic-sparkle"></span>
                 </button>
@@ -366,7 +358,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                             <li><b>Quality checks</b> of stereochemistry and bonds</li>
                             <li>With GLOMOS: a <b>ranked list of conformers</b></li>
                         </ol>
-                        <p class="re-hint"><span class="when-empty">Start with <b>step 1</b>: type a SMILES above or click an example like <button type="button" class="re-example" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button></span><span class="when-ready">✓ Your molecule is ready. Now press <b>Convert structure</b> (step 3).</span></p>
+                        <p class="re-hint"><span class="when-empty">Start by typing a SMILES above, or click an example like <button type="button" class="re-example" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button></span><span class="when-ready">✓ Your molecule is ready. Choose the options (or keep the defaults) and press <b>Convert structure</b>.</span></p>
                     </div>
                    
                      <!--<div class="tab-bar" id="format-tab-bar" style="display: none;">
@@ -970,7 +962,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.2</span>},
+  version = {<span id="cite-version">2.4.3</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>

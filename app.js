@@ -434,18 +434,10 @@ document.querySelectorAll('#smiles-examples [data-smiles]').forEach(chip => {
     });
 });
 
-// Enter in the SMILES field = Convert (unless the history dropdown is choosing an entry)
+// v2.4.3: Enter no longer converts (it surprised new users); the Convert button is the one way to run.
 (function () {
     const smilesInput = document.getElementById('smiles');
     if (!smilesInput) return;
-    smilesInput.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' || e.isComposing) return;
-        const btn = document.getElementById('convert-molecules');
-        if (btn && !btn.disabled && smilesInput.value.trim()) {
-            e.preventDefault();
-            btn.click();
-        }
-    });
     // typing by hand clears the highlighted example
     smilesInput.addEventListener('input', (e) => {
         if (!e.isTrusted) return;
@@ -685,22 +677,27 @@ function toggleRecordingUI(recording) {
         : `<circle cx="12" cy="12" r="8" />`;
 
     recordBtn.classList.toggle('recording-blink', recording);
-    recordBtn.title = recording ? "Stop recording" : "Record a video (WebM) of the rotating molecule";
-    const lbl = recordBtn.querySelector('.tool-label');
-    if (lbl) lbl.textContent = recording ? 'Stop' : 'Record';
+    recordBtn.title = recording ? "Click to stop and download the video" : "Record a video (WebM) of the rotating molecule";
+    if (!recording) recLabel('Record');
 }
 
+// v2.4.3: the 3-2-1 countdown and the recording time are shown inside the Record button itself
+function recLabel(text) {
+    const lbl = recordBtn && recordBtn.querySelector('.tool-label');
+    if (lbl) lbl.textContent = text;
+}
 function countdown(seconds, callback) {
-    countdownEl.style.display = 'block';
     let current = seconds;
+    recordBtn.classList.add('counting');
+    recordBtn.disabled = true;
+    recLabel(`${current}…`);
     const timer = setInterval(() => {
-        countdownEl.textContent = current;
         current--;
-        if (current < 0) {
-            clearInterval(timer);
-            countdownEl.style.display = 'none';
-            callback();
-        }
+        if (current > 0) { recLabel(`${current}…`); return; }
+        clearInterval(timer);
+        recordBtn.classList.remove('counting');
+        recordBtn.disabled = false;
+        callback();
     }, 1000);
 }
 
@@ -726,7 +723,7 @@ function startRecording() {
 
     mediaRecorder.onstop = function () {
         clearInterval(timerInterval);
-        document.getElementById('countdown').style.display = 'none';
+        recLabel('Record');
 
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
@@ -749,11 +746,10 @@ function startRecording() {
 
 function startTimer() {
     startTime = Date.now();
-    const countdownEl = document.getElementById('countdown');
-    countdownEl.style.display = 'block';
+    recLabel('00:00');
     timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        countdownEl.textContent = formatTime(elapsed);
+        recLabel(formatTime(elapsed));
     }, 1000);
 }
 
@@ -765,6 +761,7 @@ function formatTime(seconds) {
 
 
 function stopRecording() {
+    clearInterval(timerInterval);
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }

@@ -1,9 +1,9 @@
 /*
  * guide.js — makes the first visit obvious.
  *   - which page you are on (body[data-page]) and a sliding indicator under the active menu item
- *   - a 4-step bar on the explorer that follows what you do (current step glows, finished steps get ✓)
+ *   - hints on the explorer that follow what you do (start here → settings → Convert)
  *   - spotlight on the next thing to do, a "start here" bubble, an empty results card
- *   - a short guided tour (offered once on the first visit, always available from the step bar)
+ *   - a short guided tour (offered once on the first visit, always available from the menu)
  *   - on About / Contact: a floating arrow that says there is more below, and turns into "back to top"
  */
 (function () {
@@ -53,7 +53,7 @@
     setTimeout(place, 300);
   }
 
-  // ------------------------------------------------------------------ explorer: step bar + spotlight
+  // ------------------------------------------------------------------ explorer: hints + spotlight
   const hasResults = () => {
     const c = $('molecule-controls');
     if (c && c.style.display !== 'none' && getComputedStyle(c).display !== 'none') return true;
@@ -88,9 +88,6 @@
   }
 
   function initSteps() {
-    const bar = $('guide-steps');
-    if (!bar) return;
-    const items = [...bar.querySelectorAll('li[data-step]')];
     let lastState = '';
 
     // the "start here" bubble next to the SMILES box
@@ -103,7 +100,7 @@
     // step 2 hint, pinned on the settings box
     const sHint = document.createElement('div');
     sHint.className = 'settings-hint';
-    sHint.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Step 2 · Change the options or keep the defaults, then press <b>Convert</b>';
+    sHint.innerHTML = '<span class="sb-arrow" aria-hidden="true">↓</span> Choose the options or keep the defaults, then press <b>Convert structure</b>';
     document.querySelector('.method-controls')?.prepend(sHint);
     let touched = false;
     document.querySelector('.method-controls')?.addEventListener('change', () => { touched = true; });
@@ -126,15 +123,6 @@
       if (state === lastState) return;
       lastState = state;
 
-      items.forEach(li => {
-        const n = Number(li.dataset.step);
-        const done = n < cur && !(n === 3 && busy);
-        li.classList.toggle('done', done);
-        li.classList.toggle('current', n === cur && !busy);
-        li.classList.toggle('busy', n === 3 && busy);
-        li.querySelector('button').setAttribute('aria-current', n === cur ? 'step' : 'false');
-      });
-
       document.body.classList.toggle('g-no-molecule', !s1 && !res);
       document.body.classList.toggle('g-settings', s1 && !res && !busy && cur === 2);
       document.body.classList.toggle('g-ready', s1 && !res && !busy);
@@ -149,15 +137,7 @@
       }
     };
 
-    bar.querySelectorAll('button[data-target]').forEach(b => b.addEventListener('click', () => {
-      const t = b.dataset.target;
-      const el = TARGETS[t]?.();
-      scrollToEl(el, t === 'input' ? $('smiles') : t === 'convert' ? $('convert-molecules') : null);
-      if (el) { el.classList.remove('g-flash'); void el.offsetWidth; el.classList.add('g-flash'); }
-    }));
-
     $('convert-molecules')?.addEventListener('click', () => { touched = true; });
-    $('smiles')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') touched = true; });
     ['input', 'change', 'click', 'keyup'].forEach(ev => document.addEventListener(ev, () => setTimeout(update, 60), true));
     window.addEventListener('elaya:file-loaded', () => setTimeout(update, 60));
     window.addEventListener('elaya:glomos-state', () => setTimeout(update, 60));
@@ -175,11 +155,10 @@
 
   // ------------------------------------------------------------------ guided tour
   const TOUR = [
-    { el: () => $('guide-steps'), t: 'Four steps, in order', b: 'This bar shows where you are. The glowing step is the next thing to do; finished steps get a ✓. Click any step to jump to it.' },
-    { el: () => document.querySelector('.input-section'), t: '1 · Enter a molecule', b: 'Type a SMILES string (a molecule written as text) and press Enter, or click one of the examples. If the SMILES has a mistake, ELAYA tells you right under the box.' },
+    { el: () => document.querySelector('.input-section'), t: '1 · Enter a molecule', b: 'Type a SMILES string (a molecule written as text, not a formula like C6H12O6) or click one of the examples. If the SMILES has a mistake, ELAYA tells you right under the box.' },
     { el: () => document.querySelector('.input-method'), t: 'Many molecules?', b: 'Switch to “SMILES File” and drop a .smi, .txt or .csv file with one molecule per line. You can download an example file there.' },
-    { el: () => document.querySelector('.method-controls'), t: '2 · Settings (optional)', b: 'How to build the 3D structure, an optional force-field clean-up, and the advanced GLOMOS conformer search. The defaults work. Each ⓘ explains its option.' },
-    { el: () => $('convert-molecules'), t: '3 · Convert', b: 'Builds the 3D structure. It usually takes a second; GLOMOS takes minutes and shows its progress live.' },
+    { el: () => document.querySelector('.method-controls'), t: '2 · Settings', b: 'Change them or keep the defaults. How to build the 3D structure, an optional force-field clean-up, and the advanced GLOMOS conformer search. The defaults work. Each ⓘ explains its option.' },
+    { el: () => $('convert-molecules'), t: '3 · Convert', b: 'Press this button to build the 3D structure. It usually takes a second; GLOMOS takes minutes and shows its progress live.' },
     { el: () => document.querySelector('.visualization-container'), t: '4 · Explore', b: 'Drag to rotate, scroll to zoom, switch between 3D and 2D. The buttons at the top left save a picture, record a video, and measure distances, angles and dihedrals (click the atoms). ⤢ is full screen.' },
     { el: () => document.querySelector('.visualization-controls'), t: 'Results & downloads', b: 'Coordinates in six formats (XYZ, MOL, SDF, PDB, MOL2, CML), quality checks, and buttons to download one or all.' },
     { el: () => document.querySelector('.navbar a[href="#about"]'), t: 'New to chemistry?', b: 'The About tab has a 15-minute mini-course: SMILES, 3D structures, conformers and GLOMOS, with interactive examples.' },
@@ -196,7 +175,7 @@
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
       store.set('elaya.tour.seen', true);
-      if (done) toast('You are ready. Start with step 1 ✨');
+      if (done) toast('You are ready. Start by entering a molecule ✨');
       prevFocus?.focus?.({ preventScroll: true });
     };
     const onKey = (e) => {

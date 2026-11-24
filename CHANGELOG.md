@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.4.3
+
+* **Measure fixed**: atom clicks were ignored because 3Dmol builds its pick list while rendering and the view was
+  paused before the first render; it now renders once when measuring starts. Speed slider hidden while measuring.
+* One style for every drop-down: dark, readable, smaller text; in Chrome 135+ the open list is fully styled too
+  (rounded, dark, ✓ on the chosen option).
+* Removed the step bar; "Guided tour" moved to the top menu. Hints (Start here → choose options → Convert) stay.
+* Enter no longer converts; all "press Enter" texts removed. Placeholder: "Enter a SMILES string (not a molecular
+  formula)".
+* Examples back to plain words with a simple colour change on hover; Oxytocin like the others.
+* Recording: the 3-2-1 countdown and the elapsed time are shown inside the Record button; the dark box that
+  covered the button is gone.
+
 ## 2.4.2
 
 * **Measure tool** in the viewer: click 2 atoms → distance (Å), 3 → angle (°), 4 → dihedral (°); values drawn in

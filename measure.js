@@ -94,6 +94,7 @@
 
   function onPick(atom) {
     if (!on || !atom) return;
+    if (hoverLabel) { try { viewer.removeLabel(hoverLabel); } catch (e) { /* */ } hoverLabel = null; }
     const a = { x: atom.x, y: atom.y, z: atom.z, elem: atom.elem, index: atom.index, serial: atom.serial };
     if (picks.length === 4) picks = [];
     const last = picks[picks.length - 1];
@@ -118,6 +119,7 @@
         (atom) => { if (!on || hoverLabel) return; hoverLabel = viewer.addLabel(name(atom), { position: atom, inFront: true, fontSize: 11, fontColor: '#e8eef2', backgroundColor: '#000', backgroundOpacity: 0.6 }); viewer.render(); },
         () => { if (hoverLabel) { try { viewer.removeLabel(hoverLabel); viewer.render(); } catch (e) { /* */ } hoverLabel = null; } });
       viewer.setHoverDuration?.(60);
+      viewer.render();      // 3Dmol builds its pick list while rendering; rotation is paused, so render once here
     } catch (e) { console.warn('measure: could not attach', e); return false; }
     return true;
   }
