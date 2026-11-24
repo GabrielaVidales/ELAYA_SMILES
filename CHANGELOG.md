@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.11
+
+* Views: back to two independent switches, 3D and 2D (both on = side by side; both off = a short hint).
+* "Share your feedback" uses the ELAYA SMILES title style (white italic with gold glow).
+* The example hint shows twinkling ✨ instead of a pointing hand.
+
+## 2.4.10
+
+* Fix: in 3D + 2D (and on phones) the 3D model was cropped left and right, because the fit used the panel height
+  only; the fit now accounts for the panel aspect ratio.
+* `validation/benchmark_builders.py` + results: the builder benchmark reported in the manuscript.
+
 ## 2.4.9
 
 * SMILES box: animated placeholder "Type a SMILES · e.g. …" types an example while the matching example word

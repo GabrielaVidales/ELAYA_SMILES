@@ -817,26 +817,21 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 const btn3D = document.getElementById("toggle-3d");
 const btn2D = document.getElementById("toggle-2d");
     
-const btnBoth = document.getElementById("toggle-both");
 btn3D.addEventListener("click", () => toggleView("3d"));
 btn2D.addEventListener("click", () => toggleView("2d"));
-btnBoth?.addEventListener("click", () => toggleView("both"));
 
-// v2.4.7: one choice at a time (3D · 2D · 3D + 2D) instead of two buttons that switched on and off
+// v2.4.11: 3D and 2D are independent switches again (both on = side by side, both off = nothing shown)
 function syncViewButtons() {
-  const mode = is3DEnabled && is2DEnabled ? "both" : is2DEnabled ? "2d" : "3d";
-  [[btn3D, "3d"], [btn2D, "2d"], [btnBoth, "both"]].forEach(([b, m]) => {
+  [[btn3D, is3DEnabled], [btn2D, is2DEnabled]].forEach(([b, on]) => {
     if (!b) return;
-    b.classList.toggle("active", m === mode);
-    b.setAttribute("aria-checked", m === mode ? "true" : "false");
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
   });
-  const tg = document.querySelector(".view-toggle");
-  if (tg) tg.dataset.mode = mode;
 }
 
 function toggleView(mode) {
-  is3DEnabled = mode !== "2d";
-  is2DEnabled = mode !== "3d";
+  if (mode === "3d") is3DEnabled = !is3DEnabled;
+  else if (mode === "2d") is2DEnabled = !is2DEnabled;
   syncViewButtons();
 
   // Toggle mode-2d class for contrast styling (pure 2D = white bg)
@@ -993,6 +988,16 @@ function updateViewerContainerLayout() {
         viewer2D.textContent = "Error al mostrar estructura 2D.";
       });
 
+    if (speedControl) speedControl.style.display = 'none';
+  }
+
+  // Ninguna vista activa
+  else {
+    const ph = document.createElement('div');
+    ph.className = 'placeholder views-off';
+    ph.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#9ab8cc;font-size:.95rem;text-align:center;padding:1rem;';
+    ph.textContent = 'Both views are off — turn on 3D or 2D (top right).';
+    viewer.appendChild(ph);
     if (speedControl) speedControl.style.display = 'none';
   }
 
@@ -1425,6 +1430,16 @@ function updateXYZDisplay() {
     xyzDisplay.textContent = [atomCount, comment, ...atoms].join('\n');
 }
 
+// 3Dmol's zoomTo() fits the molecule to the panel height; in a narrow panel (3D + 2D side by side,
+// phones) that crops it left and right. Shrink by the aspect ratio so the whole molecule is visible.
+function fitWhole(viewer) {
+    viewer.zoomTo();
+    const c = viewer.getCanvas ? viewer.getCanvas() : null;
+    const w = c ? c.clientWidth : 0, h = c ? c.clientHeight : 0;
+    viewer.zoom(0.9 * (w && h ? Math.min(1, w / h) : 1));
+}
+window.elayaFitWhole = fitWhole;
+
 function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContainer = viewerContainer) {
     if (!targetContainer) {
         viewerContainer = document.getElementById('viewer-container') || null;
@@ -1498,8 +1513,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         try {
             viewer.addModel(modelData, format, { keepH: true, noComputeSecondaryStructure: true });
             viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.25 } });
-            viewer.zoomTo();
-            viewer.zoom(0.9);                       // whole molecule with a small margin
+            fitWhole(viewer);                       // whole molecule with a small margin
             if (isVisible()) viewer.render();      // a hidden (0×0) canvas would raise WebGL errors
         } catch (e) {
             console.error("❌ Error al renderizar modelo:", e);
@@ -1518,7 +1532,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
                 if (wasHidden) {
                     wasHidden = false;
                     // zoom computed while the canvas was 0×0 is meaningless: redo it now
-                    try { viewer.resize(); viewer.zoomTo(); viewer.zoom(0.9); } catch (e) { /* ignore */ }
+                    try { viewer.resize(); fitWhole(viewer); } catch (e) { /* ignore */ }
                 }
                 if (!isRotationPaused) {
                     viewer.rotate(rotationSpeed, { x: 0, y: 1, z: 0 });
@@ -1535,7 +1549,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
         if (placeholder) placeholder.style.display = 'none';
 
         setTimeout(() => {
-            try { if (isVisible()) { viewer.resize(); viewer.zoomTo(); viewer.zoom(0.9); viewer.render(); } }
+            try { if (isVisible()) { viewer.resize(); fitWhole(viewer); viewer.render(); } }
             catch (err) { console.warn("⚠ Error al redibujar viewer:", err); }
         }, 150);
     }

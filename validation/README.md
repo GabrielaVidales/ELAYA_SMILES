@@ -7,3 +7,6 @@
   there)**: run it once in the deployed image (`python validation/run_validation.py`) before quoting any number.
 * For the aspirin comparison with microwave data, put the experimental A, B, C of each conformer in `aspirin/results.csv`
   next to the ELAYA values and report the percentage difference per constant (see `docs/paper_vs_code.md` §2).
+* `benchmark_builders.py` — the 13-molecule benchmark of the paper (Tables 3–4): every builder (RDKit+MMFF94,
+  RDKit+UFF, Open Babel, NetworkX) × 3 runs; records time, bond check and stereo check.
+  `python validation/benchmark_builders.py . validation/benchmark_builders.json`

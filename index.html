@@ -293,11 +293,9 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
             <!-- Cuenta regresiva -->
                     <div id="countdown"></div>
 
-                    <div class="view-toggle" role="radiogroup" aria-label="View" data-mode="3d">
-                        <span class="view-pill" aria-hidden="true"></span>
-                        <button id="toggle-3d" class="view-btn active" role="radio" aria-checked="true" title="3D model you can rotate">3D</button>
-                        <button id="toggle-2d" class="view-btn" role="radio" aria-checked="false" title="2D structural drawing">2D</button>
-                        <button id="toggle-both" class="view-btn" role="radio" aria-checked="false" title="3D and 2D side by side">3D + 2D</button>
+                    <div class="view-toggle" aria-label="Views (turn each one on or off)">
+                        <button id="toggle-3d" class="view-btn active" aria-pressed="true" title="Show / hide the 3D model">3D</button>
+                        <button id="toggle-2d" class="view-btn" aria-pressed="false" title="Show / hide the 2D drawing (both on = side by side)">2D</button>
                     </div>
 
                     <div class="placeholder">3D Visualization will appear here</div>
@@ -941,7 +939,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.9</span>},
+  version = {<span id="cite-version">2.4.11</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>

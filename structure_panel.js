@@ -402,8 +402,7 @@
         const c = v.container || (v.getCanvas && v.getCanvas().parentElement);
         if (c && (c.offsetWidth === 0 || c.offsetHeight === 0)) return;
         v.resize();
-        v.zoomTo();
-        v.zoom(0.9);          // a small margin so nothing touches the edges
+        if (window.elayaFitWhole) window.elayaFitWhole(v); else { v.zoomTo(); v.zoom(0.9); }
         v.render();
       } catch (e) { /* viewer gone */ }
     });
