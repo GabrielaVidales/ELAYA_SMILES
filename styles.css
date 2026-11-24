@@ -4758,3 +4758,48 @@ body.g-ready #convert-molecules { outline: none !important; animation: g-soft 2.
 .mode-both #molecule-controls .fullscreen-btn svg { fill: #1b2b36 !important; stroke: none !important; filter: none !important; }
 .mode-both #molecule-controls .fullscreen-btn:hover, .mode-both #fit-btn:hover { background: rgba(0,0,0,.06) !important; }
 .contact-ways { align-content: center; }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.8
+════════════════════════════════════════════════════════════ */
+/* Contact header: same space above the title as below the subtitle */
+#contact-section .contact-hero { padding: 2.2rem 1rem 1.8rem !important; margin: 0 !important; }
+.contact-subtitle { margin: 0; }
+.contact-intro { margin-top: 0 !important; }
+
+/* "How can you help?": four tiles with icons */
+.contact-ways { display: flex !important; flex-direction: column; justify-content: center; padding: 1.4rem 1.5rem !important; background: linear-gradient(160deg, rgba(143,227,203,.06), rgba(201,167,240,.05) 60%, transparent), var(--sf-2) !important; }
+.contact-ways h3 { margin: 0 0 .15rem !important; }
+.cw-sub { margin: 0 0 1rem; color: var(--on-md); font-size: .86rem; }
+.cw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.contact-ways a.cw { flex-direction: row !important; align-items: center; gap: .8rem !important; padding: .85rem .9rem !important; background: rgba(255,255,255,.035); border-radius: 12px; transition: background .2s, transform .2s; }
+.contact-ways a.cw:hover { background: rgba(255,255,255,.07); transform: translateY(-2px); }
+.cw-ico { flex: 0 0 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: rgba(143,227,203,.12); }
+.cw-ico svg { width: 21px; height: 21px; fill: none; stroke: var(--mint); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cw-idea .cw-ico { background: rgba(255,191,0,.12); } .cw-idea .cw-ico svg { stroke: #ffd36b; }
+.cw-code .cw-ico { background: rgba(201,167,240,.14); } .cw-code .cw-ico svg { stroke: var(--lav); }
+.cw-cite .cw-ico { background: rgba(126,200,255,.12); } .cw-cite .cw-ico svg { stroke: #9fd3ff; }
+.cw-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.contact-ways a.cw b { color: var(--on-hi) !important; font-size: .93rem; }
+.contact-ways a.cw small { color: var(--on-md); font-size: .78rem; }
+.contact-ways a.cw i { font-style: normal; color: var(--mint); font-weight: 700; transition: transform .2s, color .2s; }
+.contact-ways a.cw:hover i { color: #ffbf00; transform: translateX(2px); }
+.contact-ways a.cw:hover b { color: #ffffff !important; }
+@media (max-width: 600px) { .cw-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* SMILES file: compact dropzone and help */
+.file-dropzone .fd-main { font-size: .95rem; }
+.ffe-help { gap: .8rem !important; }
+.ffe-sample { font-size: .78rem !important; }
+
+/* 2D drawing: zoomable */
+#viewer-2d { cursor: grab; }
+#viewer-2d svg { will-change: transform; }
+.ffe-help { justify-content: flex-start !important; flex-wrap: wrap; }
+.ffe-help > div:first-child { flex: 0 1 auto !important; }
+#glomos-panel select { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; padding-right: 2rem !important; font-size: .86rem !important; }
+/* the explorer never shows on the other tabs (a phone rule forced it visible) */
+body:not([data-page="explore"]) main > .conversion-section, body:not([data-page="explore"]) main > .input-section { display: none !important; }
+.nav-short { display: none; }
+@media (max-width: 600px) { .nav-long { display: none; } .nav-short { display: inline; } }
+#contact-section .contact-hero { padding: 4rem 1rem 2rem !important; }

@@ -704,8 +704,14 @@ function countdown(seconds, callback) {
 let timerInterval;
 let startTime;
 
-function startRecording() {
-    const canvas = document.querySelector('#viewer-container canvas');
+let _liveCapture = null;
+async function startRecording() {
+    let canvas = document.querySelector('#viewer-container canvas');
+    // v2.4.8: with 2D on, record the whole viewer (2D, or 3D + 2D side by side)
+    if (is2DEnabled && window.ElayaView2D && document.querySelector('#viewer-2d svg')) {
+        _liveCapture = await window.ElayaView2D.liveCanvas();
+        canvas = _liveCapture.canvas;
+    }
     if (!canvas) {
         console.error("⚠ No se encontró canvas para capturar.");
         return;
@@ -723,6 +729,7 @@ function startRecording() {
 
     mediaRecorder.onstop = function () {
         clearInterval(timerInterval);
+        if (_liveCapture) { _liveCapture.stop(); _liveCapture = null; }
         recLabel('Record');
 
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
@@ -1477,6 +1484,7 @@ function render3DMolecule(modelData, smiles = '', format = 'xyz', targetContaine
             viewer = $3Dmol.createViewer(targetContainer, {
                 width: viewerW,
                 height: viewerH,
+                preserveDrawingBuffer: true,      // lets Image/Record copy the 3D canvas next to the 2D drawing
                 backgroundColor: 'black'
             });
         } catch (e) {
@@ -1750,7 +1758,19 @@ function downloadXYZ() {
     }
 }
 
-function downloadImage() {
+async function downloadImage() {
+    // v2.4.8: with 2D on, save what is on screen (2D, or 3D + 2D side by side)
+    if (is2DEnabled && window.ElayaView2D && document.querySelector('#viewer-2d svg')) {
+        try {
+            const cv = await window.ElayaView2D.snapshot();
+            const a = document.createElement('a');
+            a.href = cv.toDataURL('image/png');
+            a.download = `molecule_${molecules[currentMoleculeIndex]?.id || 'unknown'}${is3DEnabled ? '_3D_2D' : '_2D'}.png`;
+            document.body.appendChild(a); a.click(); a.remove();
+            showSuccess('✔ Downloaded image');
+        } catch (e) { console.error(e); showError('Could not save the image'); }
+        return;
+    }
     if (!currentVisualizations.length) {
         showError('No hay visualización para descargar');
         return;
@@ -2193,7 +2213,7 @@ window.showMoleculeSelectionModal = showMoleculeSelectionModal;
 
 function updateSmilesHistory(newSmiles) {
     const key = 'smilesHistory';
-    let history = JSON.parse(localStorage.getItem(key)) || [];
+    let history = JSON.parse(sessionStorage.getItem(key)) || [];
 
     // Elimina duplicados y agrega nuevo al principio
     history = [newSmiles, ...history.filter(s => s !== newSmiles)];
@@ -2201,8 +2221,8 @@ function updateSmilesHistory(newSmiles) {
     // Limita a 5 entradas
     history = history.slice(0, 5);
 
-    // Guarda en localStorage
-    localStorage.setItem(key, JSON.stringify(history));
+    // Guarda en sessionStorage
+    sessionStorage.setItem(key, JSON.stringify(history));
 
     // Actualiza el datalist
     const datalist = document.getElementById('smiles-history');
@@ -2216,7 +2236,7 @@ function updateSmilesHistory(newSmiles) {
 
 function loadSmilesHistory() {
     const key = 'smilesHistory';
-    const history = JSON.parse(localStorage.getItem(key)) || [];
+    const history = JSON.parse(sessionStorage.getItem(key)) || [];
     const datalist = document.getElementById('smiles-history');
     if (datalist) {
         datalist.innerHTML = '';

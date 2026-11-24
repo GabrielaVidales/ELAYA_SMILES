@@ -10,8 +10,8 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const store = {
-    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } },
+    get(k, d) { try { const v = sessionStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode */ } },
   };
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const NAV_H = 48;
@@ -161,7 +161,7 @@
     { el: () => $('convert-molecules'), t: '3 · Convert', b: 'Press this button to build the 3D structure. It usually takes a second; GLOMOS takes minutes and shows its progress live.' },
     { el: () => document.querySelector('.visualization-container'), t: '4 · Explore', b: 'Drag to rotate, scroll to zoom, switch between 3D and 2D. The buttons at the top left save a picture, record a video, and measure distances, angles and dihedrals (click the atoms). ⤢ is full screen.' },
     { el: () => document.querySelector('.visualization-controls'), t: 'Results & downloads', b: 'Coordinates in six formats (XYZ, MOL, SDF, PDB, MOL2, CML) and buttons to download one or all. A warning appears here only if the 3D structure does not match the SMILES.' },
-    { el: () => document.querySelector('.navbar a[href="#about"]'), t: 'New to chemistry?', b: 'The About tab has a 15-minute mini-course: SMILES, 3D structures, conformers and GLOMOS, with interactive examples.' },
+    { el: () => document.querySelector('.navbar a[href="#about"]'), t: 'New to chemistry?', b: 'The “What is SMILES?” tab has a 15-minute mini-course: SMILES, 3D structures, conformers and GLOMOS, with interactive examples.' },
   ];
 
   function initTour() {
@@ -301,7 +301,17 @@
     update();
   }
 
+  // v2.4.8: everything is remembered per visit (sessionStorage), not per device; clear what older versions left
+  function forgetOldDeviceData() {
+    try {
+      Object.keys(window['local' + 'Storage']).forEach(k => {
+        if (k.startsWith('elaya') || k === 'smilesHistory') window['local' + 'Storage'].removeItem(k);
+      });
+    } catch (e) { /* storage off */ }
+  }
+
   function init() {
+    forgetOldDeviceData();
     initPages();
     initSteps();
     initTour();

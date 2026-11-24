@@ -13,8 +13,8 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const store = {
-    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
+    get(k, d) { try { const v = sessionStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
   };
 
   // ---------------------------------------------------------------- clear button + live check
@@ -131,7 +131,7 @@
     let box = $('glomos-estimate');
     if (!box) { box = document.createElement('div'); box.id = 'glomos-estimate'; grid.appendChild(box); }
     const n = relaxations();
-    let text = `Up to <b>${n}</b> ANI relaxations (fewer if it converges early).`;
+    let text = `≤ <b>${n}</b> ANI relaxations`;
     const rate = store.get('elaya.glomosRate', null);
     const atoms = lastInfo?.atoms_with_h;
     if (rate && rate.secPerRelaxAtom > 0 && atoms) {
@@ -141,8 +141,7 @@
       }
       const lim = Number($('glomos-minutes')?.value) || 20;
       const min = sec / 60;
-      text += ` Estimated <b>≈ ${min < 1 ? '<1' : Math.round(min)} min</b> on this server (from your last run)` +
-              (min > lim ? ` — longer than the time limit: the best structures found by then are returned.` : '.');
+      text += ` · ≈ <b>${min < 1 ? '<1' : Math.round(min)} min</b>` + (min > lim ? ` (stops at ${lim} min with the best so far)` : '');
     }
     box.innerHTML = text;
   }
@@ -245,7 +244,7 @@
         <div class="fs-head">
           <span><b>${molecules.length}</b> loaded${results ? ` · <b class="fs-okc">${molecules.length - bad}</b> valid` : ''}${bad ? ` · <b class="fs-badc">${bad}</b> invalid` : ''}</span>
           ${bad ? '<button type="button" class="ffe-btn" id="fs-drop-bad">Remove invalid</button>' : ''}
-          <span class="fs-hint">Press <b>Convert structure</b> to choose which ones to build.</span>
+
         </div>
         <div class="fs-table-wrap"><table class="fs-table"><thead><tr><th>#</th><th>Name</th><th>SMILES</th><th>Check</th></tr></thead>
         <tbody>${rows}</tbody></table></div>

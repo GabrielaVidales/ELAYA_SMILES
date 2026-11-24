@@ -36,7 +36,7 @@
         <div class="navbar-container">
             <img src="pictures/Logo_Elaya.jpg" alt="Elaya Logo" class="navbar-logo">
             <a href="#explore" id="nav-explore">Explore</a>
-            <a href="#about" id="nav-about">About</a>
+            <a href="#about" id="nav-about"><span class="nav-long">What is SMILES?</span><span class="nav-short">SMILES?</span></a>
             <a href="#contact" id="nav-contact">Contact</a>
             <div class="code-links">
                 <button type="button" id="guide-tour-btn" class="nav-tour-btn" title="A 30-second guided tour of the page">
@@ -102,8 +102,8 @@
                     <div class="input-overlay-wrapper">
                         <label for="smiles-file" id="file-dropzone" class="file-dropzone" tabindex="0">
                             <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M19 13v6H5v-6H3v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2zm-6-9.17 3.59 3.58L18 6l-6-6-6 6 1.41 1.41L11 3.83V15h2V3.83z"/></svg>
-                            <span class="fd-main"><b>Drop a file here</b> or <u>browse</u></span>
-                            <span class="fd-sub">.smi · .txt · .csv — one molecule per line</span>
+                            <span class="fd-main"><b>Drop</b> or <u>browse</u></span>
+                            <span class="fd-sub">.smi · .txt · .csv</span>
                         </label>
                         <input type="file" id="smiles-file" class="visually-hidden-file" accept=".smi,.txt,.csv,.tsv">
                     </div>
@@ -112,8 +112,7 @@
 
             <div id="file-format-example" class="file-format-example" style="display: none;">
                 <div class="ffe-help">
-                    <div><strong>File format</strong> — one molecule per line: <code>SMILES</code> optionally followed by a name.
-                        CSV/TSV files with a <code>smiles</code> column (and optional <code>name</code>) also work. Lines starting with <code>#</code> are ignored.</div>
+                    <div>One molecule per line: <code>SMILES</code> and an optional name.</div>
                     <pre class="ffe-sample">CCO                      ethanol
 CC(=O)Oc1ccccc1C(=O)O    aspirin
 C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
@@ -201,8 +200,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                 <div class="glomos-title">
                     GLOMOS Conformational Search
                 </div>
-                <p class="glomos-hint">Genetic algorithm in torsion space with ANI potentials. Runs as a background job that you can cancel.
-                    Neutral, closed-shell molecules with H, C, N, O (ANI-1ccx) or also F, S, Cl (ANI-2x).</p>
+                <p class="glomos-hint">Finds the lowest-energy shapes with ANI. Neutral molecules of H, C, N, O (+ F, S, Cl with ANI-2x).</p>
                 <div class="glomos-grid">
                     <div class="glomos-item">
                     <span>Preset</span>
@@ -486,7 +484,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     </div>
                     <ol>
                         <li><a href="#c-start" data-ch="c-start"><span class="toc-n">0</span>Start here</a></li>
-                        <li><a href="#c-smiles" data-ch="c-smiles"><span class="toc-n">1</span>Molecules as text</a></li>
+                        <li><a href="#c-smiles" data-ch="c-smiles"><span class="toc-n">1</span>What is SMILES?</a></li>
                         <li><a href="#c-3d" data-ch="c-3d"><span class="toc-n">2</span>From text to 3D</a></li>
                         <li><a href="#c-energy" data-ch="c-energy"><span class="toc-n">3</span>Energy: FF vs ANI</a></li>
                         <li><a href="#c-conf" data-ch="c-conf"><span class="toc-n">4</span>Conformers</a></li>
@@ -558,13 +556,13 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         </div>
                         <div class="fc-detail" id="fc-detail" aria-live="polite"></div>
                     </div>
-                    <button type="button" class="lesson-next" data-next="c-smiles">Lesson 1 · Molecules as text →</button>
+                    <button type="button" class="lesson-next" data-next="c-smiles">Lesson 1 · What is SMILES? →</button>
                 </article>
 
                 <!-- 1 ───────────────────────────────────────────── -->
                 <article id="c-smiles" class="lesson">
                     <span class="lp-section-tag">Lesson 1 · 4 min · interactive</span>
-                    <h2>Molecules as text: SMILES</h2>
+                    <h2>What is SMILES?</h2>
                     <p class="lead">A molecule is a set of atoms joined by bonds — a <em>graph</em>. <strong>SMILES</strong>
                         (Simplified Molecular Input Line Entry System) writes that graph as a short line of text, so it can be typed,
                         stored in databases such as PubChem or ChEMBL, and read by programs.</p>
@@ -889,10 +887,13 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                 </div>
                 <div class="contact-ways">
                     <h3>How can you help?</h3>
-                    <a href="#report-builder" data-scroll="report-builder"><b>Report a problem ↓</b><span>Guided form below; technical details are filled in for you.</span></a>
-                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener"><b>Suggest a feature ↗</b><span>A new method, output format or lesson.</span></a>
-                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener"><b>Contribute on GitHub ↗</b><span>Code, tests, translations or docs.</span></a>
-                    <a href="#cite-bibtex" data-scroll="cite-bibtex"><b>Cite ELAYA ↓</b><span>BibTeX ready to copy.</span></a>
+                    <p class="cw-sub">Every report and idea makes ELAYA better.</p>
+                    <div class="cw-grid">
+                        <a href="#report-builder" data-scroll="report-builder" class="cw cw-report"><span class="cw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><circle cx="12" cy="16.5" r=".6"/></svg></span><span class="cw-t"><b>Report a problem</b><small>Guided form below</small></span><i aria-hidden="true">↓</i></a>
+                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener" class="cw cw-idea"><span class="cw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><span class="cw-t"><b>Suggest a feature</b><small>New method, format or lesson</small></span><i aria-hidden="true">↗</i></a>
+                        <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener" class="cw cw-code"><span class="cw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span><span class="cw-t"><b>Contribute</b><small>Code, tests or docs on GitHub</small></span><i aria-hidden="true">↗</i></a>
+                        <a href="#cite-bibtex" data-scroll="cite-bibtex" class="cw cw-cite"><span class="cw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M8 9h8M8 13h6"/></svg></span><span class="cw-t"><b>Cite ELAYA</b><small>BibTeX ready to copy</small></span><i aria-hidden="true">↓</i></a>
+                    </div>
                 </div>
             </div>
 
@@ -940,7 +941,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.7</span>},
+  version = {<span id="cite-version">2.4.8</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
@@ -983,5 +984,6 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
     <script src="/learn.js" defer></script>
     <script src="/guide.js" defer></script>
     <script src="/measure.js" defer></script>
+    <script src="/view2d.js" defer></script>
 </body>
 </html>

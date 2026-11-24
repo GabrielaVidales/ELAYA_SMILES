@@ -19,7 +19,7 @@
   const FORMATS = ['xyz', 'mol', 'sdf', 'pdb', 'mol2', 'cml'];
   const LS_FMT = 'elaya.format';
   let fmt = 'xyz';
-  try { const f = localStorage.getItem(LS_FMT); if (FORMATS.includes(f)) fmt = f; } catch (e) { /* storage off */ }
+  try { const f = sessionStorage.getItem(LS_FMT); if (FORMATS.includes(f)) fmt = f; } catch (e) { /* storage off */ }
   const cache = new Map();                    // `${fmt}\u0000${smiles}\u0000${xyz}` -> text
 
   const $ = (id) => document.getElementById(id);
@@ -237,7 +237,7 @@
   function setFormat(f) {
     if (!FORMATS.includes(f)) return;
     fmt = f;
-    try { localStorage.setItem(LS_FMT, f); } catch (e) { /* */ }
+    try { sessionStorage.setItem(LS_FMT, f); } catch (e) { /* */ }
     refresh();
   }
 

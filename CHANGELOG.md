@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.8
+
+* 2D drawing can be zoomed (wheel / pinch), moved (drag) and reset (double-click or Fit).
+* Image and Record capture what is on screen: 2D, or 3D + 2D side by side (with the current 2D zoom).
+* "About" is now "What is SMILES?" (short "SMILES?" on phones); lesson 1 has the same title.
+* Everything is remembered per visit (sessionStorage), not per device: course progress, tour, options, last
+  format; data older versions left on the device is cleared.
+* Shorter texts: GLOMOS description and estimate ("≤ 44 ANI relaxations · ≈ 3 min"), file drop zone ("Drop or
+  browse"), file help ("One molecule per line: SMILES and an optional name").
+* Contact: "How can you help?" as four tiles with icons; title spaced evenly between the menu and the cards.
+* Fix: on phones the explorer stayed visible under the About / Contact tabs.
+
 ## 2.4.7
 
 * **Fix**: a second conversion in the same session re-used the previous molecule (two bindings of `molecules`
