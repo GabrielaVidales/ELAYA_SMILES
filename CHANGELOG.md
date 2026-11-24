@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.7
+
+* **Fix**: a second conversion in the same session re-used the previous molecule (two bindings of `molecules`
+  in app.js); the box content is now always what gets converted, so the result and the notification match the input.
+* View switch is one choice: **3D · 2D · 3D + 2D** (the chosen one is the white pill; same colours as before).
+  In 3D + 2D, Fit and full screen use dark ink over the white drawing.
+* Notifications back at the top, over the title area, solid and one line: "✔ Successfully converted <SMILES>".
+* About: lessons start higher; the Contact orbit animation, larger, around the ELAYA logo in the header.
+* Contact: author card back on the left, "How can you help?" (report, suggest, contribute, cite) on the right.
+
 ## 2.4.6
 
 * Viewer tools, Speed, Fit and full screen without backgrounds or shadows (icon + word, readable over the molecule);

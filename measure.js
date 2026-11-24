@@ -141,9 +141,7 @@
     const want = state === undefined ? !on : state;
     if (want) {
       if (!getViewer()) { flash('Convert a molecule first, then measure it in 3D.'); return; }
-      if (document.querySelector('#toggle-3d') && !document.querySelector('#toggle-3d').classList.contains('active')) {
-        document.querySelector('#toggle-3d').click();
-      }
+      if (typeof is3DEnabled !== 'undefined' && !is3DEnabled) document.querySelector('#toggle-3d')?.click();
       on = true;
       wasPaused = getPaused();
       setPaused(true);

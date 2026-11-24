@@ -4703,3 +4703,58 @@ body.g-ready #convert-molecules { outline: none !important; animation: g-soft 2.
 /* readable on the black stage and on the white drawing alike */
 #molecule-controls .fullscreen-btn svg { stroke: rgba(0,0,0,.55); stroke-width: .8px; paint-order: stroke; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)) !important; }
 #molecule-controls .control-btn, #fit-btn { text-shadow: 0 0 2px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.8) !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   v2.4.7
+════════════════════════════════════════════════════════════ */
+/* 3D · 2D · 3D + 2D: one choice; the chosen one is the white pill (same colours as before) */
+.view-toggle { display: inline-flex !important; align-items: center; gap: 2px !important; padding: 3px; background: #221b01; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.4) !important; }
+.view-pill { display: none; }
+.view-toggle .view-btn, #toggle-3d, #toggle-2d, #toggle-both { height: 36px !important; border-radius: 9px !important; padding: 0 12px !important; background: transparent; color: #7fffd4; font-size: .85rem; white-space: nowrap; }
+.view-toggle .view-btn:hover:not(.active) { background: rgba(127,255,212,.1); }
+.view-toggle .view-btn.active { background: #ffffff !important; color: #0A0A1A !important; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.mode-2d .view-toggle { background: #221b01 !important; }
+@media (max-width: 600px) { .view-toggle .view-btn { padding: 0 9px !important; font-size: .78rem; height: 32px !important; } }
+
+/* notifications: top centre, in the title area; one short line */
+#toast-stack { top: 54px !important; bottom: auto !important; left: 50% !important; right: auto !important; transform: translateX(-50%); align-items: center !important; }
+#toast-stack .alert { max-width: min(560px, calc(100vw - 2rem)) !important; padding: .55rem 1rem !important; border-radius: 12px !important; animation: toast-in .25s ease-out; }
+.toast-smi { font-family: ui-monospace, Menlo, monospace; font-size: .85em; opacity: .85; margin-left: .35rem; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 768px) { #toast-stack { left: .75rem !important; right: .75rem !important; transform: none; } }
+
+/* About: lesson cards start closer to the top */
+.learn { padding-top: .25rem !important; }
+.lesson { padding-top: 1.15rem !important; }
+.lesson h2 { margin-top: .1rem !important; }
+
+/* About hero: the Contact orbits, bigger, centred on the logo */
+.lp-hero-visual { position: relative; width: 300px !important; }
+.hero-orbits { left: 50% !important; top: 50% !important; width: 620px !important; transform: translate(-50%, -50%) !important; opacity: .95; z-index: 0; }
+.lp-hero-visual .lp-logo-ring { position: relative; z-index: 1; }
+.lp-hero-content { position: relative; z-index: 2; }
+@media (max-width: 760px) { .hero-orbits { width: 380px !important; } .lp-hero-visual { width: 160px !important; } }
+
+/* Contact: author card + ways to help, side by side */
+.contact-quick, .contact-author-strip { display: none !important; }
+.contact-intro { position: relative; z-index: 1; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1.5rem; max-width: 1100px; margin: 0 auto 1.5rem; align-items: stretch; box-sizing: border-box; }
+.contact-intro .contact-author-card { margin: 0 !important; height: 100%; box-sizing: border-box; }
+.contact-intro .cas-links { display: flex; justify-content: center; gap: 1.1rem; margin-top: .8rem; }
+.contact-ways { background: var(--sf-2); border-radius: 14px; padding: 1.2rem 1.4rem; display: grid; grid-template-columns: 1fr 1fr; gap: .2rem 1.4rem; align-content: start; }
+.contact-ways h3 { grid-column: 1 / -1; margin: 0 0 .5rem; color: var(--on-hi); font-size: 1.05rem; }
+.contact-ways a { display: flex; flex-direction: column; gap: 2px; text-decoration: none; padding: .65rem .7rem; border-radius: 10px; transition: background .2s; }
+.contact-ways a b { color: #98ebc4; font-size: .95rem; transition: color .2s; }
+.contact-ways a span { color: var(--on-md); font-size: .82rem; line-height: 1.4; }
+.contact-ways a:hover { background: rgba(255,255,255,.04); }
+.contact-ways a:hover b { color: #ffbf00; }
+@media (max-width: 900px) { .contact-intro { grid-template-columns: minmax(0, 1fr); margin-left: .75rem; margin-right: .75rem; } .contact-ways { grid-template-columns: minmax(0, 1fr); } }
+/* toast covers the title area cleanly (solid, not see-through) */
+#toast-stack { top: 58px !important; }
+#toast-stack .alert { background: #1a1d33 !important; opacity: 1 !important; backdrop-filter: none !important; box-shadow: 0 10px 26px rgba(0,0,0,.6) !important; color: var(--on-hi) !important; }
+#toast-stack .alert.success { border-left: 3px solid var(--mint) !important; }
+#toast-stack .alert.error { border-left: 3px solid #ff6b6b !important; }
+/* 3D + 2D: Fit and full screen sit on the white drawing → dark ink */
+.mode-both #molecule-controls .control-btn, .mode-both #fit-btn { color: #1f8f78 !important; text-shadow: none !important; }
+.mode-both #molecule-controls .fullscreen-btn svg { fill: #1b2b36 !important; stroke: none !important; filter: none !important; }
+.mode-both #molecule-controls .fullscreen-btn:hover, .mode-both #fit-btn:hover { background: rgba(0,0,0,.06) !important; }
+.contact-ways { align-content: center; }

@@ -295,9 +295,11 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
             <!-- Cuenta regresiva -->
                     <div id="countdown"></div>
 
-                    <div class="view-toggle">
-                        <button id="toggle-3d" class="view-btn active">3D</button>
-                        <button id="toggle-2d" class="view-btn">2D</button>
+                    <div class="view-toggle" role="radiogroup" aria-label="View" data-mode="3d">
+                        <span class="view-pill" aria-hidden="true"></span>
+                        <button id="toggle-3d" class="view-btn active" role="radio" aria-checked="true" title="3D model you can rotate">3D</button>
+                        <button id="toggle-2d" class="view-btn" role="radio" aria-checked="false" title="2D structural drawing">2D</button>
+                        <button id="toggle-both" class="view-btn" role="radio" aria-checked="false" title="3D and 2D side by side">3D + 2D</button>
                     </div>
 
                     <div class="placeholder">3D Visualization will appear here</div>
@@ -425,6 +427,18 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     </div>
                 </div>
                 <div class="lp-hero-visual">
+                    <div class="contact-orbits hero-orbits" aria-hidden="true">
+                <svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="400" cy="400" r="390" fill="url(#co-glow)"/>
+                    <g class="co-spin co-s1"><circle cx="400" cy="400" r="360" class="co-ring co-faint"/></g>
+                    <g class="co-spin co-s2"><circle cx="400" cy="400" r="300" class="co-ring co-dash"/><circle cx="400" cy="100" r="7" class="co-dot"/><circle cx="700" cy="400" r="4" class="co-dot co-mint"/></g>
+                    <g class="co-spin co-s3"><circle cx="400" cy="400" r="240" class="co-ring co-dot2"/><circle cx="400" cy="640" r="5" class="co-dot co-purple"/><circle cx="160" cy="400" r="3.5" class="co-dot co-mint"/></g>
+                    <circle cx="400" cy="400" r="180" class="co-ring co-pulse"/>
+                    <g class="co-spin co-s4"><polygon points="400,330 461,365 461,435 400,470 339,435 339,365" class="co-hex"/>
+                        <circle cx="400" cy="330" r="5" class="co-atom"/><circle cx="461" cy="365" r="5" class="co-atom"/><circle cx="461" cy="435" r="5" class="co-atom"/>
+                        <circle cx="400" cy="470" r="5" class="co-atom"/><circle cx="339" cy="435" r="5" class="co-atom"/><circle cx="339" cy="365" r="5" class="co-atom"/></g>
+                </svg>
+            </div>
                     <div class="lp-logo-ring">
                         <img src="pictures/Logo_Elaya.jpg" alt="ELAYA Logo" class="lp-hero-logo"/>
                         <svg class="lp-ring-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
@@ -858,15 +872,29 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
             </div>
 
             <!-- Author card + action cards -->
-            <nav class="contact-quick" aria-label="Ways to help">
-                <a href="#report-builder" data-scroll="report-builder">Report a problem ↓</a>
-                <span aria-hidden="true">·</span>
-                <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener">Suggest a feature ↗</a>
-                <span aria-hidden="true">·</span>
-                <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener">Contribute on GitHub ↗</a>
-                <span aria-hidden="true">·</span>
-                <a href="#cite-bibtex" data-scroll="cite-bibtex">Cite ELAYA ↓</a>
-            </nav>
+            <div class="contact-intro">
+                <div class="contact-author-card">
+                    <img src="pictures/Logo_Elaya.jpg" alt="ELAYA" class="contact-author-logo"/>
+                    <div class="contact-author-info">
+                        <div class="contact-author-name">
+                            <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales-Ayala</a>
+                        </div>
+                        <div class="contact-author-role">Physics Engineering Student</div>
+                        <p class="contact-author-bio">Committed to using science, education, and technology to improve people's quality of life.</p>
+                        <div class="cas-links">
+                            <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener">LinkedIn ↗</a>
+                            <a href="https://github.com/GabrielaVidales" target="_blank" rel="noopener">GitHub ↗</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="contact-ways">
+                    <h3>How can you help?</h3>
+                    <a href="#report-builder" data-scroll="report-builder"><b>Report a problem ↓</b><span>Guided form below; technical details are filled in for you.</span></a>
+                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener"><b>Suggest a feature ↗</b><span>A new method, output format or lesson.</span></a>
+                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener"><b>Contribute on GitHub ↗</b><span>Code, tests, translations or docs.</span></a>
+                    <a href="#cite-bibtex" data-scroll="cite-bibtex"><b>Cite ELAYA ↓</b><span>BibTeX ready to copy.</span></a>
+                </div>
+            </div>
 
             <!-- Guided bug report -->
             <div class="contact-panel" id="report-builder">
@@ -912,7 +940,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.6</span>},
+  version = {<span id="cite-version">2.4.7</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
@@ -930,17 +958,6 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         <details><summary>Can I reproduce a run?</summary><p>Yes: set a fixed <em>Random seed</em> in the GLOMOS panel and keep the same parameters.</p></details>
                         <details><summary>Can I run it on my own computer?</summary><p>Yes, with Docker: <code>docker build -t elaya .</code> then <code>docker run -p 5000:5000 elaya</code>, and open <code>http://localhost:5000</code>. On a normal laptop GLOMOS is several times faster than on the free server.</p></details>
                     </div>
-                </div>
-            </div>
-            <div class="contact-author-strip">
-                <img src="pictures/Logo_Elaya.jpg" alt="" class="cas-logo">
-                <div>
-                    <b><a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener">Gabriela Vidales-Ayala</a></b>
-                    <span>Physics Engineering student · science, education and technology to improve people's quality of life</span>
-                </div>
-                <div class="cas-links">
-                    <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener">LinkedIn ↗</a>
-                    <a href="https://github.com/GabrielaVidales" target="_blank" rel="noopener">GitHub ↗</a>
                 </div>
             </div>
         </section>

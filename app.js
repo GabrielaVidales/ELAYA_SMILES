@@ -810,37 +810,34 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 const btn3D = document.getElementById("toggle-3d");
 const btn2D = document.getElementById("toggle-2d");
     
+const btnBoth = document.getElementById("toggle-both");
 btn3D.addEventListener("click", () => toggleView("3d"));
 btn2D.addEventListener("click", () => toggleView("2d"));
+btnBoth?.addEventListener("click", () => toggleView("both"));
+
+// v2.4.7: one choice at a time (3D · 2D · 3D + 2D) instead of two buttons that switched on and off
+function syncViewButtons() {
+  const mode = is3DEnabled && is2DEnabled ? "both" : is2DEnabled ? "2d" : "3d";
+  [[btn3D, "3d"], [btn2D, "2d"], [btnBoth, "both"]].forEach(([b, m]) => {
+    if (!b) return;
+    b.classList.toggle("active", m === mode);
+    b.setAttribute("aria-checked", m === mode ? "true" : "false");
+  });
+  const tg = document.querySelector(".view-toggle");
+  if (tg) tg.dataset.mode = mode;
+}
 
 function toggleView(mode) {
-  if (mode === "3d") {
-    is3DEnabled = !is3DEnabled;
-  } else if (mode === "2d") {
-    is2DEnabled = !is2DEnabled;
-  }
-
-  // Asegura que al menos uno esté activo
-  if (!is3DEnabled && !is2DEnabled) {
-    if (mode === "3d") {
-      is2DEnabled = true;
-    } else {
-      is3DEnabled = true;
-    }
-  }
-
-  // Actualiza estilos de botones
-  if (is3DEnabled) btn3D.classList.add("active");
-  else btn3D.classList.remove("active");
-
-  if (is2DEnabled) btn2D.classList.add("active");
-  else btn2D.classList.remove("active");
+  is3DEnabled = mode !== "2d";
+  is2DEnabled = mode !== "3d";
+  syncViewButtons();
 
   // Toggle mode-2d class for contrast styling (pure 2D = white bg)
   const visContainer = document.querySelector('.visualization-container');
   if (visContainer) {
     if (is2DEnabled && !is3DEnabled) visContainer.classList.add('mode-2d');
     else visContainer.classList.remove('mode-2d');
+    visContainer.classList.toggle('mode-both', is2DEnabled && is3DEnabled);
   }
 
   updateViewerContainerLayout();
@@ -1040,8 +1037,7 @@ document.querySelectorAll('.mol-entry').forEach((entry, idx) => {
         currentMoleculeIndex = idx;
         is2DEnabled = true;
         is3DEnabled = false;
-        btn2D.classList.add("active");
-        btn3D.classList.remove("active");
+        syncViewButtons();
 
         // Actualizar visualización
         updateViewerContainerLayout();
@@ -1180,7 +1176,7 @@ async function convertMolecules(pickedList = null) {
       });
 
       const _smi = String(mol.smiles || '');
-      showSuccess(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${_smi.length > 70 ? _smi.slice(0, 67) + '…' : _smi}`);
+      showSuccess(`<strong>✔ Successfully converted</strong> <span class="toast-smi">${_esc(_smi.length > 70 ? _smi.slice(0, 67) + '…' : _smi)}</span>`);
     }
 
     // Estado final + render/XYZ
@@ -1254,12 +1250,14 @@ async function convertSingleMolecule() {
   const _label      = _convertBtn?.querySelector('.button-label');
 
   try {
-    if (!Array.isArray(molecules) || molecules.length === 0 || !molecules[currentMoleculeIndex]) {
-      const smilesInput = document.getElementById('smiles');
-      const smilesText  = smilesInput?.value?.trim();
-      if (!smilesText) throw new Error('No molecule selected. Please enter a SMILES string.');
-      molecules = [{ smiles: smilesText, id: smilesText }];
+    // v2.4.7: always convert what is in the box now. `molecules` here is a different binding from
+    // window.molecules, and it kept the previous molecule, so a second conversion re-used the old SMILES.
+    const _inputSmiles = document.getElementById('smiles')?.value?.trim();
+    if (_inputSmiles) {
+      molecules = [{ smiles: _inputSmiles, id: _inputSmiles }];
       currentMoleculeIndex = 0;
+    } else if (!Array.isArray(molecules) || molecules.length === 0 || !molecules[currentMoleculeIndex]) {
+      throw new Error('No molecule selected. Please enter a SMILES string.');
     }
 
     const method     = document.getElementById('conversion-method')?.value || 'rdkit';
@@ -1327,7 +1325,7 @@ async function convertSingleMolecule() {
 
     updateViewerContainerLayout();
     const _s = String(molecule.smiles || '');
-    showSuccess?.(`<strong>✔ Molecule successfully converted</strong><br><strong>SMILES:</strong> ${_s.length > 70 ? _s.slice(0, 67) + '…' : _s}`);
+    showSuccess?.(`<strong>✔ Successfully converted</strong> <span class="toast-smi">${_esc(_s.length > 70 ? _s.slice(0, 67) + '…' : _s)}</span>`);
 
     const moleculeCtrls = document.getElementById('molecule-controls');
     const speedControl  = document.querySelector('.speed-control');
@@ -1946,7 +1944,8 @@ function formatXYZWithAlignment(xyzText) {
 }
 
 // Funciones de ayuda
-// Notifications live in one stack (bottom-right) so they never overlap each other or the title
+function _esc(t) { return String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+// Notifications live in one stack at the top, in the space of the page title
 function _toastStack() {
     let stack = document.getElementById('toast-stack');
     if (!stack) {
