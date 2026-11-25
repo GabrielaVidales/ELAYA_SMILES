@@ -101,7 +101,7 @@
                 <div id="file-input" class="input-group" style="display: none;">
                     <div class="input-overlay-wrapper">
                         <label for="smiles-file" id="file-dropzone" class="file-dropzone" tabindex="0">
-                            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M19 13v6H5v-6H3v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2zm-6-9.17 3.59 3.58L18 6l-6-6-6 6 1.41 1.41L11 3.83V15h2V3.83z"/></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19 13v6H5v-6H3v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6h-2zm-6-9.17 3.59 3.58L18 6l-6-6-6 6 1.41 1.41L11 3.83V15h2V3.83z"/></svg>
                             <span class="fd-main"><b>Drop</b> or <u>browse</u></span>
                             <span class="fd-sub">.smi · .txt · .csv</span>
                         </label>
@@ -113,9 +113,9 @@
             <div id="file-format-example" class="file-format-example" style="display: none;">
                 <div class="ffe-help">
                     <div class="ffe-text">One molecule per line: <code>SMILES</code> and an optional name.</div><span class="ffe-divider" aria-hidden="true"></span>
-                    <pre class="ffe-sample">CCO                      ethanol
-CC(=O)Oc1ccccc1C(=O)O    aspirin
-C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
+                    <pre class="ffe-sample"><span class="ffe-smi">CCO</span>                      ethanol
+<span class="ffe-smi">CC(=O)Oc1ccccc1C(=O)O</span>    aspirin
+<span class="ffe-smi">C1=CC(=C(C=C1CCN)O)O</span>     dopamine</pre>
                     <button type="button" id="ffe-download-sample" class="ffe-btn">Download example file</button>
                 </div>
                 <div id="file-summary" class="file-summary" style="display:none;"></div>
@@ -416,9 +416,10 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                         <button class="lp-cta-primary" onclick="document.querySelector('a[href=\'#explore\']').click()">
                             Open the explorer
                         </button>
-                        <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">
-                            New here? Mini-course ↓
-                        </a>
+                        <span class="hero-q">
+                            <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">New to chemistry? Start from zero ↓</a>
+                            <a href="#c-conf" class="lp-cta-ghost hero-q2" id="hero-conf-btn">Curious what a conformational analysis is? ↓</a>
+                        </span>
                         <a href="#c-start" class="lp-cta-ghost lp-cta-continue" id="hero-continue-btn" hidden>Continue the course ↓</a>
                     </div>
                 </div>
@@ -502,7 +503,12 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
                     <p class="lead">No chemistry background needed. In about 15 minutes you will know how a molecule can be written as
                         text, how ELAYA turns that text into a 3D shape, why one molecule has many shapes (<em>conformers</em>), and how
                         GLOMOS finds the most likely ones.</p>
-                    <div class="flowchart" id="elaya-flow" aria-label="How ELAYA works">
+                    <div class="flow-head">
+                        <span class="flow-badge">How the page works</span>
+                        <p>This is the pipeline that runs when you press <b>Convert structure</b>, not the course outline.
+                            Hover or tap a step to see what it does.</p>
+                    </div>
+                    <div class="flowchart" id="elaya-flow" aria-label="How ELAYA works: from SMILES to results">
                         <div class="fc-row">
                         <button type="button" class="fc-node" data-go="c-smiles" data-detail="1">
                             
@@ -939,7 +945,7 @@ C1=CC(=C(C=C1CCN)O)O     dopamine</pre>
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.11</span>},
+  version = {<span id="cite-version">2.4.12</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>

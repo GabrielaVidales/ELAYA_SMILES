@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.12
+
+* Example hint: the ✨ sit above the highlighted word and no longer cover the neighbouring examples.
+* Contact: "How can you help?" has the same background as the author card.
+* Lesson 0: "How the page works" label and a line explaining the flowchart is the pipeline behind Convert, not the
+  course outline.
+* About header: two questions, general then specific — "New to chemistry? Start from zero ↓" and "Curious what a
+  conformational analysis is? ↓" (opens the Conformers lesson).
+* SMILES file: thinner drop zone with smaller text; SMILES in the example shown in light blue, aligned.
+
 ## 2.4.11
 
 * Views: back to two independent switches, 3D and 2D (both on = side by side; both off = a short hint).
