@@ -12,7 +12,7 @@ MOLS = [
  ("L-Alanine","N[C@@H](C)C(=O)O"),
  ("Aspirin","CC(=O)Oc1ccccc1C(=O)O"),
  ("Dopamine","C1=CC(=C(C=C1CCN)O)O"),
- ("Serotonin","C1=CC2=C(C=C1O)NC=C2CCN"),
+ ("Serotonin","NCCc1c[nH]c2ccc(O)cc12"),
  ("Melatonin","COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C"),
  ("beta-D-Glucose","OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O"),
  ("(S)-Ibuprofen","CC(C)Cc1ccc(cc1)[C@H](C)C(=O)O"),

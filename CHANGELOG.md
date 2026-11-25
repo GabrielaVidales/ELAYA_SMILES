@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.4.15
+
+* Fix: the Serotonin example (and the example file and the builder benchmark) used 6-hydroxytryptamine; now
+  serotonin, `NCCc1c[nH]c2ccc(O)cc12`. Benchmark re-run: same results (RDKit/Open Babel 13/13, NetworkX 11/13).
+  A test checks every example chip against its PubChem InChIKey.
+* Results: "More information ▾" under the formula line opens a two-column card: known compound (PubChem name,
+  IUPAC name and CID, via `/api/pubchem/<inchikey>`, cached), functional groups, structure (rings, double/triple
+  bonds, stereocentres, possible stereoisomers) and properties (mass, monoisotopic mass, H-bond donors/acceptors,
+  TPSA, logP, Fsp3) with plain-language tooltips; InChIKey with copy. The open/closed state is kept for the session.
+* Measure: back to click measurements only (length, Rg, size and H-bonds removed).
+* About: "How ELAYA works" keeps only its label (no title, no "Tap a step"); the same space above and below the
+  "Open the explorer" row.
+* Contact: "Passion for building tools…" sits under the authors; each author chip opens a profile (ResearchGate,
+  ORCID, OpenAlex).
+
+## 2.4.14
+
+* About: the pipeline sits right under the title, without its own card or divider, and "Open the explorer" with
+  the two questions moved below it; more space before the course. "Continue" only replaces "Start from zero" after
+  lesson 1 (lesson 0 is read in a glance).
+* Contact: Gabriela's card keeps her bio and "Passion for building tools…" (its LinkedIn/GitHub are hers); the team
+  is a separate "Project authors" card at the end, one chip per author.
+* SMILES file: the drop zone looks like the single SMILES field (light pill), centred on "① Input Type", a bit to
+  the right.
+* SMILES field: ✕ 3 px further in.
+* Measure: the hover tag (C1, O5…) is a solid mint chip with dark bold text above the atom.
+* Header: closed a stray `<h2>`.
+
 ## 2.4.13
 
 * GLOMOS for large molecules on the free server (512 MB, 0.1 CPU). From 60 atoms (with H) a fast engine is used:

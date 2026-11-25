@@ -13,7 +13,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.004441293000013502,
+  "time_s": 0.0025950520000037613,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -39,7 +39,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.003008375999996815,
+  "time_s": 0.002003653000002714,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -65,7 +65,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.012564759000014192,
+  "time_s": 0.007455320000005372,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -91,7 +91,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.011371621999984427,
+  "time_s": 0.006968315999998254,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -118,7 +118,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.007205577000007679,
+  "time_s": 0.005518887999997446,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -144,7 +144,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.005970816000001378,
+  "time_s": 0.004113058999990926,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -170,7 +170,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.07193516800001021,
+  "time_s": 0.04806352700001071,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -196,7 +196,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.011097026999976833,
+  "time_s": 0.01029541300000858,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -223,7 +223,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.004568402000018068,
+  "time_s": 0.004469995999997423,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -249,7 +249,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.0033854619999829083,
+  "time_s": 0.0032987250000076074,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -275,7 +275,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.010305557000009458,
+  "time_s": 0.00852511499999764,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -301,7 +301,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.013106102000023157,
+  "time_s": 0.01036895100000379,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -328,7 +328,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.0047829330000013215,
+  "time_s": 0.004313078000009796,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -354,7 +354,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.003600691999992023,
+  "time_s": 0.0035083699999916007,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -380,7 +380,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.020612507999999252,
+  "time_s": 0.014980933000003915,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -406,7 +406,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.011431441999974368,
+  "time_s": 0.008930373000012537,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -433,7 +433,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.0053639369999984865,
+  "time_s": 0.004952922000001081,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -459,7 +459,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.004526762000011786,
+  "time_s": 0.004343141999996192,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -485,7 +485,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.07520644499999207,
+  "time_s": 0.05513927300000887,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -511,7 +511,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.03231308700000568,
+  "time_s": 0.017537464000000114,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -538,7 +538,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.015224263999982668,
+  "time_s": 0.008541422000007515,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -564,7 +564,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.009854848999992782,
+  "time_s": 0.007275587000009409,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -590,7 +590,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.40059490100000517,
+  "time_s": 0.25769841299999996,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -616,7 +616,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.023177507000013975,
+  "time_s": 0.013212594999998828,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -643,7 +643,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.012780292000002191,
+  "time_s": 0.008363005999996176,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -669,7 +669,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.013324255999975776,
+  "time_s": 0.006643492000009132,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -695,7 +695,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.4280462319999856,
+  "time_s": 0.28475231800000245,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -721,7 +721,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.025154271000019435,
+  "time_s": 0.012579173999995419,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -736,7 +736,7 @@
  },
  {
   "name": "Serotonin",
-  "smiles": "C1=CC2=C(C=C1O)NC=C2CCN",
+  "smiles": "NCCc1c[nH]c2ccc(O)cc12",
   "formula": "C10H12N2O",
   "heavy": 13,
   "atoms": 25,
@@ -748,7 +748,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.021160575999999764,
+  "time_s": 0.012520543999997358,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -762,7 +762,7 @@
  },
  {
   "name": "Serotonin",
-  "smiles": "C1=CC2=C(C=C1O)NC=C2CCN",
+  "smiles": "NCCc1c[nH]c2ccc(O)cc12",
   "formula": "C10H12N2O",
   "heavy": 13,
   "atoms": 25,
@@ -774,7 +774,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.017337053000005653,
+  "time_s": 0.010883081999992328,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -788,7 +788,7 @@
  },
  {
   "name": "Serotonin",
-  "smiles": "C1=CC2=C(C=C1O)NC=C2CCN",
+  "smiles": "NCCc1c[nH]c2ccc(O)cc12",
   "formula": "C10H12N2O",
   "heavy": 13,
   "atoms": 25,
@@ -800,7 +800,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.5220262260000084,
+  "time_s": 0.1434057820000021,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -814,7 +814,7 @@
  },
  {
   "name": "Serotonin",
-  "smiles": "C1=CC2=C(C=C1O)NC=C2CCN",
+  "smiles": "NCCc1c[nH]c2ccc(O)cc12",
   "formula": "C10H12N2O",
   "heavy": 13,
   "atoms": 25,
@@ -826,7 +826,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.01585286400000996,
+  "time_s": 0.013652580999988118,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -853,7 +853,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.0231695239999965,
+  "time_s": 0.01863522200000034,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -879,7 +879,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.02122135599998387,
+  "time_s": 0.015410621000000901,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -905,7 +905,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.43658383800001843,
+  "time_s": 0.2952616600000084,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -931,7 +931,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.023445811999977195,
+  "time_s": 0.017335740999996574,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -958,7 +958,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.014131508000019721,
+  "time_s": 0.010616554999998584,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -984,7 +984,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.00996818299998381,
+  "time_s": 0.007175011999990488,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1010,7 +1010,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.4823333979999802,
+  "time_s": 0.3086148749999893,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1036,7 +1036,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.017941147000016144,
+  "time_s": 0.01844123499999739,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1063,7 +1063,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.038977130000006355,
+  "time_s": 0.01747848400000862,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1089,7 +1089,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.03635840500001564,
+  "time_s": 0.015822493000001714,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1115,7 +1115,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 0.7022276720000207,
+  "time_s": 0.45811188999999786,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1141,7 +1141,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.043646617999996806,
+  "time_s": 0.03286198499999671,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1168,7 +1168,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 0.2088047600000209,
+  "time_s": 0.1508624159999954,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1194,7 +1194,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 0.24759185900001057,
+  "time_s": 0.1538517780000035,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1220,7 +1220,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 2.332885828000002,
+  "time_s": 1.4717818299999976,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1246,7 +1246,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.1810531259999948,
+  "time_s": 0.13405106899999453,
   "bonds_ok": false,
   "keys": [
    "xyz",
@@ -1273,7 +1273,7 @@
   },
   "config": "RDKit (ETKDGv3) + MMFF94",
   "ok": true,
-  "time_s": 1.0917012719999946,
+  "time_s": 0.7912373730000013,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1299,7 +1299,7 @@
   },
   "config": "RDKit (ETKDGv3) + UFF",
   "ok": true,
-  "time_s": 1.3059271420000016,
+  "time_s": 0.9023137220000024,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1325,7 +1325,7 @@
   },
   "config": "Open Babel",
   "ok": true,
-  "time_s": 5.857458353999988,
+  "time_s": 4.828674487000001,
   "bonds_ok": true,
   "keys": [
    "xyz",
@@ -1353,7 +1353,7 @@
   },
   "config": "NetworkX layout",
   "ok": true,
-  "time_s": 0.7910325210000053,
+  "time_s": 0.5763614789999991,
   "bonds_ok": false,
   "keys": [
    "xyz",

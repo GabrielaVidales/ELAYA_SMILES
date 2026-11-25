@@ -51,7 +51,7 @@
       const a = input.getBoundingClientRect(), b = op.getBoundingClientRect();
       if (!a.width) return;
       clear.style.top = `${a.top - b.top + a.height / 2}px`;
-      clear.style.right = `${b.right - a.right + 8}px`;      // ✕ always last, at the very end
+      clear.style.right = `${b.right - a.right + 11}px`;      // ✕ always last, at the very end
     };
     window.addEventListener('resize', place);
 
@@ -222,7 +222,7 @@
     $('ffe-download-sample')?.addEventListener('click', () => {
       const txt = '# ELAYA example: SMILES, then a name (optional)\n' +
         'CCO                       ethanol\nCC(=O)Oc1ccccc1C(=O)O     aspirin\nC1=CC(=C(C=C1CCN)O)O      dopamine\n' +
-        'C1=CC2=C(C=C1O)NC=C2CCN   serotonin\nCOc1ccc2c(c1)c(c[nH]2)CCNC(=O)C   melatonin\n';
+        'NCCc1c[nH]c2ccc(O)cc12   serotonin\nCOc1ccc2c(c1)c(c[nH]2)CCNC(=O)C   melatonin\n';
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
       a.download = 'elaya_example.smi';

@@ -1,8 +1,6 @@
 /*
  * measure.js — simple geometry in the 3D viewer.
  * Turn on "Measure", then click atoms: 2 atoms → distance (Å), 3 → angle (°), 4 → dihedral (°).
- * Without clicking: whole-molecule size (longest distance, radius of gyration, extent along the principal
- * axes) and intramolecular hydrogen bonds (H···N/O ≤ 2.5 Å, D–H···A ≥ 120°), which can be drawn.
  * The fifth click starts a new measurement; results stay listed until "Clear".
  * Uses the 3Dmol viewer that app.js keeps in `currentVisualizations[0]`; rotation is paused while measuring.
  */
@@ -13,7 +11,6 @@
 
   const MINT = '#8fe3cb', GOLD = '#ffbf00', LAV = '#c9a7f0';
   let on = false, viewer = null, picks = [], history = [], wasPaused = false, watch = null, hoverLabel = null;
-  let hbShow = false, molCache = null;
 
   const getViewer = () => {
     try { return (typeof currentVisualizations !== 'undefined' && currentVisualizations[0]) || null; } catch (e) { return null; }
@@ -42,55 +39,12 @@
   const mid = (...ps) => ({ x: ps.reduce((s, p) => s + p.x, 0) / ps.length, y: ps.reduce((s, p) => s + p.y, 0) / ps.length, z: ps.reduce((s, p) => s + p.z, 0) / ps.length });
   const name = (a) => `${a.elem}${(a.index ?? a.serial ?? 0) + 1}`;
 
-  // ------------------------------------------------------------------ whole molecule
-  const MASS = { H: 1.008, B: 10.81, C: 12.011, N: 14.007, O: 15.999, F: 18.998, Si: 28.085, P: 30.974, S: 32.06,
-                 Cl: 35.45, Br: 79.904, I: 126.904 };
-  function atomsOf(v) {
-    try { return v.selectedAtoms({}).filter(a => a.elem && Number.isFinite(a.x)); } catch (e) { return []; }
-  }
-  /** Size descriptors and H-bonds of the molecule shown in the viewer (cached per viewer). */
-  function molecule() {
-    if (molCache && molCache.viewer === viewer) return molCache;
-    const at = atomsOf(viewer);
-    const out = { viewer, n: at.length, length: 0, rg: 0, extent: null, hbonds: [] };
-    if (at.length < 2) return (molCache = out);
-    let maxd = 0;
-    for (let i = 0; i < at.length; i++) for (let j = i + 1; j < at.length; j++) maxd = Math.max(maxd, dist(at[i], at[j]));
-    out.length = maxd;
-    const m = at.map(a => MASS[a.elem] || 12);
-    const M = m.reduce((s, x) => s + x, 0);
-    const c = { x: 0, y: 0, z: 0 };
-    at.forEach((a, k) => { c.x += m[k] * a.x / M; c.y += m[k] * a.y / M; c.z += m[k] * a.z / M; });
-    out.rg = Math.sqrt(at.reduce((s, a, k) => s + m[k] * dist(a, c) ** 2, 0) / M);
-    // extent along the principal axes of the (unweighted) coordinate covariance: power iteration, 3 axes
-    const P = at.map(a => [a.x - c.x, a.y - c.y, a.z - c.z]);
-    const C = [0, 1, 2].map(i => [0, 1, 2].map(j => P.reduce((s, p) => s + p[i] * p[j], 0)));
-    const axes = [];
-    for (let k = 0; k < 3; k++) {
-      let v = [1, 0.7 - 0.3 * k, 0.3 + 0.2 * k];
-      for (let it = 0; it < 60; it++) {
-        axes.forEach(a => { const d = dot(v, a); v = v.map((x, i) => x - d * a[i]); });
-        const w = C.map(r => dot(r, v)); const n = norm(w) || 1; v = w.map(x => x / n);
-      }
-      axes.forEach(a => { const d = dot(v, a); v = v.map((x, i) => x - d * a[i]); });
-      const n = norm(v) || 1; axes.push(v.map(x => x / n));
-    }
-    out.extent = axes.map(a => { const pr = P.map(p => dot(p, a)); return Math.max(...pr) - Math.min(...pr); });
-    // hydrogen bonds: H bonded to N/O (donor D), acceptor A = N/O not bonded to D
-    const byIdx = new Map(at.map(a => [a.index, a]));
-    const bonded = (a, b) => (a.bonds || []).includes(b.index);
-    for (const h of at) {
-      if (h.elem !== 'H') continue;
-      const d = (h.bonds || []).map(i => byIdx.get(i)).find(x => x && (x.elem === 'N' || x.elem === 'O'));
-      if (!d) continue;
-      for (const a of at) {
-        if ((a.elem !== 'N' && a.elem !== 'O') || a === d || bonded(a, d) || bonded(a, h)) continue;
-        const r = dist(h, a);
-        if (r <= 2.5 && angle(d, h, a) >= 120) out.hbonds.push({ h, a, d, r });
-      }
-    }
-    return (molCache = out);
-  }
+  // hover tag (C1, O5…): solid mint chip with dark bold text, just above the atom, readable on any background
+  const HOVER_STYLE = (atom) => ({
+    position: { x: atom.x, y: atom.y + 0.45, z: atom.z }, inFront: true, fontSize: 15, bold: true,
+    fontColor: '#0d1020', backgroundColor: '#8fe3cb', backgroundOpacity: 1, borderThickness: 1.5, borderColor: '#0d1020',
+    alignment: 'bottomCenter',
+  });
 
   // ------------------------------------------------------------------ drawing
   function label(text, pos, color) {
@@ -117,10 +71,6 @@
         if (i) viewer.addCylinder({ start: picks[i - 1], end: a, radius: 0.045, color: GOLD, dashed: true, fromCap: 1, toCap: 1 });
       });
       picks.forEach(a => label(name(a), { x: a.x, y: a.y + 0.55, z: a.z }, LAV));
-      if (hbShow) molecule().hbonds.forEach(b => {
-        viewer.addCylinder({ start: b.h, end: b.a, radius: 0.05, color: LAV, dashed: true, dashLength: 0.18, gapLength: 0.14, fromCap: 1, toCap: 1 });
-        label(`${b.r.toFixed(2)} Å`, mid(b.h, b.a), LAV);
-      });
       const r = result();
       if (r) label(r.value, r.at, MINT);
       viewer.render();
@@ -136,30 +86,17 @@
     const r = result();
     const need = ['Click 2 atoms (distance), 3 (angle) or 4 (dihedral).', 'Click another atom.', '', '', ''][Math.min(picks.length, 4)];
     const older = history.slice(r ? 1 : 0, 4);
-    const mol = molecule();
-    const nh = mol.hbonds.length;
-    const molRow = mol.n > 1 ? `
-      <div class="mp-mol" title="Whole molecule, no clicks needed">
-        <span><i>Length</i><b>${mol.length.toFixed(1)} Å</b></span>
-        <span title="Radius of gyration (mass-weighted)"><i>R<sub>g</sub></i><b>${mol.rg.toFixed(2)} Å</b></span>
-        ${mol.extent ? `<span title="Extent along the three principal axes"><i>Size</i><b>${mol.extent.map(x => x.toFixed(1)).join(' × ')} Å</b></span>` : ''}
-        <span title="Intramolecular hydrogen bonds: H···N/O ≤ 2.5 Å, D–H···A ≥ 120°"><i>H-bonds</i><b>${nh}</b>${nh ? `<button type="button" id="mp-hb" class="mp-hb${hbShow ? ' on' : ''}">${hbShow ? 'Hide' : 'Show'}</button>` : ''}</span>
-      </div>` : '';
     box.innerHTML = `
-      <div class="mp-head"><b>Measure</b><button type="button" class="mp-x" id="mp-done" aria-label="Stop measuring">✕</button></div>${molRow}
+      <div class="mp-head"><b>Measure</b><button type="button" class="mp-x" id="mp-done" aria-label="Stop measuring">✕</button></div>
       ${r ? `<div class="mp-val"><span>${esc(r.text)}</span><b>${r.value}</b></div>` : `<div class="mp-need">${need}</div>`}
       ${older.length ? `<ul class="mp-hist">${older.map(h => `<li><span>${esc(h.text)}</span><b>${h.value}</b></li>`).join('')}</ul>` : ''}
       ${history.length ? `<div class="mp-actions"><button type="button" id="mp-copy">Copy</button><button type="button" id="mp-clear">Clear</button></div>` : ''}`;
-    if ($('mp-hb')) $('mp-hb').onclick = () => { hbShow = !hbShow; draw(); panel(); };
     if (!$('mp-clear')) { $('mp-done').onclick = () => toggle(false); return; }
     $('mp-clear').onclick = () => { picks = []; history = []; draw(); panel(); };
     $('mp-done').onclick = () => toggle(false);
     if (!$('mp-copy')) return;
     $('mp-copy').onclick = async () => {
-      const m = molecule();
-      const whole = m.n > 1 ? [`Length\tmolecule\t${m.length.toFixed(2)} Å`, `Radius of gyration\tmolecule\t${m.rg.toFixed(2)} Å`,
-        `H-bonds\tmolecule\t${m.hbonds.length}`] : [];
-      const txt = [...history.map(h => `${h.kind}\t${h.text}\t${h.value}`), ...whole].join('\n');
+      const txt = history.map(h => `${h.kind}\t${h.text}\t${h.value}`).join('\n');
       try { await navigator.clipboard.writeText(txt); $('mp-copy').textContent = 'Copied ✓'; } catch (e) { /* */ }
     };
   }
@@ -188,7 +125,7 @@
     try {
       viewer.setClickable({}, true, (atom) => onPick(atom));
       viewer.setHoverable({}, true,
-        (atom) => { if (!on || hoverLabel || picks.some(p => p.index === atom.index)) return; hoverLabel = viewer.addLabel(name(atom), { position: atom, inFront: true, fontSize: 11, fontColor: '#e8eef2', backgroundColor: '#000', backgroundOpacity: 0.6 }); viewer.render(); },
+        (atom) => { if (!on || hoverLabel || picks.some(p => p.index === atom.index)) return; hoverLabel = viewer.addLabel(name(atom), HOVER_STYLE(atom)); viewer.render(); },
         () => { if (hoverLabel) { try { viewer.removeLabel(hoverLabel); viewer.render(); } catch (e) { /* */ } hoverLabel = null; } });
       viewer.setHoverDuration?.(60);
       viewer.render();      // 3Dmol builds its pick list while rendering; rotation is paused, so render once here
@@ -216,13 +153,13 @@
       wasPaused = getPaused();
       setPaused(true);
       picks = [];
-      molCache = null;
+     
       attach();
       draw();
       clearInterval(watch);
       watch = setInterval(() => {          // a new molecule/conformer creates a new viewer
         const v = getViewer();
-        if (on && v && v !== viewer) { picks = []; history = []; molCache = null; attach(); draw(); panel(); }
+        if (on && v && v !== viewer) { picks = []; history = []; attach(); draw(); panel(); }
       }, 400);
     } else {
       on = false;
@@ -247,7 +184,7 @@
   function init() {
     $('measure-btn')?.addEventListener('click', () => toggle());
     document.addEventListener('keydown', (e) => { if (on && e.key === 'Escape') toggle(false); });
-    window.ElayaMeasure = { toggle, pick: onPick, geometry: { dist, angle, dihedral }, molecule: () => (viewer ? molecule() : null) };
+    window.ElayaMeasure = { toggle, pick: onPick, geometry: { dist, angle, dihedral }, _hoverStyle: HOVER_STYLE };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

@@ -191,6 +191,53 @@ def _stereo_info(mol):
     return specified, unspecified, dbl
 
 
+# Functional groups shown in "More information" (name, SMARTS). Counted as non-overlapping matches.
+FUNCTIONAL_GROUPS = [
+    ("Carboxylic acid", "[CX3](=O)[OX2H1]"),
+    ("Ester", "[#6][CX3](=O)[OX2H0][#6]"),
+    ("Amide", "[NX3][CX3](=[OX1])"),
+    ("Aldehyde", "[CX3H1](=O)"),
+    ("Ketone", "[#6][CX3](=O)[#6]"),
+    ("Alcohol", "[OX2H][CX4]"),
+    ("Phenol", "[OX2H]c"),
+    ("Ether", "[OX2]([#6;!$(C=[O,S,N])])[#6;!$(C=[O,S,N])]"),
+    ("Amine", "[NX3;!$(N-C=[O,S,N]);!$(N-a);!$(N-[!#6;!#1])]"),
+    ("Aromatic amine", "[NX3;!$(N-C=[O,S,N])]-a"),
+    ("Imine", "[CX3]=[NX2]"),
+    ("Nitrile", "[CX2]#[NX1]"),
+    ("Nitro", "[$([NX3](=O)=O),$([NX3+](=O)[O-])]"),
+    ("Thiol", "[SX2H]"),
+    ("Disulfide", "[SX2][SX2]"),
+    ("Thioether", "[SX2;!$(S-S)]([#6])[#6]"),
+    ("Halogen", "[F,Cl,Br,I]"),
+    ("Alkene", "[CX3;!a]=[CX3;!a]"),
+    ("Alkyne", "[CX2]#[CX2]"),
+    ("Aromatic heterocycle", "[a;!c;r]"),
+]
+_FG_PATTERNS = None
+
+
+def functional_groups(mol):
+    """[(name, count)] of the FUNCTIONAL_GROUPS present (aromatic heterocycles counted per ring)."""
+    global _FG_PATTERNS
+    if _FG_PATTERNS is None:
+        _FG_PATTERNS = [(n, Chem.MolFromSmarts(sm)) for n, sm in FUNCTIONAL_GROUPS]
+    out = []
+    for name, patt in _FG_PATTERNS:
+        if patt is None:
+            continue
+        if name == "Aromatic heterocycle":
+            ri = mol.GetRingInfo()
+            n = sum(1 for ring in ri.AtomRings()
+                    if all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in ring)
+                    and any(mol.GetAtomWithIdx(i).GetSymbol() != "C" for i in ring))
+        else:
+            n = len(mol.GetSubstructMatches(patt))
+        if n:
+            out.append((name, n))
+    return out
+
+
 def mol_report(smiles):
     """Descriptors, stereo summary and warnings for the web 'report' panel."""
     mol = parse_smiles(smiles)
@@ -222,6 +269,11 @@ def mol_report(smiles):
         inchikey = Chem.MolToInchiKey(mol)
     except Exception:
         inchi = inchikey = None
+    nonarom = [b for b in mol.GetBonds() if not b.GetIsAromatic()]
+    n_double = sum(1 for b in nonarom if b.GetBondType() == Chem.BondType.DOUBLE)
+    n_triple = sum(1 for b in nonarom if b.GetBondType() == Chem.BondType.TRIPLE)
+    n_stereo_bonds = dbl["E"] + dbl["Z"] + dbl["undefined"]
+    n_stereo = len(specified) + len(unspecified) + n_stereo_bonds
     return {
         "canonical_smiles": Chem.MolToSmiles(mol),
         "isomeric_smiles": Chem.MolToSmiles(mol, isomericSmiles=True),
@@ -244,6 +296,13 @@ def mol_report(smiles):
         "double_bond_stereo": dbl,
         "inchi": inchi,
         "inchikey": inchikey,
+        "double_bonds": n_double,
+        "triple_bonds": n_triple,
+        "stereo_double_bonds": n_stereo_bonds,
+        # upper bound: every stereo element independent (meso forms make the real number smaller)
+        "possible_stereoisomers": 2 ** n_stereo,
+        "fraction_csp3": round(rdMolDescriptors.CalcFractionCSP3(mol), 3),
+        "functional_groups": [{"name": n, "count": c} for n, c in functional_groups(mol)],
         "ani_supported": bool(set(elems) <= {"H", "C", "N", "O", "F", "S", "Cl"} and not radicals),
         "warnings": warnings,
     }

@@ -44,7 +44,7 @@
       if ($('learn-toc-bar')) $('learn-toc-bar').style.width = `${(100 * n / counted.length).toFixed(0)}%`;
       const cont = $('hero-continue-btn'), first = counted.find(l => !read.has(l.id));
       if (cont) {
-        cont.hidden = !(n > 0 && first);
+        cont.hidden = !(n > 1 && first);           // lesson 0 alone (read in a glance) is not "started"
         // once the course is started, "Continue" replaces "Start from zero" (one line in the hero)
         const startBtn = $('hero-course-btn');
         if (startBtn) { startBtn.hidden = !cont.hidden; startBtn.nextElementSibling?.classList.toggle('hq-hide', !cont.hidden); }

@@ -147,3 +147,43 @@ def test_glomos_start_reports_engine_and_size_limit(client):
     big = "C" * 60                                       # 182 atoms with H: above the GLOMOS limit
     r = client.post("/api/glomos/start", json={"smiles": big})
     assert r.status_code == 422 and r.get_json()["kind"] == "too_large"
+
+
+def test_analyze_has_more_information_fields():
+    pytest.importorskip("rdkit")
+    d = ec.mol_report("CC(=O)Oc1ccccc1C(=O)O")
+    assert d["inchikey"] == "BSYNRYMUTXBXSQ-UHFFFAOYSA-N" and d["double_bonds"] == 2 and d["possible_stereoisomers"] == 1
+    assert {g["name"] for g in d["functional_groups"]} == {"Carboxylic acid", "Ester"}
+
+
+def test_pubchem_lookup_is_validated_and_cached(client, monkeypatch):
+    import io, json as _json, urllib.request
+    import app as appmod
+    appmod._PUBCHEM_CACHE.clear()
+    calls = []
+
+    def fake_urlopen(req, timeout=0):
+        calls.append(req.full_url)
+        body = {"PropertyTable": {"Properties": [{"CID": 2244, "Title": "Aspirin", "IUPACName": "2-acetyloxybenzoic acid"}]}}
+        return io.BytesIO(_json.dumps(body).encode())
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    assert client.get("/api/pubchem/not-a-key").status_code == 400
+    for _ in range(2):
+        d = client.get("/api/pubchem/BSYNRYMUTXBXSQ-UHFFFAOYSA-N").get_json()
+        assert d == {"found": True, "cid": 2244, "title": "Aspirin", "iupac": "2-acetyloxybenzoic acid"}
+    assert len(calls) == 1
+
+
+def test_example_chips_are_the_named_molecules():
+    """Each example chip's SMILES must be the molecule its label names (InChIKey from PubChem)."""
+    pytest.importorskip("rdkit")
+    import re
+    from rdkit import Chem
+    known = {"Aspirin": "BSYNRYMUTXBXSQ-UHFFFAOYSA-N", "Dopamine": "VYFYYTLLBUKUHU-UHFFFAOYSA-N",
+             "Glucose": "WQZGKKKJIJFFOK-VFUOTHLCSA-N", "Melatonin": "DRLFMBDRBRZALE-UHFFFAOYSA-N",
+             "Oxytocin": "XNOPRXBHLZRZKH-DSZYJQQASA-N", "Serotonin": "QZAYGJVTTNCVMB-UHFFFAOYSA-N"}
+    html = open(os.path.join(os.path.dirname(__file__), "..", "index.html"), encoding="utf-8").read()
+    chips = re.findall(r'class="example-chip"[^>]*data-smiles="([^"]+)">(\w+)<', html)
+    assert {n for _, n in chips} == set(known)
+    for smi, name in chips:
+        assert Chem.MolToInchiKey(Chem.MolFromSmiles(smi)) == known[name], name

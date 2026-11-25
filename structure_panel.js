@@ -23,8 +23,8 @@
   const cache = new Map();                    // `${fmt}\u0000${smiles}\u0000${xyz}` -> text
 
   const $ = (id) => document.getElementById(id);
-  const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const short = (t, n = 34) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const safe = (t) => String(t || 'structure').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 60) || 'structure';
 
   // ------------------------------------------------------------------ state of the screen
@@ -197,8 +197,79 @@
     }
     if (infoFor !== smiles) return;
     const rb = d.rotatable_bonds;
-    el.textContent = `✓ ${d.formula} · ${Number(d.mol_weight).toFixed(2)} g/mol · ${d.atoms_with_h} atoms · ${rb} rotatable bond${rb === 1 ? '' : 's'}`;
+    const open = sessionStorage.getItem('elaya.moreInfo') === '1';
+    el.innerHTML = `<span class="sp-info-line">✓ ${esc(d.formula)} · ${Number(d.mol_weight).toFixed(2)} g/mol · ${d.atoms_with_h} atoms · ${rb} rotatable bond${rb === 1 ? '' : 's'}</span>
+      <button type="button" class="sp-more-btn" id="sp-more-btn" aria-expanded="${open}" aria-controls="sp-more">More information <span aria-hidden="true">▾</span></button>
+      <div class="sp-more" id="sp-more" ${open ? '' : 'hidden'}></div>`;
     el.hidden = false;
+    $('sp-more-btn').addEventListener('click', () => {
+      const box = $('sp-more'), btn = $('sp-more-btn');
+      const show = box.hidden;
+      box.hidden = !show;
+      btn.setAttribute('aria-expanded', String(show));
+      sessionStorage.setItem('elaya.moreInfo', show ? '1' : '0');
+      if (show) renderMore(d);
+    });
+    if (open) renderMore(d);
+  }
+
+  // ------------------------------------------------------------------ "More information" (two columns)
+  const pubchemCache = new Map();
+  function renderMore(d) {
+    const box = $('sp-more');
+    if (!box) return;
+    const row = (k, v, tip) => `<div class="mi-row"${tip ? ` title="${esc(tip)}"` : ''}><span>${k}</span><b>${v}</b></div>`;
+    const nStereo = (d.stereocenters?.length || 0) + (d.undefined_stereocenters?.length || 0);
+    const fg = (d.functional_groups || []).map(g => `<span class="mi-chip">${esc(g.name)}${g.count > 1 ? ` ×${g.count}` : ''}</span>`).join('')
+      || '<span class="mi-none">None detected</span>';
+    box.innerHTML = `
+      <div class="mi-col">
+        <h4>Known compound?</h4>
+        <div class="mi-known" id="mi-known"><span class="mi-none">Checking PubChem…</span></div>
+        <h4>Functional groups</h4>
+        <div class="mi-chips">${fg}</div>
+        <h4>Structure</h4>
+        ${row('Rings', `${d.rings}${d.aromatic_rings ? ` (${d.aromatic_rings} aromatic)` : ''}`)}
+        ${row('Double / triple bonds', `${d.double_bonds ?? '–'} / ${d.triple_bonds ?? '–'}`, 'Outside aromatic rings')}
+        ${row('Stereocentres', nStereo + (d.undefined_stereocenters?.length ? ` (${d.undefined_stereocenters.length} unspecified)` : ''), 'Atoms with four different groups: they make mirror-image forms possible')}
+        ${row('Possible stereoisomers', d.possible_stereoisomers > 1 ? `up to ${d.possible_stereoisomers}` : '1', '2 to the power of the stereo elements (stereocentres + E/Z double bonds)')}
+      </div>
+      <div class="mi-col">
+        <h4>Properties</h4>
+        ${row('Molecular weight', `${Number(d.mol_weight).toFixed(2)} g/mol`)}
+        ${row('Monoisotopic mass', `${Number(d.exact_mass).toFixed(4)} Da`, 'Mass with the most abundant isotope of each element (what a mass spectrometer sees)')}
+        ${row('H-bond donors / acceptors', `${d.hbd} / ${d.hba}`, 'Groups that can give (O–H, N–H) or take a hydrogen bond')}
+        ${row('TPSA', `${Number(d.tpsa).toFixed(1)} Å²`, 'Polar surface area: higher = more polar, usually less able to cross membranes')}
+        ${row('logP (estimated)', Number(d.logp).toFixed(2), 'Oil/water preference (Crippen): > 0 prefers oil, < 0 prefers water')}
+        ${row('Fraction sp³ carbons', Number(d.fraction_csp3 ?? 0).toFixed(2), 'Share of carbons with four single bonds: 1 = fully saturated, 0 = flat/aromatic')}
+        <h4>Identifier</h4>
+        <div class="mi-key"><code>${esc(d.inchikey || '–')}</code>${d.inchikey ? '<button type="button" class="mi-copy" id="mi-copy">Copy</button>' : ''}</div>
+      </div>
+      <p class="mi-foot">Computed with RDKit from the 2D structure. Name from PubChem (NCBI), matched by InChIKey.</p>`;
+    $('mi-copy')?.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(d.inchikey); flash($('mi-copy'), 'Copied ✓'); } catch (e) { /* */ }
+    });
+    known(d.inchikey);
+  }
+  async function known(key) {
+    const el = $('mi-known');
+    if (!el) return;
+    if (!key) { el.innerHTML = '<span class="mi-none">No InChIKey for this structure.</span>'; return; }
+    let r = pubchemCache.get(key);
+    if (!r) {
+      try {
+        const res = await fetch(`/api/pubchem/${encodeURIComponent(key)}`);
+        r = res.ok ? await res.json() : { error: true };
+        if (res.ok) pubchemCache.set(key, r);
+      } catch (e) { r = { error: true }; }
+    }
+    const target = $('mi-known');
+    if (!target) return;
+    if (r.error) target.innerHTML = '<span class="mi-none">PubChem could not be reached right now.</span>';
+    else if (!r.found) target.innerHTML = '<span class="mi-none">Not in PubChem: a new or unusual structure.</span>';
+    else target.innerHTML = `<b class="mi-name">${esc(r.title || 'Known compound')}</b>
+        ${r.iupac && r.iupac.toLowerCase() !== String(r.title || '').toLowerCase() ? `<small>IUPAC: ${esc(r.iupac)}</small>` : ''}
+        <a href="https://pubchem.ncbi.nlm.nih.gov/compound/${encodeURIComponent(r.cid)}" target="_blank" rel="noopener">PubChem CID ${esc(r.cid)} ↗</a>`;
   }
 
   // ------------------------------------------------------------------ the card (title + tabs)

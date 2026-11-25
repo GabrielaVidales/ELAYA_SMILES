@@ -54,7 +54,7 @@
 
     <header>
         <h1><a href="#home" class="gold-flash">ELAYA SMILES</a></h1>
-        <h2><em>"Convert SMILES to 3D/2D structure"</em>
+        <h2><em>"Convert SMILES to 3D/2D structure"</em></h2>
              <!--Centro de Investigación y Estudios Avanzados (CINVESTAV) Mérida, Yucatán, México</h2>-->
     </header>
 
@@ -88,7 +88,7 @@
                             <button type="button" class="example-chip" data-smiles="OC[C@H]1O[C@@H](O)[C@H](O)[C@@H](O)[C@@H]1O">Glucose</button>
                             <button type="button" class="example-chip" data-smiles="COc1ccc2c(c1)c(c[nH]2)CCNC(=O)C">Melatonin</button>
                             <button type="button" class="example-chip" title="Oxytocin, the “love hormone” (a 9-amino-acid peptide)" data-smiles="N[C@H]1CSSC[C@H](NC(=O)[C@H](CC(N)=O)NC(=O)[C@H](CCC(N)=O)NC(=O)[C@@H](NC(=O)[C@H](Cc2ccc(O)cc2)NC1=O)[C@@H](C)CC)C(=O)N3CCC[C@H]3C(=O)N[C@@H](CC(C)C)C(=O)NCC(N)=O">Oxytocin</button>
-                            <button type="button" class="example-chip" data-smiles="C1=CC2=C(C=C1O)NC=C2CCN">Serotonin</button>
+                            <button type="button" class="example-chip" data-smiles="NCCc1c[nH]c2ccc(O)cc12">Serotonin</button>
                             <span class="examples-sep" aria-hidden="true">·</span>
                             <span class="formula-link">Only have the formula?
                                 <a href="https://smilx-isogenerator.streamlit.app/" target="_blank" rel="noopener" title="SMILX-isogenerator lists the SMILES of the isomers of a molecular formula">Get its SMILES ↗</a>
@@ -413,16 +413,6 @@
                         A web platform that converts SMILES notation into optimized 
                         3D molecular geometries — interactively and for free.
                     </p>
-                    <div class="lp-hero-actions">
-                        <button class="lp-cta-primary" onclick="document.querySelector('a[href=\'#explore\']').click()">
-                            Open the explorer
-                        </button>
-                        <span class="hero-q">
-                            <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">New to chemistry? Start from zero ↓</a><span class="hq-sep" aria-hidden="true">·</span>
-                            <a href="#c-conf" class="lp-cta-ghost hero-q2" id="hero-conf-btn">Curious what a conformational analysis is? ↓</a>
-                        </span>
-                        <a href="#c-start" class="lp-cta-ghost lp-cta-continue" id="hero-continue-btn" hidden>Continue the course ↓</a>
-                    </div>
                 </div>
                 <div class="lp-hero-visual">
                     <div class="contact-orbits hero-orbits" aria-hidden="true">
@@ -468,11 +458,9 @@
             </div>
 
             <!-- ══════════════ HOW IT WORKS: what Convert does (not the course outline) ══════════════ -->
-            <section class="how-band" id="how-it-works" aria-labelledby="how-title">
+            <section class="how-band" id="how-it-works" aria-label="How ELAYA works: what happens when you press Convert structure">
                 <div class="how-head">
                     <span class="flow-badge">How ELAYA works</span>
-                    <h2 id="how-title">What happens when you press <b>Convert structure</b></h2>
-                    <span class="how-tip">Tap a step for details</span>
                 </div>
                 <div class="flowchart" id="elaya-flow" aria-label="How ELAYA works: from SMILES to results">
                         <div class="fc-row">
@@ -526,6 +514,17 @@
                         </div>
                         <div class="fc-detail" id="fc-detail" aria-live="polite"></div>
                     </div>
+                <!-- start: explorer / course -->
+                <div class="lp-hero-actions how-actions">
+                        <button class="lp-cta-primary" onclick="document.querySelector('a[href=\'#explore\']').click()">
+                            Open the explorer
+                        </button>
+                        <a href="#c-start" class="lp-cta-ghost lp-cta-continue" id="hero-continue-btn" hidden>Continue the course ↓</a>
+                        <span class="hero-q">
+                            <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">New to chemistry? Start from zero ↓</a><span class="hq-sep" aria-hidden="true">·</span>
+                            <a href="#c-conf" class="lp-cta-ghost hero-q2" id="hero-conf-btn">Curious what a conformational analysis is? ↓</a>
+                        </span>
+                </div>
             </section>
 
             <!-- ══════════════════════ LEARN: a short course ══════════════════════ -->
@@ -857,8 +856,7 @@
                             <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales-Ayala</a>
                         </div>
                         <div class="contact-author-role">Physics Engineering Student</div>
-                        <p class="contact-author-bio">Building open, reproducible tools that bring science closer to people.</p>
-                        <p class="contact-author-team">Scientific guidance: <b>Filiberto Ortiz-Chi</b>, <b>Gabriel Merino</b> and <b>Luis Ortiz-Gonzalez</b>.</p>
+                        <p class="contact-author-bio">Committed to using science, education, and technology to improve people's quality of life.</p>
                         <div class="cas-links">
                             <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener">LinkedIn ↗</a>
                             <a href="https://github.com/GabrielaVidales" target="_blank" rel="noopener">GitHub ↗</a>
@@ -922,7 +920,7 @@
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.13</span>},
+  version = {<span id="cite-version">2.4.15</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
@@ -954,6 +952,21 @@
                         <details><summary>Can I run it on my own computer?</summary><p>Yes, with Docker: <code>docker build -t elaya .</code> then <code>docker run -p 5000:5000 elaya</code>, and open <code>http://localhost:5000</code>. On a normal laptop GLOMOS is several times faster than on the free server.</p></details>
                     </div>
                 </div>
+            </div>
+
+            <!-- Project authors (the links in the card above are Gabriela's only) -->
+            <div class="contact-panel authors-card">
+                <div class="cp-head">
+                    <h3>Project authors</h3>
+                    <p>ELAYA SMILES was designed and developed by Gabriela Vidales-Ayala, with scientific guidance from her advisors.</p>
+                </div>
+                <ul class="author-chips">
+                    <li><a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" title="ResearchGate profile"><span class="ac-av" aria-hidden="true">GV</span><span class="ac-t"><b>Gabriela Vidales-Ayala</b><small>Design and development</small></span><i class="ac-go" aria-hidden="true">↗</i></a></li>
+                    <li><a href="https://orcid.org/0000-0002-2859-7633" target="_blank" rel="noopener" title="ORCID profile"><span class="ac-av" aria-hidden="true">FO</span><span class="ac-t"><b>Filiberto Ortiz-Chi</b><small>PhD · Scientific guidance</small></span><i class="ac-go" aria-hidden="true">↗</i></a></li>
+                    <li><a href="https://orcid.org/0000-0003-1961-8321" target="_blank" rel="noopener" title="ORCID profile"><span class="ac-av" aria-hidden="true">GM</span><span class="ac-t"><b>Gabriel Merino</b><small>PhD · Scientific guidance</small></span><i class="ac-go" aria-hidden="true">↗</i></a></li>
+                    <li><a href="https://openalex.org/A5106164544" target="_blank" rel="noopener" title="Publications (OpenAlex)"><span class="ac-av" aria-hidden="true">LO</span><span class="ac-t"><b>Luis Ortiz-Gonzalez</b><small>MSc · Scientific guidance</small></span><i class="ac-go" aria-hidden="true">↗</i></a></li>
+                </ul>
+                <p class="authors-quote">Passion for building tools that bring science closer to people. Fostering open and reproducible science.</p>
             </div>
         </section>
     </main>

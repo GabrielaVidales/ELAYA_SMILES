@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.4.13"
+VERSION = "2.4.15"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -128,7 +128,8 @@ def api_base():
     return jsonify({"status": "API ready", "version": VERSION, "endpoints": {
         "health": "GET /api/health[?deep=1]", "analyze": "POST /api/analyze",
         "convert": "POST /api/convert", "export": "POST /api/export",
-        "draw2d": "POST /api/draw2d", "glomos_start": "POST /api/glomos/start",
+        "draw2d": "POST /api/draw2d", "pubchem": "GET /api/pubchem/<inchikey>",
+        "glomos_start": "POST /api/glomos/start",
         "glomos_poll": "GET /api/glomos/poll/<job_id>?cursor=n",
         "glomos_cancel": "POST /api/glomos/cancel/<job_id>",
         "glomos_result": "GET /api/glomos/result/<job_id>[?format=xyz]"}})
@@ -251,6 +252,45 @@ def analyze():
         return err(str(exc))
     except Exception as exc:                                    # noqa: BLE001
         return err("Analysis failed: %s" % exc, 500)
+
+
+_PUBCHEM_CACHE = {}
+
+
+def pubchem_lookup(inchikey, timeout=6.0):
+    """Name of a compound in PubChem by InChIKey -> {found, cid, title, iupac}. Cached in memory."""
+    import urllib.request
+    import urllib.error
+    if inchikey in _PUBCHEM_CACHE:
+        return _PUBCHEM_CACHE[inchikey]
+    url = ("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/%s/property/Title,IUPACName/JSON"
+           % inchikey)
+    req = urllib.request.Request(url, headers={"User-Agent": "ELAYA-SMILES/%s" % VERSION})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            props = json.loads(r.read().decode("utf-8"))["PropertyTable"]["Properties"]
+        best = min(props, key=lambda p: p.get("CID", 1 << 40))
+        out = {"found": True, "cid": best.get("CID"), "title": best.get("Title"), "iupac": best.get("IUPACName")}
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise
+        out = {"found": False}
+    if len(_PUBCHEM_CACHE) > 500:
+        _PUBCHEM_CACHE.clear()
+    _PUBCHEM_CACHE[inchikey] = out
+    return out
+
+
+@app.route("/api/pubchem/<inchikey>")
+def pubchem(inchikey):
+    """Is this a known compound? PubChem name and CID for an InChIKey (used by "More information")."""
+    import re
+    if not re.fullmatch(r"[A-Z]{14}-[A-Z]{10}-[A-Z]", inchikey or ""):
+        return err("Not an InChIKey.")
+    try:
+        return jsonify(pubchem_lookup(inchikey))
+    except Exception as exc:                                    # noqa: BLE001
+        return err("PubChem could not be reached (%s)." % type(exc).__name__, 502)
 
 
 @app.route("/api/validate", methods=["POST"])
