@@ -11,7 +11,7 @@
   <a href="https://elaya-smiles.onrender.com/">
     <img src="https://img.shields.io/badge/🌐 Live App-elaya--smiles.onrender.com-1D9E75?style=flat"/>
   </a>
-  <img src="https://img.shields.io/badge/version-2.4.15-8E5CD9?style=flat"/>
+  <img src="https://img.shields.io/badge/version-2.4.16-8E5CD9?style=flat"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white"/>
   <img src="https://img.shields.io/badge/RDKit-Compatible-2ECC71?style=flat"/>
   <img src="https://img.shields.io/badge/OpenBabel-Supported-E67E22?style=flat"/>
@@ -80,7 +80,7 @@ SMILES (Simplified Molecular Input Line Entry System) writes a molecule as a sho
 
 ## Scientific Highlights
 
-**Distance geometry with torsional knowledge (ETKDGv3)** produces realistic conformations from experimental and knowledge-based constraints. **Force-field optimization** refines geometries with classical methods. **GLOMOS** (Genetic-algorithm-based Local Optimization of MOlecular Structures) goes further: a heuristic genetic algorithm explores the conformational space of rotatable bonds with ANI neural-network potentials, approaching quantum-chemical accuracy at a small fraction of the cost of DFT.
+**Distance geometry with torsional knowledge (ETKDGv3)** produces realistic conformations from experimental and knowledge-based constraints. **Force-field optimization** refines geometries with classical methods. **GLOMOS** (GLobal Optimization of MOlecular Systems, by F. Ortiz-Chi; [github.com/fortizchi/glomos](https://github.com/fortizchi/glomos)) goes further: ELAYA adapts its genetic algorithm, which explores the conformational space of rotatable bonds with ANI neural-network potentials, approaching quantum-chemical accuracy at a small fraction of the cost of DFT.
 
 ### Why 3D geometry matters
 
@@ -123,6 +123,10 @@ python app.py
 The app will be available at `http://localhost:5000`.
 
 With Docker: `docker build -t elaya .` then `docker run -p 5000:5000 elaya`.
+
+**Run GLOMOS without the public-server limits.** Locally ELAYA uses all your CPU cores, and you choose the time limit and the
+largest molecule, e.g. `docker run -p 5000:5000 -e ELAYA_MAX_MINUTES=240 -e ELAYA_GLOMOS_MAX_ATOMS=300 elaya`
+(or `ELAYA_MAX_MINUTES=240 ELAYA_GLOMOS_MAX_ATOMS=300 python app.py`).
 
 ---
 

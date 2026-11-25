@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.4.15"
+VERSION = "2.4.16"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -202,6 +202,7 @@ def health():
            "libraries": libs,
            "glomos_ready": all(libs[m] for m in ("rdkit", "torch", "torchani", "ase", "scipy")),
            "max_minutes": float(os.environ.get("ELAYA_MAX_MINUTES", "20")),
+           "glomos_max_atoms": _glomos_limits()[0], "lite_min_atoms": _glomos_limits()[1],
            "max_concurrent_jobs": int(os.environ.get("ELAYA_MAX_JOBS", "1"))}
     if not out["glomos_ready"]:
         out["missing_for_glomos"] = [m for m in ("rdkit", "torch", "torchani", "ase", "scipy") if not libs[m]]
@@ -252,6 +253,11 @@ def analyze():
         return err(str(exc))
     except Exception as exc:                                    # noqa: BLE001
         return err("Analysis failed: %s" % exc, 500)
+
+
+def _glomos_limits():
+    from elaya_jobs import GLOMOS_MAX_ATOMS, LITE_MIN_ATOMS
+    return GLOMOS_MAX_ATOMS, LITE_MIN_ATOMS
 
 
 _PUBCHEM_CACHE = {}

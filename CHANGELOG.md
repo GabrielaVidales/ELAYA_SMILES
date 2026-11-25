@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.4.16
+
+* SMILES file: the drop bar is the SMILES field (same width, height and look) and always one line; once a file is
+  loaded the format help/example is hidden and the table offers **Convert all** / **Convert selected** right away
+  (tick boxes, click a row, select all). The Convert button uses that selection; the old modal is only a fallback.
+* Citation: "ELAYA started from GLOMOS (F. Ortiz-Chi)…", with the references to cite (GLOMOS, RDKit/ETKDGv3, ANI-1ccx,
+  ANI-2x, TorchANI; DOIs checked); the other technologies are behind "View all technologies".
+* "Run GLOMOS on your own computer": a card in Contact (Docker / Python commands, copy), a line in the GLOMOS panel,
+  a FAQ entry, and a link when a molecule is too large or slow for the public server.
+* `/api/health` reports `glomos_max_atoms` and `lite_min_atoms`; the GLOMOS estimate uses them (a local install can
+  raise them).
+* README: GLOMOS is GLobal Optimization of MOlecular Systems (F. Ortiz-Chi); how to run without the server limits.
+
 ## 2.4.15
 
 * Fix: the Serotonin example (and the example file and the builder benchmark) used 6-hydroxytryptamine; now

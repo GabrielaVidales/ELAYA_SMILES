@@ -321,28 +321,18 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
             }
 
-            // Limpia modal viejo si quedó alguno
-            document.getElementById('molecule-selection-modal')?.remove();
-
-            // Abre modal selección múltiple
-            const selectedSet = await showMoleculeSelectionModal(window.allMolecules);
-            if (selectedSet && selectedSet.size) {
-                const pickedIdx = [...selectedSet].map(Number).filter(i => i >= 0 && i < window.allMolecules.length).sort((a,b)=>a-b);
-                const picked    = pickedIdx.map(i => window.allMolecules[i]);
-
-                window.molecules = picked;
-                window.currentMoleculeIndex = 0;
-
-                const smilesInput = document.getElementById('smiles');
-                if (smilesInput) smilesInput.value = '';
-
-            const postOptFile = document.getElementById('post-optimization')?.value;
-            if (postOptFile !== 'glomos') document.getElementById('glomos-live-panel')?.remove();
-            await convertMolecules(picked);   // <- importante pasar picked
-            if (postOptFile === 'glomos') await runGlomosBatch(picked);
-            } else {
-            showError("No molecules selected.");
+            // Selection made in the file table (ElayaFileSel); the modal is only a fallback
+            let picked = window.ElayaFileSel ? window.ElayaFileSel.picked() : null;
+            if (!picked) {
+                document.getElementById('molecule-selection-modal')?.remove();
+                const selectedSet = await showMoleculeSelectionModal(window.allMolecules);
+                if (selectedSet && selectedSet.size) {
+                    const pickedIdx = [...selectedSet].map(Number).filter(i => i >= 0 && i < window.allMolecules.length).sort((a,b)=>a-b);
+                    picked = pickedIdx.map(i => window.allMolecules[i]);
+                }
             }
+            if (picked && picked.length) await window.elayaConvertPicked(picked);
+            else showError("No molecules selected: tick at least one in the table.");
 
         } else {
             showError("Please select an input method.");
@@ -353,6 +343,23 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
     }
+
+    // Convert a list of molecules from a file (table buttons "Convert all / selected" and the Convert button)
+    window.elayaConvertPicked = async function (picked) {
+        window.molecules = picked;
+        window.currentMoleculeIndex = 0;
+        const smilesInput = document.getElementById('smiles');
+        if (smilesInput) smilesInput.value = '';
+        const postOptFile = document.getElementById('post-optimization')?.value;
+        if (postOptFile !== 'glomos') document.getElementById('glomos-live-panel')?.remove();
+        try {
+            await convertMolecules(picked);
+            if (postOptFile === 'glomos') await runGlomosBatch(picked);
+            document.querySelector('.visualization-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (e) {
+            showError(e?.message || 'Conversion failed.');
+        }
+    };
 
     // === FILE CHANGE HANDLER (ajuste) ===
     const smilesFileEl = document.getElementById('smiles-file');
@@ -1064,6 +1071,8 @@ async function applyServerLimits() {
         const r = await fetch('/api/health');
         if (!r.ok) return;
         const h = await r.json();
+        window.ELAYA_LIMITS = { maxAtoms: h.glomos_max_atoms, liteMin: h.lite_min_atoms, maxMinutes: h.max_minutes };
+        window.dispatchEvent(new CustomEvent('elaya:limits'));
         const minutes = document.getElementById('glomos-minutes');
         if (minutes && Number.isFinite(h.max_minutes)) {
             minutes.max = String(h.max_minutes);

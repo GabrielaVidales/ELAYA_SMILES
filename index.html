@@ -270,6 +270,7 @@
                     </select>
                     </div>
                 </div>
+                <a href="#run-local" class="rl-promo"><span class="rl-ic" aria-hidden="true">⚡</span><span><b>Bigger molecules or longer runs?</b> Run GLOMOS on your own computer: all your cores, no time limit.</span><span class="rl-go">How ↗</span></a>
             </div>
 
             <div class="conversion-row">
@@ -876,6 +877,41 @@
             </div>
 
             <!-- Guided bug report -->
+            <!-- "Run it locally": a quiet ad for the open-source install -->
+            <section class="run-local" id="run-local" aria-labelledby="rl-title">
+                <div class="rl-text">
+                    <span class="rl-tag">Open source · free</span>
+                    <h3 id="rl-title">Run GLOMOS on your own computer</h3>
+                    <p>The public server is shared and stops each job at 20 minutes. Installed on your machine, ELAYA is the same page and the same code, without those limits.</p>
+                    <ul class="rl-points">
+                        <li><b>All your CPU cores</b> instead of a shared slice</li>
+                        <li><b>No 20-min limit</b>: set your own</li>
+                        <li><b>Bigger molecules</b> than the 140-atom public limit</li>
+                        <li><b>Your structures stay on your computer</b></li>
+                    </ul>
+                </div>
+                <div class="rl-code">
+                    <div class="rl-tabs" role="tablist">
+                        <button type="button" role="tab" class="rl-tab active" data-rl="docker" aria-selected="true">Docker</button>
+                        <button type="button" role="tab" class="rl-tab" data-rl="python" aria-selected="false">Python</button>
+                    </div>
+                    <pre class="rl-pre" id="rl-docker">git clone https://github.com/GabrielaVidales/Elaya_SMILES.git
+cd Elaya_SMILES
+docker build -t elaya .
+docker run -p 5000:5000 -e ELAYA_MAX_MINUTES=240 -e ELAYA_GLOMOS_MAX_ATOMS=300 elaya</pre>
+                    <pre class="rl-pre" id="rl-python" hidden>git clone https://github.com/GabrielaVidales/Elaya_SMILES.git
+cd Elaya_SMILES
+pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+ELAYA_MAX_MINUTES=240 ELAYA_GLOMOS_MAX_ATOMS=300 python app.py</pre>
+                    <div class="rl-foot">
+                        <span>Then open <code>http://localhost:5000</code></span>
+                        <button type="button" class="rl-btn" id="rl-copy">Copy</button>
+                        <a class="rl-btn" href="https://github.com/GabrielaVidales/Elaya_SMILES#getting-started" target="_blank" rel="noopener">Guide ↗</a>
+                    </div>
+                </div>
+            </section>
+
             <div class="contact-panel" id="report-builder">
                 <div class="cp-head">
                     <h3>Report a problem</h3>
@@ -920,24 +956,28 @@
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.15</span>},
+  version = {<span id="cite-version">2.4.16</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
                     <div class="cite-tech">
-                        <span class="ct-label">Built with</span>
-                        <span class="ct-list">
-                            <a href="https://www.rdkit.org/" target="_blank" rel="noopener">RDKit</a> (ETKDG, MMFF94)
-                            · <a href="https://openbabel.org/" target="_blank" rel="noopener">Open Babel</a>
-                            · <a href="https://networkx.org/" target="_blank" rel="noopener">NetworkX</a>
-                            · <a href="https://github.com/aiqm/torchani" target="_blank" rel="noopener">TorchANI</a> (ANI-1x, ANI-1ccx, ANI-2x)
-                            · <a href="https://ase-lib.org/" target="_blank" rel="noopener">ASE</a>
-                            · GLOMOS genetic algorithm
-                            · <a href="https://3dmol.csb.pitt.edu/" target="_blank" rel="noopener">3Dmol.js</a>
-                            · <a href="https://flask.palletsprojects.com/" target="_blank" rel="noopener">Flask</a>
-                        </span>
+                        <p class="ct-intro">ELAYA started from <a href="https://github.com/fortizchi/glomos" target="_blank" rel="noopener"><b>GLOMOS</b></a> (GLobal Optimization of MOlecular Systems, by F. Ortiz-Chi), and its structures and energies come from RDKit and the ANI potentials. If ELAYA helped your work, please cite these too:</p>
+                        <ul class="ct-cite">
+                            <li><b>GLOMOS</b> · F. Ortiz-Chi, <a href="https://github.com/fortizchi/glomos" target="_blank" rel="noopener">github.com/fortizchi/glomos</a></li>
+                            <li><b>RDKit</b> · <a href="https://www.rdkit.org/" target="_blank" rel="noopener">rdkit.org</a>; ETKDGv3: Wang <i>et al.</i>, <i>J. Chem. Inf. Model.</i> 2020, <a href="https://doi.org/10.1021/acs.jcim.0c00025" target="_blank" rel="noopener">10.1021/acs.jcim.0c00025</a></li>
+                            <li><b>ANI</b> (the model you used) · ANI-1ccx: Smith <i>et al.</i>, <i>Nat. Commun.</i> 2019, <a href="https://doi.org/10.1038/s41467-019-10827-4" target="_blank" rel="noopener">10.1038/s41467-019-10827-4</a>; ANI-2x: Devereux <i>et al.</i>, <i>J. Chem. Theory Comput.</i> 2020, <a href="https://doi.org/10.1021/acs.jctc.0c00121" target="_blank" rel="noopener">10.1021/acs.jctc.0c00121</a></li>
+                            <li><b>TorchANI</b> · Gao <i>et al.</i>, <i>J. Chem. Inf. Model.</i> 2020, <a href="https://doi.org/10.1021/acs.jcim.0c00451" target="_blank" rel="noopener">10.1021/acs.jcim.0c00451</a></li>
+                        </ul>
+                        <details class="ct-more">
+                            <summary>View all technologies</summary>
+                            <p><a href="https://openbabel.org/" target="_blank" rel="noopener">Open Babel</a> (3D building, MOL2/CML)
+                            · <a href="https://networkx.org/" target="_blank" rel="noopener">NetworkX</a> (graph layout)
+                            · <a href="https://ase-lib.org/" target="_blank" rel="noopener">ASE</a> (atoms, optimizer)
+                            · <a href="https://pubchem.ncbi.nlm.nih.gov/" target="_blank" rel="noopener">PubChem</a> (compound names)
+                            · <a href="https://3dmol.csb.pitt.edu/" target="_blank" rel="noopener">3Dmol.js</a> (3D viewer)
+                            · <a href="https://flask.palletsprojects.com/" target="_blank" rel="noopener">Flask</a> + Waitress (server)</p>
+                        </details>
                     </div>
-                    <p class="cite-also">Please also cite the tools behind your result, at least RDKit and the ANI model you used (references in the <a href="#c-more" data-about-link="c-more">mini-course</a>).</p>
                 </div>
 
                 <div class="contact-panel">
@@ -946,7 +986,8 @@
                         <details><summary>Is ELAYA free?</summary><p>Yes. It is free to use and open source.</p></details>
                         <details><summary>What happens to the molecules I submit?</summary><p>Conversions are computed and returned; they are not stored. GLOMOS jobs keep their files only while the job runs and for about two hours after it finishes, then they are deleted automatically. For confidential structures, run ELAYA on your own computer (see below).</p></details>
                         <details><summary>Which molecules can I use?</summary><p>Any valid SMILES (up to 120 heavy atoms) for 3D conversion. GLOMOS with ANI needs neutral, closed-shell molecules made of H, C, N, O (ANI-1x, ANI-1ccx), plus S, F and Cl with ANI-2x, and up to 140 atoms counting hydrogens (oxytocin, 135 atoms, is about the limit). The explorer warns you when a molecule is outside that domain.</p></details>
-                        <details><summary>Why does GLOMOS take minutes?</summary><p>It relaxes dozens of candidate shapes with a neural network, and the public server shares a small CPU. Use the <em>Fast</em> preset and the one-network <em>Screening</em> for exploration. Molecules with 60 atoms or more switch automatically to a fast engine (MMFF94 pre-relaxation, one ANI network to screen, all eight to rank), which keeps a peptide like oxytocin at about 15 minutes.</p></details>
+                        <details><summary>Can I run GLOMOS on my own computer?</summary><p>Yes: ELAYA is open source. With Docker or Python it runs the same page locally, using all your CPU cores, with your own time limit and molecule size. <a href="#run-local">See the two commands</a>.</p></details>
+                    <details><summary>Why does GLOMOS take minutes?</summary><p>It relaxes dozens of candidate shapes with a neural network, and the public server shares a small CPU. Use the <em>Fast</em> preset and the one-network <em>Screening</em> for exploration. Molecules with 60 atoms or more switch automatically to a fast engine (MMFF94 pre-relaxation, one ANI network to screen, all eight to rank), which keeps a peptide like oxytocin at about 15 minutes.</p></details>
                         <details><summary>Which ANI model should I choose?</summary><p>ANI-1ccx for the best accuracy on H, C, N, O molecules; ANI-2x if your molecule contains S, F or Cl. ANI-1x is the original baseline.</p></details>
                         <details><summary>Can I reproduce a run?</summary><p>Yes: set a fixed <em>Random seed</em> in the GLOMOS panel and keep the same parameters.</p></details>
                         <details><summary>Can I run it on my own computer?</summary><p>Yes, with Docker: <code>docker build -t elaya .</code> then <code>docker run -p 5000:5000 elaya</code>, and open <code>http://localhost:5000</code>. On a normal laptop GLOMOS is several times faster than on the free server.</p></details>

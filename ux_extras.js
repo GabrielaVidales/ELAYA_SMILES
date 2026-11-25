@@ -120,7 +120,8 @@
 
   // ---------------------------------------------------------------- GLOMOS estimate
   // keep in sync with elaya_jobs.py (LITE_MIN_ATOMS, GLOMOS_MAX_ATOMS, LITE_CAPS)
-  const LITE_MIN_ATOMS = 60, GLOMOS_MAX_ATOMS = 140;
+  // defaults; the real values come from /api/health (a local install can raise them)
+  const lim = () => ({ max: window.ELAYA_LIMITS?.maxAtoms || 140, lite: window.ELAYA_LIMITS?.liteMin || 60 });
   function relaxations(lite) {
     const n = (id, d, cap) => { const v = Number($(id)?.value); const x = Number.isFinite(v) ? v : d; return lite ? Math.min(x, cap) : x; };
     return n('glomos-initpop', 6, 6) + n('glomos-generations', 4, 4) * (n('glomos-matings', 4, 4) + n('glomos-mutants', 4, 4))
@@ -133,15 +134,15 @@
     let box = $('glomos-estimate');
     if (!box) { box = document.createElement('div'); box.id = 'glomos-estimate'; grid.appendChild(box); }
     const atoms = lastInfo?.atoms_with_h;
-    if (atoms > GLOMOS_MAX_ATOMS) {
-      box.innerHTML = `Too large for GLOMOS here: <b>${atoms}</b> atoms (max ${GLOMOS_MAX_ATOMS} with H)`;
+    if (atoms > lim().max) {
+      box.innerHTML = `Too large for GLOMOS here: <b>${atoms}</b> atoms (max ${lim().max} with H) · <a href="#run-local" class="rl-link">run it on your computer ↗</a>`;
       return;
     }
-    const lite = atoms >= LITE_MIN_ATOMS;
+    const lite = atoms >= lim().lite;
     const n = relaxations(lite);
     let text = `≤ <b>${n}</b> ANI relaxations`;
     if (lite) {
-      box.innerHTML = text + ` · large molecule (${atoms} atoms): fast engine, ≈ 10–15 min on the free server`;
+      box.innerHTML = text + ` · large molecule (${atoms} atoms): fast engine, ≈ 10–15 min on the free server · <a href="#run-local" class="rl-link">faster on your computer ↗</a>`;
       return;
     }
     const rate = store.get('elaya.glomosRate', null);
@@ -159,7 +160,7 @@
 
   window.addEventListener('elaya:glomos-done', (e) => {
     const d = e.detail || {};
-    if (d.status !== 'done' || !d.n_evaluated || !d.atoms || !d.seconds || d.atoms >= LITE_MIN_ATOMS) return;
+    if (d.status !== 'done' || !d.n_evaluated || !d.atoms || !d.seconds || d.atoms >= lim().lite) return;
     store.set('elaya.glomosRate', { secPerRelaxAtom: d.seconds / (d.n_evaluated * d.atoms), screening: d.screening });
     updateEstimate();
   });
@@ -245,23 +246,65 @@
         if (r.ok) results = (await r.json()).results;
       } catch (err) { /* offline: show the list without checks */ }
       const bad = results ? results.filter(x => !x.ok).length : 0;
+      const isValid = (k) => !results || !results[k] || results[k].ok;
+      // selection lives here: valid molecules start selected; the user can untick any of them
+      const sel = new Set(molecules.map((m, k) => k).filter(isValid));
+      window.ElayaFileSel = {
+        picked: () => molecules.filter((m, k) => sel.has(k)),
+        size: () => sel.size,
+      };
+      $('file-format-example')?.classList.add('has-file');
       const rows = molecules.slice(0, 200).map((m, k) => {
         const v = results && results[k];
         const st = !v ? '' : v.ok ? `<span class="fs-ok" title="${esc(v.formula)}">✓ ${esc(v.formula)}</span>`
                                   : `<span class="fs-bad" title="${esc(v.error)}">✗ ${esc(v.error)}</span>`;
-        return `<tr class="${v && !v.ok ? 'bad' : ''}"><td>${k + 1}</td><td>${esc(m.id)}</td><td><code>${esc(m.smiles)}</code></td><td>${st}</td></tr>`;
+        return `<tr class="${v && !v.ok ? 'bad' : ''}" data-k="${k}"><td class="fs-chk"><input type="checkbox" aria-label="Select ${esc(m.id)}" ${sel.has(k) ? 'checked' : ''} ${isValid(k) ? '' : 'disabled'}></td>
+          <td>${k + 1}</td><td>${esc(m.id)}</td><td><code>${esc(m.smiles)}</code></td><td>${st}</td></tr>`;
       }).join('');
+      const nValid = molecules.length - bad;
       box.innerHTML = `
         <div class="fs-head">
-          <span><b>${molecules.length}</b> loaded${results ? ` · <b class="fs-okc">${molecules.length - bad}</b> valid` : ''}${bad ? ` · <b class="fs-badc">${bad}</b> invalid` : ''}</span>
+          <span><b>${molecules.length}</b> loaded${results ? ` · <b class="fs-okc">${nValid}</b> valid` : ''}${bad ? ` · <b class="fs-badc">${bad}</b> invalid` : ''}</span>
           ${bad ? '<button type="button" class="ffe-btn" id="fs-drop-bad">Remove invalid</button>' : ''}
-
+          <span class="fs-actions">
+            <button type="button" class="fs-go fs-go-all" id="fs-convert-all">Convert all${bad ? ' valid' : ''} (${nValid})</button>
+            <button type="button" class="fs-go" id="fs-convert-sel">Convert selected (<span id="fs-nsel">${sel.size}</span>)</button>
+          </span>
         </div>
-        <div class="fs-table-wrap"><table class="fs-table"><thead><tr><th>#</th><th>Name</th><th>SMILES</th><th>Check</th></tr></thead>
+        <div class="fs-table-wrap"><table class="fs-table"><thead><tr><th class="fs-chk"><input type="checkbox" id="fs-all" aria-label="Select all" ${sel.size === nValid ? 'checked' : ''}></th><th>#</th><th>Name</th><th>SMILES</th><th>Check</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
+        <div class="fs-hint">Tick the molecules you want, or press <b>Convert all</b>. Click a row to select it.</div>
         ${molecules.length > 200 ? `<div class="fs-hint">Showing the first 200 of ${molecules.length}.</div>` : ''}`;
+      const paint = () => {
+        box.querySelectorAll('tbody tr').forEach(tr => {
+          const k = +tr.dataset.k; const on = sel.has(k);
+          tr.classList.toggle('sel', on); tr.querySelector('input').checked = on;
+        });
+        $('fs-nsel').textContent = sel.size;
+        $('fs-convert-sel').disabled = sel.size === 0;
+        $('fs-all').checked = sel.size === nValid && nValid > 0;
+        $('fs-all').indeterminate = sel.size > 0 && sel.size < nValid;
+      };
+      box.querySelectorAll('tbody tr').forEach(tr => tr.addEventListener('click', (ev) => {
+        const k = +tr.dataset.k;
+        if (!isValid(k)) return;
+        if (sel.has(k)) sel.delete(k); else sel.add(k);
+        paint();
+      }));
+      $('fs-all').addEventListener('change', (ev) => {
+        sel.clear();
+        if (ev.target.checked) molecules.forEach((m, k) => { if (isValid(k)) sel.add(k); });
+        paint();
+      });
+      const go = (list) => {
+        if (!list.length) return;
+        if (typeof window.elayaConvertPicked === 'function') window.elayaConvertPicked(list);
+      };
+      $('fs-convert-all').addEventListener('click', () => go(molecules.filter((m, k) => isValid(k))));
+      $('fs-convert-sel').addEventListener('click', () => go(window.ElayaFileSel.picked()));
+      paint();
       $('fs-drop-bad')?.addEventListener('click', () => {
-        const keep = molecules.filter((m, k) => !results || !results[k] || results[k].ok);
+        const keep = molecules.filter((m, k) => isValid(k));
         window.allMolecules = keep.slice();
         window.molecules = keep.slice();
         window.dispatchEvent(new CustomEvent('elaya:file-loaded', { detail: { name, molecules: keep } }));
@@ -269,8 +312,36 @@
     });
   }
 
+  // ---------------------------------------------------------------- "Run GLOMOS on your computer"
+  function initRunLocal() {
+    // any link to #run-local (GLOMOS panel, estimate, FAQ) opens Contact and scrolls to the card
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href="#run-local"]');
+      if (!a) return;
+      e.preventDefault();
+      const onContact = document.body.dataset.page === 'contact';
+      if (!onContact) document.querySelector('a[href="#contact"]')?.click();
+      setTimeout(() => {
+        const t = $('run-local');
+        if (t) window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' });
+      }, onContact ? 0 : 350);
+    });
+    document.querySelectorAll('.rl-tab').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('.rl-tab').forEach(t => { const on = t === tab; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); });
+      $('rl-docker').hidden = tab.dataset.rl !== 'docker';
+      $('rl-python').hidden = tab.dataset.rl !== 'python';
+    }));
+    $('rl-copy')?.addEventListener('click', async () => {
+      const pre = $('rl-docker').hidden ? $('rl-python') : $('rl-docker');
+      try { await navigator.clipboard.writeText(pre.textContent); $('rl-copy').textContent = 'Copied ✓'; }
+      catch (e) { $('rl-copy').textContent = 'Select and copy'; }
+      setTimeout(() => { $('rl-copy').textContent = 'Copy'; }, 1600);
+    });
+  }
+
   // ---------------------------------------------------------------- init
   function init() {
+    initRunLocal();
     initSmilesField();
     initFiles();
     restoreOptions();
@@ -280,6 +351,7 @@
       $(id)?.addEventListener('input', updateEstimate);
       $(id)?.addEventListener('change', updateEstimate);
     });
+    window.addEventListener('elaya:limits', updateEstimate);
     updateEstimate();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
