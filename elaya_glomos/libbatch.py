@@ -16,9 +16,14 @@ Convergence criterion as in ASE: max_i |F_i| < fmax. The force thresholds in
 ``fmax_stages`` are applied in sequence, each with a fresh L-BFGS memory and at most
 ``max_steps`` steps (exactly what successive ``LBFGS(...).run(fmax, steps)`` calls do).
 """
+import os
 import time
 
 import numpy as np
+
+# Atoms evaluated per forward pass. Memory of one ANI pass grows with batch x atoms; on a 512 MB
+# instance a 135-atom peptide needs ~17 MB per structure in a batch just for the AEVs and gradients.
+BATCH_ATOMS = int(os.environ.get("ELAYA_ANI_BATCH_ATOMS", "280"))
 
 
 # ----------------------------------------------------------------------------------------
@@ -54,6 +59,17 @@ class TorchANIBatch:
         return self._species[1]
 
     def __call__(self, symbols, positions):
+        chunk = max(1, BATCH_ATOMS // max(1, len(symbols)))
+        if len(positions) <= chunk:
+            return self._eval(symbols, positions)
+        es, fs = [], []
+        for k in range(0, len(positions), chunk):
+            e, f = self._eval(symbols, positions[k:k + chunk])
+            es.append(e)
+            fs.append(f)
+        return np.concatenate(es), np.concatenate(fs)
+
+    def _eval(self, symbols, positions):
         torch = self.torch
         n = len(positions)
         species = self._species_for(symbols, n)

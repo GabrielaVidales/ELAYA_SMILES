@@ -120,7 +120,9 @@ function _glAsciiLab(pre) {
     const place = (arr, col, str) => { for (let k = 0; k < str.length; k++) arr[col + k] = str[k]; return arr; };
     let status;
     if (phase === 'load') status = `  loading the ANI model${'.'.repeat(1 + (tick >> 2) % 3)}`;
+    else if (phase === 'seeds') status = `  building starting structures${'.'.repeat(1 + (tick >> 2) % 3)}`;
     else if (phase === 'polish') status = '  final tight re-optimisation...';
+    else if (phase === 'ranking') status = `  ranking with all 8 ANI networks${'.'.repeat(1 + (tick >> 2) % 3)}`;
     else status = `  generation ${gen} · relaxed ${relaxed}${cheer > 0 ? '   NEW GENERATION!' : wave > 0 ? '   hi! :)' : ''}`;
     const l1 = place(place(row.slice(), 1, L[0]), BELT1 + 2, R[0]).join('');
     const l2 = place(place(belt.slice(), 1, L[1]), BELT1 + 2, R[1]).join('');
@@ -136,6 +138,9 @@ function _glAsciiLab(pre) {
     optimized() { phase = 'run'; relaxed++; pending = Math.min(pending + 1, 8); if (reduce) { stamped++; frame(); } },
     generation(g) { if (g !== gen) { gen = g; if (g > 0) cheer = 14; } },
     polish() { phase = 'polish'; },
+    seeds() { phase = 'seeds'; },
+    load() { phase = 'load'; },
+    ranking() { phase = 'ranking'; },
   };
   return api;
 }
@@ -353,7 +358,7 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
         if (e.n_rotors != null) el.rotors.textContent = e.n_rotors;
         if (e.model) el.model.textContent = e.model;
         break;
-      case 'log': addLog(e.line); break;
+      case 'log': addLog(e.line); if (/^Loading .* model/.test(e.line || '')) lab.load(); break;
       case 'optimized': nEval += 1; el.evals.textContent = nEval; lab.optimized(); break;
       case 'progress': {
         const gen = e.gen ?? 0, of = e.of || 1, done = e.done || 0;
@@ -371,6 +376,8 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
       }
       case 'phase':
         if (e.name === 'polish') { el.gen.textContent = 'Final tight re-optimisation…'; lab.polish(); }
+        else if (e.name === 'seeds') { el.gen.textContent = 'Building starting structures…'; lab.seeds(); }
+        else if (e.name === 'ranking') { el.gen.textContent = 'Ranking with the full ANI ensemble…'; lab.ranking(); }
         break;
       case 'error': addLog('ERROR: ' + (e.message || '')); break;
       default: break;
@@ -426,7 +433,13 @@ function runGlomosWithStream(smiles, glomosParams, onDone, onError, onSelect) {
         <thead><tr><th>#</th><th>Name</th><th>ΔE (kcal/mol)</th><th>Pop. 298 K (%)</th><th>A (GHz)</th><th>B (GHz)</th><th>C (GHz)</th></tr></thead>
         <tbody>${rows}</tbody></table></div>
       <div class="glomos-notes info">Relative ANI electronic energies (no ZPE/thermal corrections): populations are indicative.
-        Click a row to show it in the viewer.</div>
+        Click a row to show it in the viewer.${(() => {
+          const m = res.meta || {}; const sd = c.map(x => x.ensemble_std).filter(v => v != null);
+          if (!m.final_ranking || !sd.length) return '';
+          const mean = sd.reduce((a, b) => a + b, 0) / sd.length;
+          return `<br>Large molecule: geometries from one ANI network, ranking with all 8 (their spread ≈ ${mean.toFixed(1)} kcal/mol;`
+            + ` differences smaller than that are within ANI's uncertainty).`;
+        })()}</div>
       <div class="glomos-export">
         <button class="glomos-btn" id="gl-dl-all">Download all (multi-XYZ)</button>
         <button class="glomos-btn" id="gl-dl-json">Download results (JSON)</button>

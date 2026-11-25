@@ -139,3 +139,11 @@ def test_validate_many_smiles(client):
     assert [x["ok"] for x in res] == [True, False, False, True]
     assert res[0]["formula"] == "C2H6O" and res[1]["error"]
     assert client.post("/api/validate", json={"smiles": "CCO"}).status_code == 400
+
+
+def test_glomos_start_reports_engine_and_size_limit(client):
+    r = client.post("/api/glomos/start", json={"smiles": "CCO"})
+    assert r.status_code == 200 and r.get_json()["engine"] == "standard"
+    big = "C" * 60                                       # 182 atoms with H: above the GLOMOS limit
+    r = client.post("/api/glomos/start", json={"smiles": big})
+    assert r.status_code == 422 and r.get_json()["kind"] == "too_large"

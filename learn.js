@@ -45,6 +45,9 @@
       const cont = $('hero-continue-btn'), first = counted.find(l => !read.has(l.id));
       if (cont) {
         cont.hidden = !(n > 0 && first);
+        // once the course is started, "Continue" replaces "Start from zero" (one line in the hero)
+        const startBtn = $('hero-course-btn');
+        if (startBtn) { startBtn.hidden = !cont.hidden; startBtn.nextElementSibling?.classList.toggle('hq-hide', !cont.hidden); }
         if (first) { cont.setAttribute('href', `#${first.id}`); cont.textContent = `Continue: ${first.querySelector('h2')?.textContent || ''} ↓`; }
       }
     };
@@ -78,7 +81,7 @@
 
     links.forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); go(a.dataset.ch); }));
     // any other link to a lesson (hero buttons, contact page) opens About first
-    document.querySelectorAll('a[href^="#c-"]:not([data-ch])').forEach(a => a.addEventListener('click', (e) => {
+    document.querySelectorAll('a[href^="#c-"]:not([data-ch]), a[href="#how-it-works"]').forEach(a => a.addEventListener('click', (e) => {
       e.preventDefault();
       const id = a.getAttribute('href').slice(1);
       openAboutThen(() => go(id));

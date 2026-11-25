@@ -289,8 +289,8 @@
       if (b.classList.contains('up')) { window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }); return; }
       // jump to the next block (lesson, panel) below the fold, or one screen down
       const blocks = [...document.querySelectorAll(page() === 'about'
-        ? '#about-section .lesson, #about-section .lp-bottom-grid, #about-section .learn'
-        : '#contact-section .contact-layout, #contact-section .contact-panel, #contact-section .contact-two')];
+        ? '#about-section .how-band, #about-section .lesson, #about-section .learn'
+        : '#contact-section .contact-intro, #contact-section .contact-panel, #contact-section .contact-two')];
       const next = blocks.map(el => el.getBoundingClientRect().top).filter(t => t > NAV_H + 90).sort((a, c) => a - c)[0];
       const dy = next !== undefined && next < window.innerHeight * 1.4 ? next - NAV_H - 20 : window.innerHeight * 0.8;
       window.scrollBy({ top: dy, behavior: reduceMotion ? 'auto' : 'smooth' });

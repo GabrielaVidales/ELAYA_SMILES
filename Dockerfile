@@ -32,6 +32,7 @@ RUN pip uninstall -y glomos aegon >/dev/null 2>&1; \
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    MALLOC_ARENA_MAX=2 \
     ELAYA_TORCH_THREADS=auto \
     ELAYA_MAX_JOBS=1 \
     ELAYA_MAX_MINUTES=20

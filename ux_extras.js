@@ -51,7 +51,7 @@
       const a = input.getBoundingClientRect(), b = op.getBoundingClientRect();
       if (!a.width) return;
       clear.style.top = `${a.top - b.top + a.height / 2}px`;
-      clear.style.right = `${b.right - a.right + 46}px`;
+      clear.style.right = `${b.right - a.right + 8}px`;      // ✕ always last, at the very end
     };
     window.addEventListener('resize', place);
 
@@ -119,10 +119,12 @@
   }
 
   // ---------------------------------------------------------------- GLOMOS estimate
-  function relaxations() {
-    const n = (id, d) => { const v = Number($(id)?.value); return Number.isFinite(v) ? v : d; };
-    return n('glomos-initpop', 6) + n('glomos-generations', 4) * (n('glomos-matings', 4) + n('glomos-mutants', 4))
-         + n('glomos-keep', 6);
+  // keep in sync with elaya_jobs.py (LITE_MIN_ATOMS, GLOMOS_MAX_ATOMS, LITE_CAPS)
+  const LITE_MIN_ATOMS = 60, GLOMOS_MAX_ATOMS = 140;
+  function relaxations(lite) {
+    const n = (id, d, cap) => { const v = Number($(id)?.value); const x = Number.isFinite(v) ? v : d; return lite ? Math.min(x, cap) : x; };
+    return n('glomos-initpop', 6, 6) + n('glomos-generations', 4, 4) * (n('glomos-matings', 4, 4) + n('glomos-mutants', 4, 4))
+         + (lite ? 4 : n('glomos-keep', 6, 8));
   }
 
   function updateEstimate() {
@@ -130,10 +132,19 @@
     if (!grid) return;
     let box = $('glomos-estimate');
     if (!box) { box = document.createElement('div'); box.id = 'glomos-estimate'; grid.appendChild(box); }
-    const n = relaxations();
-    let text = `≤ <b>${n}</b> ANI relaxations`;
-    const rate = store.get('elaya.glomosRate', null);
     const atoms = lastInfo?.atoms_with_h;
+    if (atoms > GLOMOS_MAX_ATOMS) {
+      box.innerHTML = `Too large for GLOMOS here: <b>${atoms}</b> atoms (max ${GLOMOS_MAX_ATOMS} with H)`;
+      return;
+    }
+    const lite = atoms >= LITE_MIN_ATOMS;
+    const n = relaxations(lite);
+    let text = `≤ <b>${n}</b> ANI relaxations`;
+    if (lite) {
+      box.innerHTML = text + ` · large molecule (${atoms} atoms): fast engine, ≈ 10–15 min on the free server`;
+      return;
+    }
+    const rate = store.get('elaya.glomosRate', null);
     if (rate && rate.secPerRelaxAtom > 0 && atoms) {
       let sec = n * atoms * rate.secPerRelaxAtom;
       if (($('glomos-screening')?.value || 'ensemble') !== (rate.screening || 'ensemble')) {
@@ -148,7 +159,7 @@
 
   window.addEventListener('elaya:glomos-done', (e) => {
     const d = e.detail || {};
-    if (d.status !== 'done' || !d.n_evaluated || !d.atoms || !d.seconds) return;
+    if (d.status !== 'done' || !d.n_evaluated || !d.atoms || !d.seconds || d.atoms >= LITE_MIN_ATOMS) return;
     store.set('elaya.glomosRate', { secPerRelaxAtom: d.seconds / (d.n_evaluated * d.atoms), screening: d.screening });
     updateEstimate();
   });

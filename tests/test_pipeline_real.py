@@ -49,3 +49,30 @@ def test_glomos_real_pipeline_keeps_structure(name, tmp_path, monkeypatch):
         assert qa["ok"], qa["problems"]
         syms, pos = ec.parse_xyz(c["xyz"])
         assert tools.check_bonds(smiles, syms, pos)["ok"] is not False
+
+
+def test_glomos_lite_engine_mmff_funnel(tmp_path, monkeypatch):
+    """Large-molecule engine (MMFF funnel, one network, top-n polish) keeps bonds and stereo."""
+    import elaya_chem as ec
+    from rdkit import Chem
+    from elaya_jobs import clamp_params, size_profile, write_input_txt
+    from elaya_glomos import libcalc_ani
+    from elaya_glomos.heuristic_ga_rotamers import conformational
+    from elaya_glomos.libreport import Reporter
+    from mmff_calc import MMFFCalculator
+
+    smiles = MOLECULES["gly-leu-leu-NH2"][0]
+    p, _ = size_profile(clamp_params({"preset": "fast", "random_seed": 3}), 135)   # force the lite engine
+    molh, seed_xyz, problem, info = ec.glomos_seed_pool(smiles, p["n_seeds"], 665)
+    problem["molblock"] = Chem.MolToMolBlock(molh)
+    monkeypatch.setitem(libcalc_ani._MODEL_CACHE, "MMFF_TEST", MMFFCalculator(smiles))
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "seed.xyz").write_text(seed_xyz)
+    (tmp_path / "problem.json").write_text(json.dumps(problem))
+    write_input_txt(str(tmp_path), p, "MMFF_TEST")
+    logs = []
+    res = conformational("INPUT.txt", reporter=Reporter(emit=lambda e: logs.append(e), echo=False))
+    assert res["meta"]["prerelax"] == "MMFF94" and res["conformers"]
+    assert len(res["conformers"]) <= 4                       # polish_top
+    for c in res["conformers"]:
+        assert ec.stereo_qa(ec.mol_with_coords(smiles, c["xyz"]), smiles, 0)["ok"]

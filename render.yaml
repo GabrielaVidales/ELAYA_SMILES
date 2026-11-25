@@ -2,8 +2,9 @@ services:
   - type: web
     name: elaya-smiles
     env: docker
-    # GLOMOS (torch + ASE + ANI) needs ~1.2-1.8 GB while a job runs: use at least 'standard' (2 GB).
-    # 'starter' (512 MB) only supports plain conversion; GLOMOS jobs would be killed (OOM).
+    # Measured (v2.4.13): web process ~90-170 MB; GLOMOS worker ~200 MB private memory + ~120 MB shared
+    # torch libraries. The free instance (512 MB, 0.1 CPU) runs GLOMOS up to oxytocin (135 atoms, ~15 min,
+    # fast engine for >= 60 atoms). A bigger plan only makes it faster.
     plan: standard
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health

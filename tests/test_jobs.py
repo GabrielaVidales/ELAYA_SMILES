@@ -124,3 +124,31 @@ def test_worker_error_event_is_not_duplicated(tmp_path):
     errors = [e for e in m.poll(jid)["events"] if e["type"] == "error"]
     assert len(errors) == 1
     m.shutdown()
+
+
+def test_size_profile_lite_and_limit(tmp_path):
+    p, notes = ej.size_profile(ej.clamp_params({"preset": "thorough"}), 135)
+    assert p["engine"] == "lite" and p["generations"] <= ej.LITE_CAPS["generations"] and notes
+    p2, _ = ej.size_profile(ej.clamp_params({"preset": "thorough"}), 21)
+    assert p2["engine"] == "standard" and p2["generations"] == 20
+    import pytest
+    with pytest.raises(ValueError):
+        ej.size_profile(ej.clamp_params({}), ej.GLOMOS_MAX_ATOMS + 1)
+
+
+def test_lite_input_has_no_duplicate_keys(tmp_path):
+    p, _ = ej.size_profile(ej.clamp_params({"preset": "fast"}), 135)
+    ej.write_input_txt(str(tmp_path), p, "ANI2x")
+    keys = [l.split()[0] for l in open(os.path.join(str(tmp_path), "INPUT.txt")) if l.strip() and not l.startswith("#")]
+    assert len(keys) == len(set(keys))                  # the reader keeps the FIRST occurrence
+    txt = open(os.path.join(str(tmp_path), "INPUT.txt")).read()
+    assert "prerelax            mmff" in txt and "final_ranking       ensemble_sp" in txt
+
+
+def test_seed_request_is_written_for_the_worker(tmp_path):
+    m = manager(tmp_path)
+    jid = m.submit(None, {"smiles": "CCO", "n_seeds": 2, "seed": 665}, ej.clamp_params({}), "ANI1ccx", {})
+    wd = m.get(jid).workdir
+    assert os.path.isfile(os.path.join(wd, "seed_request.json")) and not os.path.isfile(os.path.join(wd, "seed.xyz"))
+    wait(m, jid)
+    m.shutdown()

@@ -2484,9 +2484,9 @@ function initSmilesOverflowUI() {
   const indicator = document.createElement('button');
   indicator.id = 'smiles-indicator';
   indicator.type = 'button';
-  indicator.title = 'Ver completo';
-  indicator.setAttribute('aria-label', 'Ver SMILES completo');
-  indicator.textContent = '▸';
+  indicator.title = 'Show the full SMILES';
+  indicator.setAttribute('aria-label', 'Show the full SMILES');
+  indicator.textContent = '▾';
   wrap.appendChild(indicator);
 
   // 3) popover
@@ -2496,8 +2496,8 @@ function initSmilesOverflowUI() {
     <div class="smiles-pop-content">
       <pre id="smiles-full"></pre>
       <div class="smiles-actions">
-        <button id="smiles-copy">Copiar</button>
-        <button id="smiles-close">Cerrar</button>
+        <button id="smiles-copy">Copy</button>
+        <button id="smiles-close">Close</button>
       </div>
     </div>`;
   document.body.appendChild(pop);
@@ -2527,7 +2527,7 @@ function initSmilesOverflowUI() {
   // 6) cerrar/copiar
   btnClose.addEventListener('click', () => pop.classList.remove('open'));
   btnCopy.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(input.value || ''); showSuccess?.('✔ Copiado al portapapeles'); }
+    try { await navigator.clipboard.writeText(input.value || ''); showSuccess?.('✔ SMILES copied'); }
     catch(e) { console.warn(e); }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') pop.classList.remove('open'); });

@@ -25,7 +25,7 @@ import time
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-VERSION = "2.4.12"
+VERSION = "2.4.13"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
@@ -362,23 +362,35 @@ def glomos_start():
     data = body()
     try:
         smiles = smiles_from(data)
-        from elaya_jobs import clamp_params
+        from elaya_jobs import clamp_params, size_profile
         from elaya_glomos.ani_domain import resolve_model, DomainError
         import elaya_chem as ec
+        from rdkit import Chem
         params = clamp_params(data.get("glomos_params"))
-        molh, seed_xyz, problem, info = ec.glomos_seed_pool(smiles, params["n_seeds"], 665)
+        mol = ec.parse_smiles(smiles)
+        if len(Chem.GetMolFrags(mol)) > 1:
+            return err("GLOMOS needs a single molecule (the SMILES has several fragments).")
+        molh = Chem.AddHs(mol)
         syms = [a.GetSymbol() for a in molh.GetAtoms()]
+        n_rotors = len(ec.rotor_specs(molh))
         try:
-            dom = resolve_model(syms, params["ani_model"], problem["charge"])
+            params, size_notes = size_profile(params, len(syms))
+        except ValueError as exc:
+            return err(str(exc), 422, kind="too_large")
+        try:
+            dom = resolve_model(syms, params["ani_model"], Chem.GetFormalCharge(molh))
         except DomainError as exc:
             return err(str(exc), 422, kind="ani_domain")
-        meta = {"smiles": smiles, "n_rotors": len(problem["rotors"]), "n_atoms": len(syms),
-                "seed_info": info, "ani_notes": dom["notes"], "ani_warnings": dom["warnings"],
+        notes = list(dom["notes"]) + size_notes
+        meta = {"smiles": smiles, "n_rotors": n_rotors, "n_atoms": len(syms), "engine": params["engine"],
+                "ani_notes": notes, "ani_warnings": dom["warnings"],
                 "formula": ec.mol_report(smiles)["formula"]}
-        job_id = jobs().submit(seed_xyz, problem, params, dom["model"], meta,
-                               finalize=lambda res: _finalize(res, smiles))
-        return jsonify({"job_id": job_id, "model": dom["model"], "notes": dom["notes"],
-                        "warnings": dom["warnings"], "n_rotors": meta["n_rotors"], "params": params})
+        # starting structures are built by the worker (seconds to minutes on a small CPU)
+        job_id = jobs().submit(None, {"smiles": smiles, "n_seeds": params["n_seeds"], "seed": 665},
+                               params, dom["model"], meta, finalize=lambda res: _finalize(res, smiles))
+        return jsonify({"job_id": job_id, "model": dom["model"], "notes": notes, "engine": params["engine"],
+                        "warnings": dom["warnings"], "n_rotors": n_rotors, "n_atoms": len(syms),
+                        "params": params})
     except ValueError as exc:
         return err(str(exc))
     except Exception as exc:                                    # noqa: BLE001
@@ -428,8 +440,26 @@ def glomos_result(job_id):
     return jsonify(out)
 
 
+def _warm_up():
+    """Import the conversion libraries in the background after start-up, so the first NetworkX
+    conversion does not pay ~3 s of imports on a 0.1-CPU instance (ELAYA_WARMUP=0 disables it)."""
+    import threading
+
+    def run():
+        import time
+        time.sleep(2.0)
+        for mod in ("rdkit.Chem.AllChem", "networkx", "scipy.optimize"):
+            try:
+                __import__(mod)
+            except Exception:                                   # noqa: BLE001
+                pass
+    if os.environ.get("ELAYA_WARMUP", "1") != "0":
+        threading.Thread(target=run, daemon=True).start()
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    _warm_up()
     try:
         from waitress import serve
         print("ELAYA %s on http://0.0.0.0:%d" % (VERSION, port))

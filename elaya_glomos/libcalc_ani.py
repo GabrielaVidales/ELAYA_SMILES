@@ -149,32 +149,83 @@ def _prepare_torch():
     return torch
 
 
-def get_calculator(opt="ANI1ccx"):
-    """ASE calculator for an ANI model, built once per process and reused."""
-    if opt in _MODEL_CACHE:
-        return _MODEL_CACHE[opt]
+def _dtype_name(dtype=None):
+    d = (dtype or os.environ.get("ELAYA_ANI_DTYPE", "float64")).lower()
+    return "float64" if d in ("float64", "double", "fp64") else "float32"
+
+
+def _builder(opt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        import torchani
+    return {"ANI1x": torchani.models.ANI1x, "ANI1ccx": torchani.models.ANI1ccx,
+            "ANI2x": torchani.models.ANI2x}[opt]
+
+
+def get_calculator(opt="ANI1ccx", member=None, dtype=None):
+    """ASE calculator for an ANI model, built once per process and reused.
+
+    member  None = the 8-network ensemble; k = only network k (8x cheaper to evaluate,
+            ~70 MB less memory for ANI-2x; used to screen large molecules)
+    dtype   'float64' (default, ELAYA_ANI_DTYPE) or 'float32'
+    """
+    key = opt if (member is None and dtype is None) else (opt, member, _dtype_name(dtype))
+    if key in _MODEL_CACHE:
+        return _MODEL_CACHE[key]
+    if key != opt and opt in _MODEL_CACHE and not hasattr(_MODEL_CACHE[opt], "model"):
+        return _MODEL_CACHE[opt]                     # test stand-in (not a torch model): use it as is
     if opt not in ANI_INFO_FILES:
         raise ValueError("Unknown ANI model %r (valid: %s)" % (opt, ", ".join(ANI_INFO_FILES)))
     try:
         torch = _prepare_torch()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            import torchani
-        builders = {
-            "ANI1x": torchani.models.ANI1x,
-            "ANI1ccx": torchani.models.ANI1ccx,
-            "ANI2x": torchani.models.ANI2x,
-        }
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         with suppress_stdout():
-            model = builders[opt]()
-            if os.environ.get("ELAYA_ANI_DTYPE", "float64").lower() in ("float64", "double", "fp64"):
+            model = _builder(opt)() if member is None else _builder(opt)(model_index=int(member))
+            if _dtype_name(dtype) == "float64":
                 model = model.double()
             model = model.to(device)
-            _MODEL_CACHE[opt] = model.ase()
+            _MODEL_CACHE[key] = model.ase()
     except Exception as exc:                            # noqa: BLE001
         raise ModelLoadError(_explain_model_error(opt, exc)) from exc
-    return _MODEL_CACHE[opt]
+    return _MODEL_CACHE[key]
+
+
+def release_models():
+    """Drop every cached torch model (frees memory before loading another one)."""
+    import gc
+    for k in [k for k, v in _MODEL_CACHE.items() if hasattr(v, "model")]:
+        del _MODEL_CACHE[k]
+    gc.collect()
+
+
+def ensemble_single_points(opt, atoms_list, n_members=8, check=None):
+    """Mean and spread of the energies (kcal/mol) of the full ANI ensemble at fixed geometries.
+
+    The networks are loaded ONE AT A TIME (float64, no gradients), so ranking with the whole
+    ensemble costs ~10 MB of extra memory instead of ~150 MB. Returns (mean, std) lists, or
+    None when the calculator is not a TorchANI model (tests)."""
+    if not atoms_list or opt not in ANI_INFO_FILES:
+        return None
+    if opt in _MODEL_CACHE and not hasattr(_MODEL_CACHE[opt], "model"):
+        return None
+    import numpy as np
+    import ase.units
+    torch = _prepare_torch()
+    symbols = atoms_list[0].get_chemical_symbols()
+    coords = torch.tensor(np.stack([a.get_positions() for a in atoms_list]), dtype=torch.float64)
+    E = []
+    for k in range(n_members):
+        if check is not None:
+            check()
+        with suppress_stdout():
+            net = _builder(opt)(model_index=k).double()
+        species = net.species_to_tensor(symbols).unsqueeze(0).repeat(len(atoms_list), 1)
+        with torch.no_grad():
+            e = net((species, coords)).energies.numpy() * ase.units.Hartree * eVtokcalpermol
+        E.append(e)
+        del net
+    E = np.array(E)
+    return E.mean(axis=0).tolist(), E.std(axis=0).tolist()
 
 
 def torchani_versions():
@@ -225,7 +276,8 @@ def ANI_single(atoms, opt="ANI1ccx", preclist=(2e-2, 5e-3), max_steps=400, repor
 
 
 def ANI(moleculelist, n_jobs=1, opt="ANI1ccx", preclist=(2e-2, 5e-3), problem=None,
-        reporter=None, max_steps=400, keep_unconverged=False, sink=None, screening="ensemble"):
+        reporter=None, max_steps=400, keep_unconverged=False, sink=None, screening="ensemble",
+        member=None, dtype=None):
     """Relax a list of conformers of one molecule (batched, see libbatch.relax_many).
 
     in:
@@ -236,6 +288,7 @@ def ANI(moleculelist, n_jobs=1, opt="ANI1ccx", preclist=(2e-2, 5e-3), problem=No
                 cancellation/timeout in the middle of a batch keeps what was already relaxed
         screening  "ensemble" (all networks) or "single" (first network only; faster, used to
                 screen candidates; the final polish always uses the ensemble)
+        member, dtype  see get_calculator (one network / float32 for large molecules)
     out:
         list of relaxed ase.Atoms in input order (info: e, i, converged, steps, seconds)
     """
@@ -243,7 +296,7 @@ def ANI(moleculelist, n_jobs=1, opt="ANI1ccx", preclist=(2e-2, 5e-3), problem=No
     mols = list(moleculelist)
     if not mols:
         return []
-    calculator = get_calculator(opt)
+    calculator = get_calculator(opt) if member is None and dtype is None else get_calculator(opt, member, dtype)
     total = len(mols)
     accepted = {}
     finished = set()

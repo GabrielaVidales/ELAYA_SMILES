@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.4.13
+
+* GLOMOS for large molecules on the free server (512 MB, 0.1 CPU). From 60 atoms (with H) a fast engine is used:
+  MMFF94 pre-relaxation of 2x candidates (only the lowest go to ANI; repeats of known conformers are skipped),
+  screening with one ANI network in float32, polish of the 4 best and final ranking with all 8 networks by
+  single points loaded one at a time (their spread is reported). Oxytocin (135 atoms, 25 rotors): ~90 s of CPU
+  instead of hours, ~200 MB of private memory. Limit: 140 atoms with H (`ELAYA_GLOMOS_MAX_ATOMS`).
+* Starting structures are built by the GLOMOS worker (with progress) instead of inside the HTTP request.
+* ANI forces are evaluated in chunks (`ELAYA_ANI_BATCH_ATOMS`, default 280 atoms per pass) to cap memory;
+  `MALLOC_ARENA_MAX=2`.
+* NetworkX and SciPy are preloaded in the background after start-up (the first NetworkX conversion no longer pays
+  ~3 s of imports on a small CPU). The layout itself is unchanged: NetworkX Kamada-Kawai with chemical distance
+  targets.
+* 3D | 2D toggle: one joined control again, rounder.
+* Example hint: ✨ bottom-left and top-right (diagonal).
+* About: button and both questions on one line; once the course is started "Continue" replaces "Start from zero".
+* "How ELAYA works" (the pipeline) is now its own band above the course, with a short title; the explorer links to
+  it from the empty results card.
+* SMILES field: ▾ (show all) and ✕ (clear, dark red) at the end; the text no longer runs under them. Popover in
+  English (Copy / Close).
+* Technologies and authors moved from About to Contact (team line in the author card, "Built with" in the citation
+  panel); Contact texts shortened; FAQ updated (size limit, fast engine).
+* Measure: whole-molecule length, radius of gyration, size along the principal axes and intramolecular hydrogen
+  bonds (can be drawn), without clicking.
+
 ## 2.4.12
 
 * Example hint: the ✨ sit above the highlighted word and no longer cover the neighbouring examples.

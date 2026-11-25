@@ -343,6 +343,7 @@
                             <li><b>Six file formats</b>: XYZ, MOL, SDF, PDB, MOL2, CML</li>
                             <li>With GLOMOS: a <b>ranked list of conformers</b></li>
                         </ol>
+                        <a href="#how-it-works" class="re-how" id="re-how">How does it work? See the 6 steps →</a>
                         <p class="re-hint"><span class="when-empty">Start by typing a SMILES above, or click an example like <button type="button" class="re-example" data-smiles="C1=CC(=C(C=C1CCN)O)O">Dopamine</button></span><span class="when-ready">✓ Ready. Press <b>Convert structure</b>.</span></p>
                     </div>
                    
@@ -417,7 +418,7 @@
                             Open the explorer
                         </button>
                         <span class="hero-q">
-                            <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">New to chemistry? Start from zero ↓</a>
+                            <a href="#c-start" class="lp-cta-ghost" id="hero-course-btn">New to chemistry? Start from zero ↓</a><span class="hq-sep" aria-hidden="true">·</span>
                             <a href="#c-conf" class="lp-cta-ghost hero-q2" id="hero-conf-btn">Curious what a conformational analysis is? ↓</a>
                         </span>
                         <a href="#c-start" class="lp-cta-ghost lp-cta-continue" id="hero-continue-btn" hidden>Continue the course ↓</a>
@@ -466,49 +467,14 @@
                 </div>
             </div>
 
-            <!-- ══════════════════════ LEARN: a short course ══════════════════════ -->
-            <div id="learn" class="learn">
-                <div class="learn-progress" aria-hidden="true"><div id="learn-progress-bar"></div></div>
-
-                <nav class="learn-toc" aria-label="Course contents">
-                    <div class="learn-toc-title">Tutorial <span><span id="learn-done-count">0/8</span>
-                        <button type="button" id="learn-reset" class="learn-reset" title="Reset my progress" aria-label="Reset my progress">↺</button></span></div>
-                    <div class="learn-toc-sub" id="learn-toc-sub">Interactive tutorial · 8 short lessons</div>
-                    <div class="learn-toc-progress" aria-hidden="true"><i id="learn-toc-bar"></i></div>
-                    <div class="learn-search" role="search">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-                        <input type="search" id="learn-q" placeholder="Search the course…  ( / )" autocomplete="off" spellcheck="false"
-                               role="combobox" aria-expanded="false" aria-controls="learn-results" aria-label="Search the course">
-                        <div class="learn-results" id="learn-results" role="listbox" hidden></div>
-                    </div>
-                    <ol>
-                        <li><a href="#c-start" data-ch="c-start"><span class="toc-n">0</span>Start here</a></li>
-                        <li><a href="#c-smiles" data-ch="c-smiles"><span class="toc-n">1</span>What is SMILES?</a></li>
-                        <li><a href="#c-3d" data-ch="c-3d"><span class="toc-n">2</span>From text to 3D</a></li>
-                        <li><a href="#c-energy" data-ch="c-energy"><span class="toc-n">3</span>Energy: FF vs ANI</a></li>
-                        <li><a href="#c-conf" data-ch="c-conf"><span class="toc-n">4</span>Conformers</a></li>
-                        <li><a href="#c-glomos" data-ch="c-glomos"><span class="toc-n">5</span>GLOMOS step by step</a></li>
-                        <li><a href="#c-results" data-ch="c-results"><span class="toc-n">6</span>Reading your results</a></li>
-                        <li><a href="#c-quiz" data-ch="c-quiz"><span class="toc-n">7</span>Check yourself</a></li>
-                        <li><a href="#c-more" data-ch="c-more"><span class="toc-n">+</span>Keep learning</a></li>
-                    </ol>
-                </nav>
-
-                <div class="learn-body">
-
-                <!-- 0 ───────────────────────────────────────────── -->
-                <article id="c-start" class="lesson">
-                    <span class="lp-section-tag">Lesson 0 · 2 min</span>
-                    <h2>Start here</h2>
-                    <p class="lead">No chemistry background needed. In about 15 minutes you will know how a molecule can be written as
-                        text, how ELAYA turns that text into a 3D shape, why one molecule has many shapes (<em>conformers</em>), and how
-                        GLOMOS finds the most likely ones.</p>
-                    <div class="flow-head">
-                        <span class="flow-badge">How the page works</span>
-                        <p>This is the pipeline that runs when you press <b>Convert structure</b>, not the course outline.
-                            Hover or tap a step to see what it does.</p>
-                    </div>
-                    <div class="flowchart" id="elaya-flow" aria-label="How ELAYA works: from SMILES to results">
+            <!-- ══════════════ HOW IT WORKS: what Convert does (not the course outline) ══════════════ -->
+            <section class="how-band" id="how-it-works" aria-labelledby="how-title">
+                <div class="how-head">
+                    <span class="flow-badge">How ELAYA works</span>
+                    <h2 id="how-title">What happens when you press <b>Convert structure</b></h2>
+                    <span class="how-tip">Tap a step for details</span>
+                </div>
+                <div class="flowchart" id="elaya-flow" aria-label="How ELAYA works: from SMILES to results">
                         <div class="fc-row">
                         <button type="button" class="fc-node" data-go="c-smiles" data-detail="1">
                             
@@ -560,6 +526,45 @@
                         </div>
                         <div class="fc-detail" id="fc-detail" aria-live="polite"></div>
                     </div>
+            </section>
+
+            <!-- ══════════════════════ LEARN: a short course ══════════════════════ -->
+            <div id="learn" class="learn">
+                <div class="learn-progress" aria-hidden="true"><div id="learn-progress-bar"></div></div>
+
+                <nav class="learn-toc" aria-label="Course contents">
+                    <div class="learn-toc-title">Tutorial <span><span id="learn-done-count">0/8</span>
+                        <button type="button" id="learn-reset" class="learn-reset" title="Reset my progress" aria-label="Reset my progress">↺</button></span></div>
+                    <div class="learn-toc-sub" id="learn-toc-sub">Interactive tutorial · 8 short lessons</div>
+                    <div class="learn-toc-progress" aria-hidden="true"><i id="learn-toc-bar"></i></div>
+                    <div class="learn-search" role="search">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                        <input type="search" id="learn-q" placeholder="Search the course…  ( / )" autocomplete="off" spellcheck="false"
+                               role="combobox" aria-expanded="false" aria-controls="learn-results" aria-label="Search the course">
+                        <div class="learn-results" id="learn-results" role="listbox" hidden></div>
+                    </div>
+                    <ol>
+                        <li><a href="#c-start" data-ch="c-start"><span class="toc-n">0</span>Start here</a></li>
+                        <li><a href="#c-smiles" data-ch="c-smiles"><span class="toc-n">1</span>What is SMILES?</a></li>
+                        <li><a href="#c-3d" data-ch="c-3d"><span class="toc-n">2</span>From text to 3D</a></li>
+                        <li><a href="#c-energy" data-ch="c-energy"><span class="toc-n">3</span>Energy: FF vs ANI</a></li>
+                        <li><a href="#c-conf" data-ch="c-conf"><span class="toc-n">4</span>Conformers</a></li>
+                        <li><a href="#c-glomos" data-ch="c-glomos"><span class="toc-n">5</span>GLOMOS step by step</a></li>
+                        <li><a href="#c-results" data-ch="c-results"><span class="toc-n">6</span>Reading your results</a></li>
+                        <li><a href="#c-quiz" data-ch="c-quiz"><span class="toc-n">7</span>Check yourself</a></li>
+                        <li><a href="#c-more" data-ch="c-more"><span class="toc-n">+</span>Keep learning</a></li>
+                    </ol>
+                </nav>
+
+                <div class="learn-body">
+
+                <!-- 0 ───────────────────────────────────────────── -->
+                <article id="c-start" class="lesson">
+                    <span class="lp-section-tag">Lesson 0 · 2 min</span>
+                    <h2>Start here</h2>
+                    <p class="lead">No chemistry background needed. In about 15 minutes you will know how a molecule can be written as
+                        text, how ELAYA turns that text into a 3D shape, why one molecule has many shapes (<em>conformers</em>), and how
+                        GLOMOS finds the most likely ones.</p>
                     <button type="button" class="lesson-next" data-next="c-smiles">Lesson 1 · What is SMILES? →</button>
                 </article>
 
@@ -799,35 +804,6 @@
                 </div>
             </div>
 
-            <!-- ── TECH & AUTHORSHIP ── -->
-            <div class="lp-bottom-grid">
-                <div class="card fade-in-section lp-bottom-card">
-                    <h3>Technologies</h3>
-                    <table class="lp-tech-table">
-                        <tr><td class="lp-tt-label">Backend</td><td><a href="https://flask.palletsprojects.com/" target="_blank" rel="noopener">Flask</a> · Waitress · <a href="https://www.python.org/" target="_blank" rel="noopener">Python 3</a></td></tr>
-                        <tr><td class="lp-tt-label">Cheminformatics</td><td><a href="https://www.rdkit.org/" target="_blank" rel="noopener">RDKit</a> · <a href="https://openbabel.org/" target="_blank" rel="noopener">OpenBabel</a> · <a href="https://networkx.org/" target="_blank" rel="noopener">NetworkX</a></td></tr>
-                        <tr><td class="lp-tt-label">Neural potentials</td><td>ANI-1x / ANI-1ccx / ANI-2x via <a href="https://github.com/aiqm/torchani" target="_blank" rel="noopener">TorchANI</a> · <a href="https://ase-lib.org/" target="_blank" rel="noopener">ASE</a></td></tr>
-                        <tr><td class="lp-tt-label">Conformer search</td><td>GLOMOS genetic algorithm (batched L-BFGS, USR shape descriptors)</td></tr>
-                        <tr><td class="lp-tt-label">Visualization</td><td><a href="https://3dmol.csb.pitt.edu/" target="_blank" rel="noopener">3Dmol.js</a> · RDKit 2D depiction</td></tr>
-                        <tr><td class="lp-tt-label">Frontend</td><td>HTML5 · CSS3 · Vanilla JavaScript</td></tr>
-                    </table>
-                </div>
-                <div class="card fade-in-section lp-bottom-card">
-                    <h3>Project Authors</h3>
-                    <p>
-                        ELAYA SMILES was designed and developed by
-                        <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link">Gabriela Vidales-Ayala</a>,
-                        with scientific guidance from <strong>PhD Filiberto Ortiz-Chi</strong>, <strong>PhD Gabriel Merino</strong> and <strong>MSc Luis Ortiz-Gonzalez</strong>.
-                    </p>
-                    <p style="margin-top:0.75rem;">
-                        <i>Passion for building tools that bring science closer to people. Fostering open and reproducible science.</i>
-                    </p>
-                    <a href="https://github.com/GabrielaVidales/Elaya_SMILES" target="_blank" rel="noopener" class="about-github-btn" style="margin-top:1rem;">
-                        View on GitHub ↗
-                    </a>
-                </div>
-            </div>
-
         </section>
 
         <!-- ═══════════════════════════════════════════════════
@@ -868,8 +844,7 @@
             <div class="contact-hero scroll-reveal">
                 <h2 class="contact-title" >Share your feedback</h2>
                 <p class="contact-subtitle">
-                    Found a bug? Have a suggestion? Something you'd like to see?<br>
-                    Your input helps make ELAYA better.
+                    Found a bug or have an idea? Tell us: every report improves ELAYA.
                 </p>
             </div>
 
@@ -882,7 +857,8 @@
                             <a href="https://www.researchgate.net/profile/Gabriela-Vidales-Ayala" target="_blank" rel="noopener" class="author-linkedin-link author-linkedin-link--contact">Gabriela Vidales-Ayala</a>
                         </div>
                         <div class="contact-author-role">Physics Engineering Student</div>
-                        <p class="contact-author-bio">Committed to using science, education, and technology to improve people's quality of life.</p>
+                        <p class="contact-author-bio">Building open, reproducible tools that bring science closer to people.</p>
+                        <p class="contact-author-team">Scientific guidance: <b>Filiberto Ortiz-Chi</b>, <b>Gabriel Merino</b> and <b>Luis Ortiz-Gonzalez</b>.</p>
                         <div class="cas-links">
                             <a href="https://www.linkedin.com/in/gabriela-vidales/" target="_blank" rel="noopener">LinkedIn ↗</a>
                             <a href="https://github.com/GabrielaVidales" target="_blank" rel="noopener">GitHub ↗</a>
@@ -891,7 +867,7 @@
                 </div>
                 <div class="contact-ways">
                     <h3>How can you help?</h3>
-                    <p class="cw-sub">Every report and idea makes ELAYA better.</p>
+                    <p class="cw-sub">Four ways to take part.</p>
                     <div class="cw-grid">
                         <a href="#report-builder" data-scroll="report-builder" class="cw cw-report"><span class="cw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><circle cx="12" cy="16.5" r=".6"/></svg></span><span class="cw-t"><b>Report a problem</b><small>Guided form below</small></span><i aria-hidden="true">↓</i></a>
                         <a href="https://github.com/GabrielaVidales/Elaya_SMILES/issues/new?labels=enhancement&amp;title=%5BIdea%5D%20" target="_blank" rel="noopener" class="cw cw-idea"><span class="cw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><span class="cw-t"><b>Suggest a feature</b><small>New method, format or lesson</small></span><i aria-hidden="true">↗</i></a>
@@ -940,16 +916,30 @@
                         <p>If ELAYA helped your work, please cite the software (a paper is in preparation).</p>
                     </div>
                     <pre class="cite-box" id="cite-bibtex">@software{elaya_smiles,
-  author  = {Vidales-Ayala, Gabriela and Ortiz-Chi, Filiberto and
-             Merino, Gabriel and Ortiz-Gonzalez, Luis},
+  author  = {Vidales-Ayala, Gabriela and
+             Ortiz-Chi, Filiberto and Merino, Gabriel and
+             Ortiz-Gonzalez, Luis},
   title   = {{ELAYA SMILES}: SMILES to optimized 3D structures
              and ANI-based conformer search},
   year    = {2026},
-  version = {<span id="cite-version">2.4.12</span>},
+  version = {<span id="cite-version">2.4.13</span>},
   url     = {https://github.com/GabrielaVidales/Elaya_SMILES}
 }</pre>
                     <div class="rb-actions"><button type="button" class="contact-link-btn" id="cite-copy">Copy BibTeX</button><span class="rb-status" id="cite-status" role="status"></span></div>
-                    <p class="cite-also">Please also cite the tools behind your result: RDKit / ETKDG, OpenBabel, and the ANI model you used (ANI-1ccx or ANI-2x, references in the <a href="#c-more" data-about-link="c-more">mini-course</a>).</p>
+                    <div class="cite-tech">
+                        <span class="ct-label">Built with</span>
+                        <span class="ct-list">
+                            <a href="https://www.rdkit.org/" target="_blank" rel="noopener">RDKit</a> (ETKDG, MMFF94)
+                            · <a href="https://openbabel.org/" target="_blank" rel="noopener">Open Babel</a>
+                            · <a href="https://networkx.org/" target="_blank" rel="noopener">NetworkX</a>
+                            · <a href="https://github.com/aiqm/torchani" target="_blank" rel="noopener">TorchANI</a> (ANI-1x, ANI-1ccx, ANI-2x)
+                            · <a href="https://ase-lib.org/" target="_blank" rel="noopener">ASE</a>
+                            · GLOMOS genetic algorithm
+                            · <a href="https://3dmol.csb.pitt.edu/" target="_blank" rel="noopener">3Dmol.js</a>
+                            · <a href="https://flask.palletsprojects.com/" target="_blank" rel="noopener">Flask</a>
+                        </span>
+                    </div>
+                    <p class="cite-also">Please also cite the tools behind your result, at least RDKit and the ANI model you used (references in the <a href="#c-more" data-about-link="c-more">mini-course</a>).</p>
                 </div>
 
                 <div class="contact-panel">
@@ -957,8 +947,8 @@
                     <div class="faq">
                         <details><summary>Is ELAYA free?</summary><p>Yes. It is free to use and open source.</p></details>
                         <details><summary>What happens to the molecules I submit?</summary><p>Conversions are computed and returned; they are not stored. GLOMOS jobs keep their files only while the job runs and for about two hours after it finishes, then they are deleted automatically. For confidential structures, run ELAYA on your own computer (see below).</p></details>
-                        <details><summary>Which molecules can I use?</summary><p>Any valid SMILES for 3D conversion. GLOMOS with ANI needs neutral, closed-shell molecules made of H, C, N, O (ANI-1x, ANI-1ccx), plus S, F and Cl with ANI-2x. The explorer warns you when a molecule is outside that domain.</p></details>
-                        <details><summary>Why does GLOMOS take minutes?</summary><p>It relaxes hundreds of candidate shapes with a neural network, and the public server shares a small CPU. Use the <em>Fast</em> preset and the one-network <em>Screening</em> for exploration; the time estimate under the panel learns from your previous runs.</p></details>
+                        <details><summary>Which molecules can I use?</summary><p>Any valid SMILES (up to 120 heavy atoms) for 3D conversion. GLOMOS with ANI needs neutral, closed-shell molecules made of H, C, N, O (ANI-1x, ANI-1ccx), plus S, F and Cl with ANI-2x, and up to 140 atoms counting hydrogens (oxytocin, 135 atoms, is about the limit). The explorer warns you when a molecule is outside that domain.</p></details>
+                        <details><summary>Why does GLOMOS take minutes?</summary><p>It relaxes dozens of candidate shapes with a neural network, and the public server shares a small CPU. Use the <em>Fast</em> preset and the one-network <em>Screening</em> for exploration. Molecules with 60 atoms or more switch automatically to a fast engine (MMFF94 pre-relaxation, one ANI network to screen, all eight to rank), which keeps a peptide like oxytocin at about 15 minutes.</p></details>
                         <details><summary>Which ANI model should I choose?</summary><p>ANI-1ccx for the best accuracy on H, C, N, O molecules; ANI-2x if your molecule contains S, F or Cl. ANI-1x is the original baseline.</p></details>
                         <details><summary>Can I reproduce a run?</summary><p>Yes: set a fixed <em>Random seed</em> in the GLOMOS panel and keep the same parameters.</p></details>
                         <details><summary>Can I run it on my own computer?</summary><p>Yes, with Docker: <code>docker build -t elaya .</code> then <code>docker run -p 5000:5000 elaya</code>, and open <code>http://localhost:5000</code>. On a normal laptop GLOMOS is several times faster than on the free server.</p></details>

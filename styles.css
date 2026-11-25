@@ -4879,3 +4879,74 @@ body:not([data-page="explore"]) main > .conversion-section, body:not([data-page=
 .file-dropzone .fd-sub { font-size: .74rem !important; }
 .ffe-smi { color: #9fd3ff; }
 .ffe-smi { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
+
+/* ── v2.4.13 ─────────────────────────────────────────────────────────────── */
+/* SMILES field: text never runs under the buttons; ▾ (show all) then ✕ (clear, dark red) at the end */
+.smiles-wrap > input#smiles, #smiles { padding-right: 78px !important; }
+.smiles-wrap > #smiles-indicator, #smiles-indicator { right: 40px !important; width: 28px !important; height: 26px !important;
+  padding: 0 !important; display: inline-flex !important; align-items: center; justify-content: center;
+  border-radius: 8px !important; background: #2b2b4a !important; color: #e8eef2 !important; font-size: .9rem !important; }
+#smiles-clear { width: 26px !important; height: 26px !important; border-radius: 8px !important;
+  background: #612020 !important; color: #ffd9d9 !important; font-size: 12px !important; font-weight: 700; }
+#smiles-clear:hover { background: #7a2828 !important; color: #fff !important; }
+
+/* 3D | 2D: one joined control again (shared middle edge, rounder outer corners) */
+.view-toggle { gap: 0 !important; padding: 0 !important; background: transparent !important; border-radius: 16px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.45) !important; overflow: hidden; }
+.mode-2d .view-toggle { background: transparent !important; }
+.view-toggle .view-btn, #toggle-3d, #toggle-2d { height: 42px !important; padding: 0 16px !important; margin: 0 !important;
+  background: #221b01 !important; color: #7fffd4 !important; font-weight: 700; box-shadow: none !important; }
+#toggle-3d { border-radius: 16px 0 0 16px !important; }
+#toggle-2d { border-radius: 0 16px 16px 0 !important; border-left: 1px solid rgba(127,127,127,.35) !important; }
+.view-toggle .view-btn.active { background: #ffffff !important; color: #0A0A1A !important; box-shadow: none !important; }
+.view-toggle .view-btn:hover:not(.active) { background: #2e2504 !important; }
+@media (max-width: 600px) { .view-toggle .view-btn, #toggle-3d, #toggle-2d { height: 34px !important; padding: 0 11px !important; } }
+
+/* example hint: one sparkle bottom-left, one top-right (diagonal), small enough not to touch the neighbours */
+#smiles-examples .example-chip.hint-click::before { left: -2px !important; right: auto !important; top: 62% !important; bottom: auto !important; }
+#smiles-examples .example-chip.hint-click::after { right: -2px !important; left: auto !important; bottom: 66% !important; top: auto !important; }
+
+/* About hero: the button and both questions on one line */
+.hero-q { flex-direction: row !important; align-items: center !important; flex-wrap: nowrap; gap: 0 .2rem !important; }
+.hero-q a { white-space: nowrap; font-size: .92rem !important; }
+.hero-q .hq-sep { color: rgba(255,255,255,.25); padding: 0 .35rem; }
+.lp-hero-content { max-width: none !important; }
+@media (max-width: 1100px) { .hero-q { flex-wrap: wrap; } .hero-q .hq-sep { display: none; } }
+
+/* "How ELAYA works": its own band between the hero and the course, so nobody takes it for the syllabus */
+.how-band { max-width: 1190px; margin: 1.6rem auto .4rem; padding: 1.4rem 1.6rem 1.2rem; border-radius: 20px;
+  background: var(--sf-2, #1a1d33); box-sizing: border-box; }
+.how-head { display: flex; align-items: center; gap: .8rem 1rem; flex-wrap: wrap; }
+.how-head h2 { margin: 0; font-size: clamp(1.05rem, 1.6vw, 1.3rem); font-weight: 700; color: var(--on-hi, #e8eef2); }
+.how-head h2 b { color: var(--mint, #8fe3cb); }
+.how-tip { margin-left: auto; font-size: .8rem; color: var(--on-md, #a9bcc6); }
+.how-band .flowchart { margin: 1rem 0 0; }
+.re-how { display: inline-block; margin: .2rem 0 .6rem; font-size: .86rem; color: var(--mint, #8fe3cb); text-decoration: none; }
+.re-how:hover { color: #ffbf00; }
+@media (max-width: 700px) { .how-band { margin: 1rem .6rem .2rem; padding: 1rem; } .how-tip { margin-left: 0; } }
+.lp-hero-actions .lp-cta-primary { flex: 0 0 auto !important; white-space: nowrap !important; }
+#hero-course-btn[hidden], .hero-q .hq-sep.hq-hide { display: none !important; }
+#hero-continue-btn { white-space: nowrap; }
+
+/* Contact: team line in the author card; technologies inside the citation panel */
+.contact-author-team { margin: .45rem 0 0; font-size: .86rem; color: var(--on-md, #a9bcc6); line-height: 1.5; }
+.contact-author-team b { color: var(--on-hi, #e8eef2); font-weight: 600; }
+.cite-tech { display: flex; gap: .7rem; align-items: baseline; margin: .9rem 0 .2rem; font-size: .84rem; line-height: 1.7; color: var(--on-md, #a9bcc6); }
+.cite-tech .ct-label { flex: 0 0 auto; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--mint, #8fe3cb); }
+.cite-tech a { color: var(--on-hi, #e8eef2); text-decoration: none; border-bottom: 1px dotted rgba(143,227,203,.5); }
+.cite-tech a:hover { color: var(--mint, #8fe3cb); }
+@media (max-width: 600px) { .cite-tech { flex-direction: column; gap: .2rem; } }
+.contact-author-team b { white-space: nowrap; }
+
+/* measure panel: whole-molecule numbers (no clicks needed) */
+.measure-panel { max-width: min(320px, calc(100% - 20px)) !important; }
+.mp-mol { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem .8rem; padding: .3rem 0 .4rem; margin-bottom: .3rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+.mp-mol span { display: flex; align-items: baseline; gap: .35rem; font-size: .74rem; white-space: nowrap; }
+.mp-mol i { font-style: normal; color: var(--on-md, #a9bcc6); }
+.mp-mol b { color: var(--on-hi, #e8eef2); font-weight: 600; }
+.mp-mol span:nth-child(3) { grid-column: 1 / -1; }
+.mp-hb { margin-left: auto; padding: 0 .45rem !important; font-size: .68rem !important; line-height: 1.5; border-radius: 6px; border: 0;
+  background: rgba(201,167,240,.16); color: var(--lav, #c9a7f0); cursor: pointer; }
+.mp-hb.on { background: var(--lav, #c9a7f0); color: #1a1d33; }
+#toggle-3d.active, #toggle-2d.active { background: #ffffff !important; color: #0A0A1A !important; }
+#toggle-3d:hover:not(.active), #toggle-2d:hover:not(.active) { background: #2e2504 !important; }

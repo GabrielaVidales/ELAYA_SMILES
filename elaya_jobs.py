@@ -43,6 +43,51 @@ LIMITS = {
 ANI_CHOICES = ("auto", "ANI1x", "ANI1ccx", "ANI2x")
 
 
+def _env_int(name, default):
+    try:
+        return int(os.environ.get(name, default))
+    except ValueError:
+        return int(default)
+
+
+# Largest molecule GLOMOS accepts (atoms including H) and size from which the light engine is used.
+# 140 atoms: oxytocin (C43H66N12O12S2, 135 atoms, 25 rotors) runs on a 0.1-CPU / 512 MB instance.
+GLOMOS_MAX_ATOMS = _env_int("ELAYA_GLOMOS_MAX_ATOMS", 140)
+LITE_MIN_ATOMS = _env_int("ELAYA_LITE_MIN_ATOMS", 60)
+LITE_CAPS = {"initpop": 6, "matings": 4, "mutants": 4, "generations": 4, "cutoff_population": 8, "n_seeds": 2}
+
+
+def size_profile(params, n_atoms):
+    """Pick the engine for the molecule size. Returns (params, notes); ValueError if too large.
+
+    standard  every candidate relaxed with the full ANI ensemble (float64)
+    lite      (>= LITE_MIN_ATOMS atoms) MMFF94 funnel (2x candidates), screening with ONE ANI
+              network in float32, polish of the 4 best, final ranking with the 8-network ensemble
+              by single points; population capped (LITE_CAPS). ~10x less CPU, ~150 MB less memory.
+    """
+    p = dict(params)
+    if n_atoms > GLOMOS_MAX_ATOMS:
+        raise ValueError("GLOMOS on this server handles up to %d atoms including H (this molecule has %d). "
+                         "Use Convert structure for its 3D model." % (GLOMOS_MAX_ATOMS, n_atoms))
+    notes = []
+    if n_atoms >= LITE_MIN_ATOMS:
+        p["engine"] = "lite"
+        capped = [k for k, v in LITE_CAPS.items() if p.get(k, 0) > v]
+        for k in capped:
+            p[k] = LITE_CAPS[k]
+        capped = [k for k in capped if k != "n_seeds"]          # an internal detail, not worth a note
+        notes.append("Large molecule (%d atoms): fast engine. MMFF94 pre-relaxation, one ANI network to "
+                     "screen, final ranking with the full ensemble." % n_atoms)
+        if capped:
+            notes.append("Search size reduced to fit the server (%s)." % ", ".join(capped))
+        if p["max_minutes"] < max_minutes_limit():
+            p["max_minutes"] = max_minutes_limit()
+            notes.append("Time limit raised to %g min for this molecule." % p["max_minutes"])
+    else:
+        p["engine"] = "standard"
+    return p, notes
+
+
 def max_minutes_limit():
     try:
         return float(os.environ.get("ELAYA_MAX_MINUTES", "20"))
@@ -85,7 +130,8 @@ def clamp_params(raw):
 
 
 def write_input_txt(workdir, p, model):
-    """INPUT.txt for elaya_glomos.heuristic_ga_rotamers."""
+    """INPUT.txt for elaya_glomos.heuristic_ga_rotamers (first occurrence of a key wins)."""
+    lite = p.get("engine") == "lite"
     txt = (
         "rotamer_seed        seed.xyz\n"
         "problem_file        problem.json\n\n"
@@ -95,7 +141,7 @@ def write_input_txt(workdir, p, model):
         "nof_mutants         %(mutants)d\n\n"
         "# discrimination\n"
         "tol_similarity      0.95\n"
-        "tol_energy          0.1\n"
+        "tol_energy          %(tol_energy)s\n"
         "cutoff_energy       %(energy_cutoff).3f\n"
         "cutoff_population   %(cutoff_population)d\n\n"
         "# stop criteria\n"
@@ -105,11 +151,22 @@ def write_input_txt(workdir, p, model):
         "max_minutes         %(max_minutes).2f\n\n"
         "# theory level\n"
         "calculator          %(model)s\n"
-        "prec                2E-02 5E-03\n"
-        "polish_prec         1E-03\n"
+        "prec                %(prec)s\n"
+        "polish_prec         %(polish_prec)s\n"
         "random_seed         %(random_seed)d\n"
         "screening           %(screening)s\n"
-    ) % dict(p, model=model, screening=p.get("screening", "ensemble"))
+    ) % dict(p, model=model, screening=p.get("screening", "ensemble"),
+             tol_energy="0.3" if lite else "0.1", prec="5E-02" if lite else "2E-02 5E-03",
+             polish_prec="2E-02" if lite else "1E-03")
+    if lite:
+        txt += ("\n# large-molecule engine\n"
+                "prerelax            mmff\n"
+                "prescreen           2\n"
+                "ani_member          0\n"
+                "ani_dtype           float32\n"
+                "max_steps           300\n"
+                "polish_top          4\n"
+                "final_ranking       ensemble_sp\n")
     with open(os.path.join(workdir, "INPUT.txt"), "w") as fh:
         fh.write(txt)
 
@@ -172,15 +229,23 @@ class JobManager:
                 "--deadline-minutes", "%.3f" % deadline_minutes]
 
     def submit(self, seed_xyz, problem, params, model, meta=None, finalize=None):
-        """Create a job. Returns job id. ``problem`` is the JSON-serialisable Problem dict."""
+        """Create a job. Returns job id. ``problem`` is the JSON-serialisable Problem dict.
+
+        With ``seed_xyz=None``, ``problem`` is a seed request ({smiles, n_seeds, seed}) and the
+        worker builds the starting structures itself (slow for large molecules on a small CPU:
+        better there, with progress, than inside the HTTP request)."""
         self._cleanup()
         job_id = uuid.uuid4().hex[:16]
         workdir = os.path.join(self.base_dir, job_id)
         os.makedirs(workdir)
-        with open(os.path.join(workdir, "seed.xyz"), "w") as fh:
-            fh.write(seed_xyz)
-        with open(os.path.join(workdir, "problem.json"), "w") as fh:
-            json.dump(problem, fh)
+        if seed_xyz is None:
+            with open(os.path.join(workdir, "seed_request.json"), "w") as fh:
+                json.dump(problem, fh)
+        else:
+            with open(os.path.join(workdir, "seed.xyz"), "w") as fh:
+                fh.write(seed_xyz)
+            with open(os.path.join(workdir, "problem.json"), "w") as fh:
+                json.dump(problem, fh)
         write_input_txt(workdir, params, model)
         meta = dict(meta or {})
         meta.update({"params": params, "model": model})
@@ -254,6 +319,7 @@ class JobManager:
     def _run(self, job):
         minutes = job.meta["params"]["max_minutes"]
         env = dict(os.environ, PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")
+        env.setdefault("MALLOC_ARENA_MAX", "2")           # fewer glibc arenas: lower peak RSS
         env["PYTHONPATH"] = HERE + os.pathsep + env.get("PYTHONPATH", "")
         cmd = self.worker_cmd(job.workdir, minutes)
         tail = []
